@@ -1,3 +1,4 @@
+#include <filesystem>
 #include "sdk/sdk.h"
 
 namespace
