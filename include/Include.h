@@ -1,5 +1,4 @@
-#ifndef INCLUDE_H__
-#define INCLUDE_H__
+#pragma once
 
 #include <windows.h>
 #include <chrono>
@@ -7,6 +6,7 @@
 #include <filesystem>
 #include <cassert>
 #include <array>
+#include <fstream>
 #include <unordered_map>
 
 using namespace std::chrono_literals;
@@ -25,11 +25,10 @@ using namespace std::this_thread;
 
 #pragma region Tools
 #include "tools/fnv.h"
+#include "tools/codegen.h"
 #pragma endregion Tools
 
 namespace source2_gen
 {
-    void WINAPI main(HMODULE h_module);
+	void WINAPI main(HMODULE h_module);
 }
-
-#endif

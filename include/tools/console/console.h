@@ -1,6 +1,3 @@
-#ifndef EZ_CONSOLE_HPP
-#define EZ_CONSOLE_HPP
-
 #pragma once
 
 #include "../../Include.h"
@@ -25,7 +22,7 @@ public:
         auto status{false};
 
         {
-            if (this->m_active_) throw std::runtime_error("cannot initialise console object more than once!");
+            if (this->m_active_) throw std::runtime_error("cannot initialize console object more than once!");
 
             this->sz_title_ += title;
             this->m_active_ = true;
@@ -159,5 +156,3 @@ private:
     HANDLE old_err_ = nullptr;
     HANDLE old_in_  = nullptr;
 };
-
-#endif
