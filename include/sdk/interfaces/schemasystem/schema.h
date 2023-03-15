@@ -3,6 +3,31 @@
 #include <Include.h>
 #include <tools/virtual.h>
 #include <SDK/Interfaces/common/CUtlTSHash.h>
+#define UNDERLORDS
+
+
+
+#ifdef SBOX
+#define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
+#define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
+#define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
+#elif defined ARTIFACT2
+#define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5430
+#define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
+#define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
+#elif defined ARTIFACT1
+#define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x4428
+#define SCHEMASYSTEMTYPESCOPE_OFF1 0x4B8
+#define SCHEMASYSTEMTYPESCOPE_OFF2 0x2001
+#elif defined DOTA2
+#define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
+#define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
+#define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
+#elif defined UNDERLORDS
+#define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
+#define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
+#define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
+#endif
 
 class CSchemaClassInfo;
 class CSchemaSystemTypeScope;
@@ -288,9 +313,9 @@ public:
 private:
     char                             pad_0x0000[0x8]; //0x0000
     std::array<char, 256>            m_name_ = {};
-    char                             pad_0x0108[0x450];  //0x0108
+    char                             pad_0x0108[SCHEMASYSTEMTYPESCOPE_OFF1];  //0x0108
     CUtlTSHash<CSchemaClassBinding*> m_classes_;         // 0x0558
-    char                             pad_0x0594[0x2804]; //0x0594
+    char                             pad_0x0594[SCHEMASYSTEMTYPESCOPE_OFF2]; //0x0594
     CUtlTSHash<CSchemaEnumBinding*>  m_enumes_;          // 0x2DA0
 private:
     static constexpr unsigned int s_class_list = 0x580;
@@ -301,18 +326,18 @@ class CSchemaSystem
 public:
     CSchemaSystemTypeScope* GlobalTypeScope(void)
     {
-        return Virtual::Get<CSchemaSystemTypeScope *(__thiscall *)(void*)>(this, 11)(this);
+        return Virtual::Get<CSchemaSystemTypeScope* (__thiscall*)(void*)>(this, 11)(this);
     }
 
     CSchemaSystemTypeScope* FindTypeScopeForModule(const char* m_module_name)
     {
-        return Virtual::Get<CSchemaSystemTypeScope *(__thiscall *)(void*, const char*)>(this, 13)
-                (this, m_module_name);
+        return Virtual::Get<CSchemaSystemTypeScope* (__thiscall*)(void*, const char*)>(this, 13)
+            (this, m_module_name);
     }
 
     [[nodiscard]] CUtlVector<CSchemaSystemTypeScope*> GetTypeScopes(void) const { return m_type_scopes_; }
 
 private:
-    char                                pad_0x0000[0x190];   // 0x0000
-    CUtlVector<CSchemaSystemTypeScope*> m_type_scopes_ = {}; // 0x190
+    char                                pad_0x0000[SCHEMASYSTEM_TYPE_SCOPES_OFFSET];   // 0x0000
+    CUtlVector<CSchemaSystemTypeScope*> m_type_scopes_ = {}; // SCHEMASYSTEM_TYPE_SCOPES_OFFSET
 };

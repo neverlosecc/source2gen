@@ -1,3 +1,4 @@
+#include <filesystem>
 #include "sdk/sdk.h"
 
 namespace sdk
@@ -16,6 +17,8 @@ namespace sdk
         if (ends_with(name.data(), dll.data())) name.remove_suffix(dll.size());
 
         fmt::print("{}\n", name);
+
+        std::filesystem::create_directory("sdk/");
 
         auto out = fmt::output_file(fmt::format("SDK\\{}.hpp", name));
 
@@ -69,6 +72,8 @@ namespace sdk
 
         for (const auto schema_class_binding : classes.GetElements())
         {
+            if (!schema_class_binding)
+                continue;
             const auto class_info = current->FindDeclaredClass(schema_class_binding->m_binary_name);
 
             out.print("// Aligment: {}\n// Size: {}\n", class_info->m_align, class_info->m_size);

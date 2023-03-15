@@ -20,7 +20,7 @@ namespace source2_gen
         sdk::g_schema = sdk::GetInterface<CSchemaSystem>("schemasystem.dll", "SchemaSystem_0");
         if (!sdk::g_schema) { throw std::runtime_error(fmt::format("Failed to obtain Schema interfaces.")); }
 
-        fmt::print("{}: Dumping SDK for Source 2", __FUNCTION__);
+        fmt::print("{}: Dumping SDK for Source 2\n", __FUNCTION__);
 
         // Generate SDK
         const auto type_scopes = sdk::g_schema->GetTypeScopes();
