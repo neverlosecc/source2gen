@@ -1,6 +1,3 @@
-#ifndef INTERFACES_H__
-#define INTERFACES_H__
-
 #pragma once
 
 #include <Include.h>
@@ -21,6 +18,4 @@ namespace sdk
     extern CSchemaSystem* g_schema;
 
     void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current);
-};
-
-#endif
+}

@@ -210,7 +210,7 @@ struct SchemaClassInfoData_t
     std::int16_t m_i_unk2;        //0x0024 
     std::int16_t m_i_unk3;        //0x0026 
 
-    std::uint64_t m_fields; //0x0028
+    SchemaClassFieldData_t* m_fields; //0x0028
 
     SchemaStaticFieldData_t*   m_static_fiels;  //0x0030 
     SchemaBaseClassInfoData_t* m_schema_parent; //0x0038

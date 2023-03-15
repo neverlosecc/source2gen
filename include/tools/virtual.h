@@ -1,6 +1,3 @@
-#ifndef VIRTUAL_H__
-#define VIRTUAL_H__
-
 #pragma once
 
 #include <Include.h>
@@ -19,5 +16,3 @@ namespace Virtual
     template <typename T>
     void Write(const std::uintptr_t location, const T &data) { *reinterpret_cast<T *>(location) = data; }
 }
-
-#endif
