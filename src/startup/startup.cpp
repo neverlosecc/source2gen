@@ -5,53 +5,80 @@
 
 namespace source2_gen
 {
-	std::atomic_bool is_finished = false;
+    enum class GenStatus : int32_t
+    {
+        kNone = 0,
+        kWorking,
+        kFinished,
+        kFailed
+    };
 
-	void Setup()
-	{
-		while (!GetModuleHandleA("GameOverlayRenderer64.dll") ||
-			!GetModuleHandleA("client.dll") ||
-			!GetModuleHandleA("engine2.dll") ||
-			!GetModuleHandleA("steamclient64.dll") ||
-			!GetModuleHandleA("schemasystem.dll"))
-			sleep_for(std::chrono::seconds(5));
+    std::atomic<GenStatus> gen_status = GenStatus::kNone;
 
-		fmt::print("{}: Found GameOverlayRenderer64\n", __FUNCTION__);
+    void Setup()
+    {
+        while (!GetModuleHandleA("GameOverlayRenderer64.dll") ||
+            !GetModuleHandleA("client.dll") ||
+            !GetModuleHandleA("engine2.dll") ||
+            !GetModuleHandleA("steamclient64.dll") ||
+            !GetModuleHandleA("schemasystem.dll"))
+            sleep_for(std::chrono::seconds(5));
 
-		sdk::g_schema = sdk::GetInterface<CSchemaSystem>("schemasystem.dll", "SchemaSystem_0");
-		if (!sdk::g_schema) { throw std::runtime_error(fmt::format("Failed to obtain Schema interfaces.")); }
+        fmt::print("{}: Found GameOverlayRenderer64\n", __FUNCTION__);
 
-		fmt::print("{}: Dumping SDK for Source 2\n", __FUNCTION__);
+        try { g_config_manager->Init("config"); }
+        catch (std::exception& ex)
+        {
+            fmt::print("{}\n", ex.what());
+            gen_status = GenStatus::kFailed;
+            return;
+        }
 
-		// Generate SDK
-		const auto type_scopes = sdk::g_schema->GetTypeScopes();
-		for (auto i = 0; i < type_scopes.Count(); ++i)
-		{
-			const auto& current = type_scopes.m_pElements[i];
-			sdk::GenerateTypeScopeSdk(current);
-		}
+        sdk::g_schema = sdk::GetInterface<CSchemaSystem>("schemasystem.dll", "SchemaSystem_0");
+        if (!sdk::g_schema)
+        {
+            fmt::print("Failed to obtain Schema interface.");
+            gen_status = GenStatus::kFailed;
+            return;
+        }
 
-		sdk::GenerateTypeScopeSdk(sdk::g_schema->GlobalTypeScope());
+        fmt::print("{}: Dumping SDK for Source 2\n", __FUNCTION__);
 
-		is_finished = true;
-	}
+        // Generate SDK
+        const auto type_scopes = sdk::g_schema->GetTypeScopes();
+        for (auto i = 0; i < type_scopes.Count(); ++i)
+        {
+            const auto& current = type_scopes.m_pElements[i];
+            sdk::GenerateTypeScopeSdk(current);
+        }
 
-	void WINAPI main(const HMODULE module)
-	{
-		auto console = std::make_unique<DebugConsole>();
-		console->start("NEVERLOSE :: Source 2 Generator");
+        sdk::GenerateTypeScopeSdk(sdk::g_schema->GlobalTypeScope());
 
-		std::jthread setup_thread(&Setup);
+        gen_status = GenStatus::kFinished;
+    }
 
-		while (!is_finished)
-		{
-			console->update();
-			sleep_for(std::chrono::milliseconds(1));
-		}
+    void WINAPI main(const HMODULE module)
+    {
+        auto console = std::make_unique<DebugConsole>();
+        console->start("NEVERLOSE :: Source 2 Generator");
 
-		fmt::print("Successfuly dumped Source 2 SDK, now you can safely close this console.\nVisit: neverlose.cc!\n");
-		console->stop();
-		console.reset();
-		FreeLibraryAndExitThread(module, EXIT_SUCCESS);
-	}
+        std::jthread setup_thread(&Setup);
+
+        while (gen_status != GenStatus::kFinished)
+        {
+            if (gen_status == GenStatus::kFailed) break;
+
+            console->update();
+            sleep_for(std::chrono::milliseconds(1));
+        }
+
+        if (gen_status == GenStatus::kFinished)
+            fmt::print("Successful dumped Source 2 SDK, now you can safely close this console.\nVisit: neverlose.cc!\n");
+        else if (gen_status == GenStatus::kFailed) 
+            fmt::print("Something went wrong\n");
+
+        console->stop();
+        console.reset();
+        FreeLibraryAndExitThread(module, EXIT_SUCCESS);
+    }
 } // namespace source2gen
