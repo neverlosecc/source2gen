@@ -15,7 +15,7 @@ workspace "source2gen"
 
   IncludeDir["fmt"] = "external/fmt/include"
   
-  CppVersion = "C++20"
+  CppVersion = "C++latest"
   MsvcToolset = "v143"
   WindowsSdkVersion = "10.0"
   
