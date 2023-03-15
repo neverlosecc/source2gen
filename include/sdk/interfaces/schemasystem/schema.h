@@ -3,7 +3,9 @@
 #include <Include.h>
 #include <tools/virtual.h>
 #include <SDK/Interfaces/common/CUtlTSHash.h>
-#define DOTA2
+#define CSGO2
+
+
 
 #ifdef SBOX
 #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
@@ -25,6 +27,16 @@
 #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
 #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
 #define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
+#elif defined DESKJOB
+#define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x3A0
+#define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
+#define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
+#elif defined HL_ALYX
+#error "unimplemented"
+#elif defined THE_LAB_ROBOT_REPAIR
+#error "unimplemented"
+#elif defined CSGO2
+#error "removed from public sources"
 #endif
 
 class CSchemaClassInfo;
