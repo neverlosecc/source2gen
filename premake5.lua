@@ -39,10 +39,10 @@ workspace "source2gen"
         "4100", -- C4100: unreferenced formal parameter
         "4201", -- C4201: nameless struct/union
         "4307", -- C4307: integral constant overflow
-	      "4311", -- C4311: 'variable' : pointer truncation from 'type' to 'type'
+	    "4311", -- C4311: 'variable' : pointer truncation from 'type' to 'type'
         "4302", -- C4302: 'conversion' : truncation from 'type 1' to 'type 2'
-	      "4267", -- C4267: 'var' : conversion from 'size_t' to 'type', possible loss of data
-	      "4244"  -- C4244: 'conversion' conversion from 'type1' to 'type2', possible loss of data
+	    "4267", -- C4267: 'var' : conversion from 'size_t' to 'type', possible loss of data
+	    "4244"  -- C4244: 'conversion' conversion from 'type1' to 'type2', possible loss of data
     }
   end
    
@@ -97,12 +97,13 @@ workspace "source2gen"
     files
     {
       "include/**.h",
+	  "include/**.hpp",
       "src/**.cpp",
     }
 
     includedirs
     {
-	    "%{IncludeDir.fmt}",
+	  "%{IncludeDir.fmt}",
       "include",
       "src"
     }
