@@ -14,6 +14,7 @@ workspace "source2gen"
   IncludeDir = {}
 
   IncludeDir["fmt"] = "external/fmt/include"
+  IncludeDir["json"] = "external/json/single_include/"
   
   CppVersion = "C++latest"
   MsvcToolset = "v143"
@@ -104,6 +105,7 @@ workspace "source2gen"
     includedirs
     {
 	  "%{IncludeDir.fmt}",
+    "%{IncludeDir.json}",
       "include",
       "src"
     }
