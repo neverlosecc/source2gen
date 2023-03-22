@@ -36,7 +36,9 @@
 #elif defined THE_LAB_ROBOT_REPAIR
 #error "unimplemented"
 #elif defined CSGO2
-#error "removed from public sources"
+#define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
+#define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
+#define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
 #endif
 
 class CSchemaClassInfo;
