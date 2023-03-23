@@ -54,7 +54,7 @@ namespace codegen {
 			if (!move_cursor_to_next_line)
 				_tabs_count = 0;
 
-			push_line("{ ", move_cursor_to_next_line);
+			push_line("{", move_cursor_to_next_line);
 
 			if (!access_modifier.empty())
 				push_line(access_modifier, move_cursor_to_next_line);
@@ -85,6 +85,9 @@ namespace codegen {
 		}
 
 		self_ref begin_class(const std::string& class_name, std::vector<std::string_view>& base_types) {
+			if (base_types.empty())
+				return begin_class(std::cref(class_name));
+
 			return begin_block(fmt::format("class {} : public {}", class_name, fmt::join(base_types, ", ")), "public:");
 		}
 
@@ -118,6 +121,9 @@ namespace codegen {
 		}
 
 		self_ref begin_struct(const std::string& name, std::vector<std::string_view>& base_types) {
+			if (base_types.empty())
+				return begin_struct(std::cref(name));
+
 			return begin_block(fmt::format("struct {} : public {}", escape_name(name), fmt::join(base_types, ", ")), "public:");
 		}
 
@@ -145,7 +151,7 @@ namespace codegen {
 			//
 			auto backup_tabs_count = _tabs_count;
 			_tabs_count = 0;
-			
+
 			auto getter = fmt::format("*reinterpret_cast<{}*>(interfaces::g_schema->FindTypeScopeForModule(\"{}\")->FindDeclaredClass(\"{}\")->m_static_fields[{}]->m_instance)", type_name, mod_name, decl_class, index);
 			return_value(getter, false);
 			end_function(false, false);
