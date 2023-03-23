@@ -308,8 +308,12 @@ namespace sdk {
                     //
                     const auto expected_offset = state.last_field_offset + state.last_field_size;
                     if (state.last_field_offset && state.last_field_size && expected_offset < field->m_single_inheritance_offset) {
+                        builder.access_modifier("private");
+
                         const auto pad_offset_str = fmt::format("{:#x}", expected_offset);
                         builder.struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false).comment(pad_offset_str);
+
+                        builder.access_modifier("public");
                     }
 
                     // @note: @es3n1n: dump metadata

@@ -44,6 +44,16 @@ namespace codegen {
 
         // @todo: @es3n1n: `self_ref prev_line()`
 
+        self_ref access_modifier(const std::string& modifier) {
+            auto backup_tabs_count = _tabs_count;
+
+            dec_tabs_count(1);
+            push_line(fmt::format("{}:", modifier));
+            _tabs_count = backup_tabs_count;
+
+            return *this;
+        }
+
         self_ref begin_block(const std::string& text, const std::string& access_modifier = "", bool increment_tabs_count = true,
                              bool move_cursor_to_next_line = true) {
             push_line(text, move_cursor_to_next_line);
@@ -59,12 +69,12 @@ namespace codegen {
             if (!access_modifier.empty())
                 push_line(access_modifier, move_cursor_to_next_line);
 
-            if (increment_tabs_count)
-                inc_tabs_count(kTabsPerBlock);
-
             // @note: @es3n1n: restore tabs count
             if (!move_cursor_to_next_line)
                 _tabs_count = backup_tabs_count;
+
+            if (increment_tabs_count)
+                inc_tabs_count(kTabsPerBlock);
 
             return *this;
         }
@@ -188,7 +198,7 @@ namespace codegen {
         }
 
         self_ref struct_padding(const std::ptrdiff_t pad_offset, const std::size_t padding_size, bool move_cursor_to_next_line = true) {
-            return prop("uint8_t", fmt::format("__pad{}[{}]", fmt::format("{:04x}", pad_offset), fmt::format("{:#x}", padding_size)),
+            return prop("[[maybe_unused]] uint8_t", fmt::format("__pad{}[{}]", fmt::format("{:04x}", pad_offset), fmt::format("{:#x}", padding_size)),
                         move_cursor_to_next_line);
         }
     public:
