@@ -54,7 +54,7 @@ namespace source2_gen {
 
     void WINAPI main(const HMODULE module) {
         auto console = std::make_unique<DebugConsole>();
-        console->start("NEVERLOSE :: Source 2 Generator");
+        console->start("Source 2 Generator");
 
         std::jthread setup_thread(&Setup);
 
@@ -63,7 +63,7 @@ namespace source2_gen {
             sleep_for(std::chrono::milliseconds(1));
         }
 
-        fmt::print("Successfuly dumped Source 2 SDK, now you can safely close this console.\nVisit: neverlose.cc!\n");
+        fmt::print("Successfuly dumped Source 2 SDK, now you can safely close this console.\n");
 
         console->stop();
         console.reset();
