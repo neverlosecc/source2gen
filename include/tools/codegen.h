@@ -92,7 +92,7 @@ namespace codegen {
             push_line("{", move_cursor_to_next_line);
 
             if (!access_modifier.empty())
-                push_line(access_modifier, move_cursor_to_next_line);
+                push_line(fmt::format("{}:", access_modifier), move_cursor_to_next_line);
 
             // @note: @es3n1n: restore tabs count
             if (!move_cursor_to_next_line)
@@ -115,15 +115,15 @@ namespace codegen {
             return *this;
         }
 
-        self_ref begin_class(const std::string& class_name) {
-            return begin_block(fmt::format("class {}", class_name), "public:");
+        self_ref begin_class(const std::string& class_name, const std::string access_modifier = "public") {
+            return begin_block(fmt::format("class {}", class_name), access_modifier);
         }
 
-        self_ref begin_class(const std::string& class_name, const std::string& base_type) {
+        self_ref begin_class_with_base_type(const std::string& class_name, const std::string& base_type, const std::string access_modifier = "public") {
             if (base_type.empty())
                 return begin_class(std::cref(class_name));
 
-            return begin_block(fmt::format("class {} : public {}", class_name, base_type), "public:");
+            return begin_block(fmt::format("class {} : public {}", class_name, base_type), access_modifier);
         }
 
         self_ref end_class() {
@@ -151,15 +151,15 @@ namespace codegen {
             return push_line(fmt::vformat(sizeof(T) >= 4 ? "{} = {:#x}," : "{} = {},", fmt::make_format_args(name, value)));
         }
 
-        self_ref begin_struct(const std::string& name) {
-            return begin_block(fmt::format("struct {}", escape_name(name)), "public:");
+        self_ref begin_struct(const std::string& name, const std::string access_modifier = "public") {
+            return begin_block(fmt::format("struct {}", escape_name(name)), access_modifier);
         }
 
-        self_ref begin_struct(const std::string& name, const std::string& base_type) {
+        self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type, const std::string access_modifier = "public") {
             if (base_type.empty())
                 return begin_struct(std::cref(name));
 
-            return begin_block(fmt::format("struct {} : public {}", escape_name(name), base_type), "public:");
+            return begin_block(fmt::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
         }
 
         self_ref end_struct() {
@@ -244,6 +244,15 @@ namespace codegen {
         }
 
         self_ref end_union(const bool move_cursor_to_next_line = true) {
+            dec_tabs_count(1);
+            return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
+        }
+
+        self_ref begin_bitfield_block() {
+            return begin_struct("", "");
+        }
+
+        self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) {
             dec_tabs_count(1);
             return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
         }

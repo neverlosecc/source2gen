@@ -258,9 +258,9 @@ namespace sdk {
                 // @note: @es3n1n: start class
                 //
                 if (is_struct)
-                    builder.begin_struct(class_info->m_name, parent_cls_name);
+                    builder.begin_struct_with_base_type(class_info->m_name, parent_cls_name);
                 else
-                    builder.begin_class(class_info->m_name, parent_cls_name);
+                    builder.begin_class_with_base_type(class_info->m_name, parent_cls_name);
 
                 // @note: @es3n1n: field assembling state
                 //
@@ -322,7 +322,7 @@ namespace sdk {
                     // @note: @es3n1n: begin union if we're assembling bitfields
                     //
                     if (!state.assembling_bitfield && var_info.is_bitfield()) {
-                        builder.begin_union();
+                        builder.begin_bitfield_block();
                         state.assembling_bitfield = true;
                     }
 
@@ -343,7 +343,10 @@ namespace sdk {
                         state.last_field_offset += expected_union_size_bytes;
                         state.last_field_size = expected_union_size_bytes;
 
-                        builder.end_union(false).reset_tabs_count().comment(fmt::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
+                        builder.end_bitfield_block(false)
+                            .reset_tabs_count()
+                            .comment(fmt::format("{:d} bits", expected_union_size_bits))
+                            .restore_tabs_count();
 
                         state.total_bits_count_in_union = 0ull;
                         state.assembling_bitfield = false;
@@ -393,7 +396,7 @@ namespace sdk {
                             .comment("@note: autoaligned")
                             .restore_tabs_count();
 
-                    builder.end_union(false).reset_tabs_count().comment(fmt::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
+                    builder.end_bitfield_block(false).reset_tabs_count().comment(fmt::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
 
                     state.total_bits_count_in_union = 0;
                     state.assembling_bitfield = false;

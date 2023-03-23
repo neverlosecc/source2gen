@@ -34,4 +34,4 @@ namespace source2_gen {
 }
 
 constexpr std::string_view kPoweredByMessage = {"Powered by neverlose.cc & es3n.in"};
-constexpr std::string_view kCreatedBySource2genMessage = {"Created using source2gen - powered by neverlose.cc & es3n.in"};
+constexpr std::string_view kCreatedBySource2genMessage = {"Created using source2gen - github.com/neverlosecc/source2gen"};
