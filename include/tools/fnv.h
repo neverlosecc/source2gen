@@ -40,8 +40,8 @@ namespace detail {
         }
 
         template <std::size_t N>
-        static __forceinline constexpr auto hash_constexpr(const char(&str)[N], const std::size_t size = N - 1 /* do not hash the null */
-        ) -> hash {
+        static __forceinline constexpr auto hash_constexpr(const char (&str)[N], const std::size_t size = N - 1 /* do not hash the null */
+                                                           ) -> hash {
             const auto prev_hash = size == 1 ? hash_init() : hash_constexpr(str, size - 1);
             const auto cur_hash = hash_byte(prev_hash, str[size - 1]);
             return cur_hash;

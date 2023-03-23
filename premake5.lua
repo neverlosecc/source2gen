@@ -96,6 +96,7 @@ workspace "source2gen"
 	
     files
     {
+	  ".clang-format",
       "include/**.h",
 	  "include/**.hpp",
       "src/**.cpp",
