@@ -249,17 +249,16 @@ namespace sdk {
 
                 // @note: @es3n1n: get parent names
                 //
-                std::vector<std::string_view> parents;
-                for (auto parent = class_info->m_schema_parent ? class_info->m_schema_parent->m_class : nullptr; parent;
-                     parent = parent->m_schema_parent ? parent->m_schema_parent->m_class : nullptr)
-                    parents.emplace_back(parent->m_name);
+                std::string_view parent_cls_name;
+                if (auto parent = class_info->m_schema_parent ? class_info->m_schema_parent->m_class : nullptr; parent)
+                    parent_cls_name = parent->m_name;
 
                 // @note: @es3n1n: start class
                 //
                 if (is_struct)
-                    builder.begin_struct(class_info->m_name, parents);
+                    builder.begin_struct(class_info->m_name, {parent_cls_name});
                 else
-                    builder.begin_class(class_info->m_name, parents);
+                    builder.begin_class(class_info->m_name, {parent_cls_name});
 
                 for (auto k = 0; k < class_info->m_align; k++) {
                     const auto field = &class_info->m_fields[k];
