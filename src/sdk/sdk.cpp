@@ -387,8 +387,7 @@ namespace sdk {
 
                     // @note: @es3n1n: apply 8 bytes align
                     //
-                    const auto expected_union_size_bits =
-                        actual_union_size_bits % 8 ? actual_union_size_bits + (actual_union_size_bits % 8) : actual_union_size_bits;
+                    const auto expected_union_size_bits = actual_union_size_bits + (actual_union_size_bits % class_info->m_align);
 
                     if (expected_union_size_bits > actual_union_size_bits)
                         builder.struct_padding(0, 0, false, false, expected_union_size_bits - actual_union_size_bits)
