@@ -6,7 +6,9 @@
 namespace {
     using namespace std::string_view_literals;
 
-    constexpr std::initializer_list<std::string_view> kRequiredGameModules = {"client.dll"sv, "engine2.dll"sv, "schemasystem.dll"sv};
+    constexpr std::initializer_list<std::string_view> kRequiredGameModules = {"client.dll"sv, "engine2.dll"sv, "schemasystem.dll"sv,
+                                                                              // @note: @soufiw: latest modules that getting loaded
+                                                                              "matchmaking.dll"sv, "navsystem.dll"sv};
 } // namespace
 
 namespace source2_gen {

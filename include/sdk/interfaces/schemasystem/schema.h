@@ -135,39 +135,65 @@ enum SchemaClassFlags_t {
     SCHEMA_CLASS_IS_NOSCHEMA_CLASS = 128,
 };
 
+enum ETypeCategory {
+    Schema_Builtin = 0,
+    Schema_Ptr = 1,
+    Schema_Bitfield = 2,
+    Schema_FixedArray = 3,
+    Schema_Atomic = 4,
+    Schema_DeclaredClass = 5,
+    Schema_DeclaredEnum = 6,
+    Schema_None = 7
+};
+
+enum EAtomicCategory {
+    Atomic_Basic = 0,
+    Atomic_T = 1,
+    Atomic_TT = 2,
+    Atomic_I = 3,
+    Atomic_None = 4
+};
+
 class CSchemaType {
 public:
-    enum ETypeCategory {
-        Schema_Builtin = 0,
-        Schema_Ptr = 1,
-        Schema_Bitfield = 2,
-        Schema_FixedArray = 3,
-        Schema_Atomic = 4,
-        Schema_DeclaredClass = 5,
-        Schema_DeclaredEnum = 6,
-        Schema_None = 7
-    };
-
-    enum EAtomicCategory {
-        Atomic_Basic = 0,
-        Atomic_T = 1,
-        Atomic_TT = 2,
-        Atomic_I = 3,
-        Atomic_None = 4
-    };
-
-    int GetSize(void) {
-        return Virtual::Get<int(__thiscall*)(void*)>(this, 8)(this);
+    bool GetSizes(int* out_size1, uint8_t* unk_probably_not_size) {
+        return reinterpret_cast<int(__thiscall*)(void*, int*, uint8_t*)>(_vtable[3])(this, out_size1, unk_probably_not_size);
     }
 public:
-    void* unk0_; // 0x0000
-
+    uintptr_t* _vtable; // 0x0000
     const char* m_name_; // 0x0008
 
     CSchemaSystemTypeScope* m_type_scope_; // 0x0010
+    uint8_t type_category; // ETypeCategory 0x0018
+    uint8_t _unknown; // 0x0019
 
-    char pad_0x0018[0x18]; // 0x0018
+    // find out to what class pointer points.
+    CSchemaType* GetRefClass() {
+        if (type_category != Schema_Ptr)
+            return nullptr;
+
+        auto ptr = m_schema_type_;
+        while (ptr && ptr->type_category == ETypeCategory::Schema_Ptr)
+            ptr = ptr->m_schema_type_;
+
+        return ptr;
+    }
+
+    struct array_t {
+        uint32_t array_size;
+        uint32_t unknown;
+        CSchemaType* element_type_;
+    };
+
+    union // 0x020
+    {
+        CSchemaType* m_schema_type_;
+        CSchemaClassInfo* m_class_info;
+        CSchemaEnumBinding* m_enum_binding_;
+        array_t m_array_;
+    };
 };
+static_assert(offsetof(CSchemaType, m_schema_type_) == 0x20);
 
 struct SchemaMetadataEntryData_t {
     SchemaString_t m_name;

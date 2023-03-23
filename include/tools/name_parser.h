@@ -9,22 +9,29 @@ namespace name_parser {
         std::string m_type = ""; // var type
         std::string m_name = ""; // var name
 
+        // array post-fix, for example "[13][37]"
+        // @todo: @soufiw: maybe make this as std::vector< int > sizes
+        // and print as fmt::format( "{} {}{};\n", m_type, m_name fmt::join( sizes ) );
+        std::string m_array = ""; 
+
         std::size_t m_bitfield_size = 0ull; // bitfield size, set to 0 if var isn't a bitfield
-        std::size_t m_array_size = 0ull; // array size, set to 0 if var isn't an array
+
     public:
         __forceinline bool is_bitfield() const {
             return static_cast<bool>(m_bitfield_size);
         }
 
         __forceinline bool is_array() const {
-            return static_cast<bool>(m_array_size);
+            return !m_array.empty();
         }
     public:
         __forceinline std::string formatted_name() const {
             if (is_bitfield())
                 return std::format("{}: {}", m_name, m_bitfield_size);
+
             if (is_array())
-                return std::format("{}[{}]", m_name, m_array_size);
+                return std::format("{}{}", m_name, m_array);
+
             return m_name;
         }
     };
@@ -68,28 +75,6 @@ namespace name_parser {
             return result;
         }
 
-        __forceinline void parse_array(field_info_t& result, const std::string& type_name) {
-            // @note: @es3n1n: for array parsing we simply match if type_name is smth like
-            // `int32_t[XX]` where XX is the array size
-
-            // @note: @es3n1n: obtaining the "[" and "]" positions
-            const auto prefix_pos = type_name.find(kArraySizePrefix.data());
-            const auto postfix_pos = type_name.find(kArraySizePostfix.data());
-            if (prefix_pos == std::string::npos || postfix_pos == std::string::npos)
-                return;
-
-            // @note: @es3n1n: extracting array size from the type name
-            const auto array_size_str = type_name.substr(prefix_pos + 1, postfix_pos - prefix_pos - 1);
-            const auto array_size = wrapped_atoi(array_size_str.data());
-
-            // @note: @es3n1n: extracting type name without the [XX] part
-            const auto proper_type_name = type_name.substr(0, prefix_pos);
-
-            // @note: @es3n1n: saving parsed values
-            result.m_array_size = array_size;
-            result.m_type = proper_type_name;
-        }
-
         __forceinline void parse_bitfield(field_info_t& result, const std::string& type_name) {
             // @note: @es3n1n: in source2 schema, every bitfield var name would start with the "bitfield:" prefix
             // so if there's no such prefix we would just skip the bitfield parsing.
@@ -130,11 +115,11 @@ namespace name_parser {
         }
     } // namespace detail
 
-    inline field_info_t parse(const std::string& type_name, const std::string& name) {
+    inline field_info_t parse(const std::string& type_name, const std::string& name, const std::string& arrays_postfix) {
         field_info_t result = {};
         result.m_name = name;
+        result.m_array = arrays_postfix;
 
-        detail::parse_array(result, type_name);
         detail::parse_bitfield(result, type_name);
         detail::parse_type(result, type_name);
 

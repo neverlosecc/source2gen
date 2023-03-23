@@ -1,5 +1,6 @@
 #include "sdk/sdk.h"
 #include <filesystem>
+#include <set>
 #include <string_view>
 
 namespace {
@@ -94,10 +95,147 @@ namespace sdk {
 
         __forceinline void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_t::self_ref builder,
                                            CUtlTSHash<CSchemaClassBinding*> classes) {
+            struct class_t {
+                CSchemaClassInfo* target_;
+                std::set<CSchemaClassInfo*> refs_;
+
+                CSchemaClassInfo* GetParent() {
+                    if (!target_->m_schema_parent)
+                        return nullptr;
+
+                    return target_->m_schema_parent->m_class;
+                }
+
+                void AddRefToClass(CSchemaType* type) {
+                    if (type->type_category == Schema_DeclaredClass) {
+                        refs_.insert(type->m_class_info);
+                        return;
+                    }
+
+                    // auto ptr = type->GetRefClass();
+                    // if (ptr && ptr->type_category == Schema_DeclaredClass)
+                    // {
+                    // 	refs_.insert(ptr->m_class_info);
+                    // 	return;
+                    // }
+                }
+
+                bool IsDependsOn(const class_t& other) {
+                    // if current class inherit other.
+                    auto parent = this->GetParent();
+                    if (parent == other.target_)
+                        return true;
+
+                    // if current class contains ref to other.
+                    if (this->refs_.contains(other.target_))
+                        return true;
+
+                    // otherwise, order doesn`t matter.
+                    return false;
+                }
+            };
+
+            // @note: @soufiw:
+            // sort all classes based on refs and inherit, and then print it.
+            // ==================
+            std::list<class_t> classes_to_dump;
+
             for (const auto schema_class_binding : classes.GetElements()) {
+                const auto class_info = current->FindDeclaredClass(schema_class_binding->m_binary_name);
+
+                auto& class_dump = classes_to_dump.emplace_back();
+                class_dump.target_ = class_info;
+
+                for (auto k = 0; k < class_info->m_align; k++) {
+                    const auto field = &class_info->m_fields[k];
+                    if (!field)
+                        continue;
+
+                    // forward declare all classes.
+                    // @todo: maybe we need to forward declare only pointers to classes?
+                    auto ptr = field->m_type->GetRefClass();
+                    auto actual_type = ptr ? ptr : field->m_type;
+
+                    if (actual_type->type_category == Schema_DeclaredClass)
+                        builder.forward_declartion(actual_type->m_name_);
+
+                    class_dump.AddRefToClass(field->m_type);
+                }
+            }
+
+            bool did_change = false;
+            do {
+                did_change = false;
+
+                // swap until we done.
+                for (auto first = classes_to_dump.begin(); first != classes_to_dump.end(); ++first) {
+                    bool second_below_first = false;
+
+                    for (auto second = classes_to_dump.begin(); second != classes_to_dump.end(); ++second) {
+                        if (second == first) {
+                            second_below_first = true;
+                            continue;
+                        }
+
+                        // swap if second class below first, and first depends on second.
+                        bool first_depend = first->IsDependsOn(*second);
+
+                        // swap if first class below second, and second depends on first.
+                        bool second_depend = second->IsDependsOn(*first);
+
+                        if (first_depend && second_depend) {
+                            // classes depends on each other, forward declare them.
+                            // @todo: verify that cyclic dependencies is a pointers.
+                            continue;
+                        }
+
+                        bool swap = second_below_first ? first_depend : second_depend;
+                        if (swap) {
+                            std::iter_swap(first, second);
+                            did_change = true;
+                        }
+                    }
+                }
+            } while (did_change);
+            // ==================
+
+            auto get_array_post_fix = [&](CSchemaType* type) -> std::pair<std::string, std::string> {
+                auto ptr = type->GetRefClass();
+                auto actual_type = ptr ? ptr : type;
+
+                std::string base_type;
+                std::stringstream mods;
+                if (actual_type->type_category == Schema_FixedArray) {
+                    // dump all sizes.
+                    auto schema = actual_type;
+                    while (true) {
+                        mods << fmt::format("[{}]", schema->m_array_.array_size);
+                        schema = schema->m_array_.element_type_;
+                        if (schema->type_category != Schema_FixedArray) {
+                            base_type = schema->m_name_;
+                            break;
+                        }
+                    }
+                }
+
+                return {base_type, mods.str()};
+            };
+
+            auto get_type = [&](CSchemaType* type) -> std::pair<std::string, std::string> {
+                auto [t, mods] = get_array_post_fix(type);
+
+                assert((!t.empty() && !mods.empty()) || (t.empty() && mods.empty()));
+
+                if (!t.empty() && !mods.empty())
+                    return {t, mods};
+
+                return { type->m_name_, ""};
+            };
+
+            for (const auto& class_dump : classes_to_dump) {
                 // @note: @es3n1n: get class info, assemble it
                 //
-                const auto class_info = current->FindDeclaredClass(schema_class_binding->m_binary_name);
+                const auto class_info = class_dump.target_;
                 const auto is_struct = ends_with(class_info->m_name, "_t");
                 PrintClassInfo(builder, class_info->m_align, class_info->m_size);
 
@@ -152,7 +290,9 @@ namespace sdk {
 
                     // @note: @es3n1n: parsing type
                     //
-                    const auto var_info = name_parser::parse(field->m_type->m_name_, field->m_name);
+
+                    auto [type, mod] = get_type(field->m_type);
+                    const auto var_info = name_parser::parse(type, field->m_name, mod);
                     const auto offset_str = fmt::format("{:#x}", field->m_single_inheritance_offset);
                     builder.prop(var_info.m_type, var_info.formatted_name(), false).comment(offset_str);
                 }
@@ -162,7 +302,8 @@ namespace sdk {
                 for (auto s = 0; s < class_info->m_static_size; s++) {
                     auto [name, m_type, m_instance, pad_0x0018] = class_info->m_static_fiels[s];
 
-                    const auto var_info = name_parser::parse(m_type->m_name_, name);
+                    auto [type, mod] = get_type(m_type);
+                    const auto var_info = name_parser::parse(type, name, mod);
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
                 }
 

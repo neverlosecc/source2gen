@@ -170,6 +170,11 @@ namespace codegen {
         self_ref prop(const std::string& type_name, const std::string& name, bool move_cursor_to_next_line = true) {
             return push_line(fmt::format("{} {}; ", type_name, name), move_cursor_to_next_line);
         }
+        
+        self_ref forward_declartion(const std::string& text) {
+            return push_line(fmt::format("struct {};\n", text));
+        }
+
     public:
         [[nodiscard]] std::string str() {
             return _stream.str();
