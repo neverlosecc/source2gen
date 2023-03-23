@@ -32,3 +32,6 @@ using namespace std::this_thread;
 namespace source2_gen {
     void WINAPI main(HMODULE h_module);
 }
+
+constexpr std::string_view kPoweredByMessage = {"Powered by neverlose.cc & es3n.in"};
+constexpr std::string_view kCreatedBySource2genMessage = {"Created using source2gen - powered by neverlose.cc & es3n.in"};

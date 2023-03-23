@@ -453,11 +453,12 @@ namespace sdk {
         // @note: @es3n1n: print banner
         //
         builder.next_line()
-            .comment("/////////////////////////////////////////")
+            .comment("/////////////////////////////////////////////////////////////")
             .comment(fmt::format("Binary: {}", current->GetScopeName()))
             .comment(fmt::format("Classes count: {}", current_classes.Count()))
             .comment(fmt::format("Enums count: {}", current_enums.Count()))
-            .comment("/////////////////////////////////////////")
+            .comment(kCreatedBySource2genMessage.data())
+            .comment("/////////////////////////////////////////////////////////////")
             .next_line();
 
         // @note: @es3n1n: assemble props
