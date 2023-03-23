@@ -115,29 +115,6 @@ namespace sdk {
                 else
                     builder.begin_class(class_info->m_name, parents);
 
-                // @note: @es3n1n: some utils
-                //
-                using is_bitfield_t = bool;
-                using type_name_t = std::string;
-                auto get_type_info = [&](const CSchemaType* type) -> std::pair<is_bitfield_t, type_name_t> {
-                    std::string type_name = type->m_name_;
-
-                    for (const auto& [original_name, cpp_name] : s_typedefs)
-                        if (original_name == type_name)
-                            type_name = cpp_name;
-
-                    constexpr std::string_view bitfield_prefix = {"bitfield:"};
-                    if (type_name.size() < bitfield_prefix.size())
-                        return {false, type_name};
-
-                    // clang-format off
-                    if (auto s = type_name.substr(0, bitfield_prefix.size()); s == bitfield_prefix.data())
-                        return {true, type_name.substr(bitfield_prefix.size(), type_name.size() - bitfield_prefix.size())};
-                    // clang-format on
-
-                    return {false, type_name};
-                };
-
                 for (auto k = 0; k < class_info->m_align; k++) {
                     const auto field = &class_info->m_fields[k];
                     if (!field)
@@ -173,23 +150,20 @@ namespace sdk {
                             builder.comment(fmt::format("{} \"{}\"", field_metadata.m_name, data));
                     }
 
-                    // @note: @es3n1n: dump prop
+                    // @note: @es3n1n: parsing type
                     //
-                    auto [is_bitfield, type_name] = get_type_info(field->m_type);
-                    builder.prop(is_bitfield ? "uint8_t" : type_name, is_bitfield ? fmt::format("{}:{}", field->m_name, type_name) : field->m_name, false)
-                        .comment(fmt::format("{:#x}", field->m_single_inheritance_offset));
+                    const auto var_info = name_parser::parse(field->m_type->m_name_, field->m_name);
+                    const auto offset_str = fmt::format("{:#x}", field->m_single_inheritance_offset);
+                    builder.prop(var_info.m_type, var_info.formatted_name(), false).comment(offset_str);
                 }
 
                 // @note: @es3n1n: dump static fields
                 //
-                if (class_info->m_static_size) {
-                    for (auto s = 0; s < class_info->m_static_size; s++) {
-                        auto [name, m_type, m_instance, pad_0x0018] = class_info->m_static_fiels[s];
+                for (auto s = 0; s < class_info->m_static_size; s++) {
+                    auto [name, m_type, m_instance, pad_0x0018] = class_info->m_static_fiels[s];
 
-                        auto [is_bitfield, type_name] = get_type_info(m_type);
-                        builder.static_field_getter(is_bitfield ? "uint8_t" : type_name, is_bitfield ? fmt::format("{}:{}", name, type_name) : name,
-                                                    current->GetScopeName().data(), class_info->m_name, s);
-                    }
+                    const auto var_info = name_parser::parse(m_type->m_name_, name);
+                    builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
                 }
 
                 if (!class_info->m_align)

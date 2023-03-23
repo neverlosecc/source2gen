@@ -74,23 +74,6 @@ struct CSchemaNetworkValue {
     };
 };
 
-// clang-format off
-inline std::unordered_map<std::string, std::string> s_typedefs = {
-    {"float32", "float"}, 
-    {"float64", "double"},
-    
-    {"int8", "int8_t"},   
-    {"int16", "int16_t"},   
-    {"int32", "int32_t"},   
-    {"int64", "int64_t"},
-    
-    {"uint8", "uint8_t"}, 
-    {"uint16", "uint16_t"}, 
-    {"uint32", "uint32_t"}, 
-    {"uint64", "uint64_t"}
-};
-// clang-format on
-
 struct CSchemaClassBinding {
     CSchemaClassBinding* parent;
     const char* m_binary_name; // ex: C_World
