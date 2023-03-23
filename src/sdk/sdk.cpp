@@ -205,18 +205,19 @@ namespace sdk {
             } while (did_change);
             // ==================
 
-            auto get_array_post_fix = [&](CSchemaType* type) -> std::pair<std::string, std::string> {
+            // returns {type_name, array_sizes}
+            auto parse_array = [&](CSchemaType* type) -> std::pair<std::string, std::vector<std::size_t>> {
                 auto ptr = type->GetRefClass();
                 auto actual_type = ptr ? ptr : type;
 
                 std::string base_type;
-                std::stringstream mods;
+                std::vector<std::size_t> sizes;
 
                 if (actual_type->type_category == Schema_FixedArray) {
                     // dump all sizes.
                     auto schema = actual_type;
                     while (true) {
-                        mods << fmt::format("[{}]", schema->m_array_.array_size);
+                        sizes.emplace_back(schema->m_array_.array_size);
                         schema = schema->m_array_.element_type_;
 
                         if (schema->type_category != Schema_FixedArray) {
@@ -226,18 +227,19 @@ namespace sdk {
                     }
                 }
 
-                return {base_type, mods.str()};
+                return {base_type, sizes};
             };
 
-            auto get_type = [&](CSchemaType* type) -> std::pair<std::string, std::string> {
-                auto [t, mods] = get_array_post_fix(type);
+            // returns {type_name, array_sizes}
+            auto get_type = [&](CSchemaType* type) -> std::pair<std::string, std::vector<std::size_t>> {
+                auto [type_name, mods] = parse_array(type);
 
-                assert((!t.empty() && !mods.empty()) || (t.empty() && mods.empty()));
+                assert((!type_name.empty() && !mods.empty()) || (type_name.empty() && mods.empty()));
 
-                if (!t.empty() && !mods.empty())
-                    return {t, mods};
+                if (!type_name.empty() && !mods.empty())
+                    return {type_name, mods};
 
-                return {type->m_name_, ""};
+                return {type->m_name_, {}};
             };
 
             for (const auto& class_dump : classes_to_dump) {
@@ -247,18 +249,25 @@ namespace sdk {
                 const auto is_struct = ends_with(class_info->m_name, "_t");
                 PrintClassInfo(builder, class_info->m_align, class_info->m_size);
 
-                // @note: @es3n1n: get parent names
+                // @note: @es3n1n: get parent name
                 //
-                std::string_view parent_cls_name;
+                std::string parent_cls_name;
                 if (auto parent = class_info->m_schema_parent ? class_info->m_schema_parent->m_class : nullptr; parent)
                     parent_cls_name = parent->m_name;
 
                 // @note: @es3n1n: start class
                 //
                 if (is_struct)
-                    builder.begin_struct(class_info->m_name, {parent_cls_name});
+                    builder.begin_struct(class_info->m_name, parent_cls_name);
                 else
-                    builder.begin_class(class_info->m_name, {parent_cls_name});
+                    builder.begin_class(class_info->m_name, parent_cls_name);
+
+                // @note: @es3n1n: field assembling state
+                //
+                struct {
+                    std::size_t last_field_size = 0ull;
+                    std::size_t last_field_offset = 0ull;
+                } state;
 
                 for (auto k = 0; k < class_info->m_align; k++) {
                     const auto field = &class_info->m_fields[k];
@@ -284,6 +293,25 @@ namespace sdk {
                         return value;
                     };
 
+                    // @note: @es3n1n: obtaining size
+                    //
+                    int field_size = 0;
+                    if (!field->m_type->GetSize(&field_size)) // @note: @es3n1n: should happen if we are attempting to get a size of the bitfield
+                        field_size = 0;
+
+                    // @note: @es3n1n: parsing type
+                    //
+                    const auto [type, mod] = get_type(field->m_type);
+                    const auto var_info = field_parser::parse(type, field->m_name, mod);
+
+                    // @note: @es3n1n: insert padding if needed
+                    //
+                    const auto expected_offset = state.last_field_offset + state.last_field_size;
+                    if (state.last_field_offset && state.last_field_size && expected_offset < field->m_single_inheritance_offset) {
+                        const auto pad_offset_str = fmt::format("{:#x}", expected_offset);
+                        builder.struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false).comment(pad_offset_str);
+                    }
+
                     // @note: @es3n1n: dump metadata
                     //
                     for (auto j = 0; j < field->m_metadata_size; j++) {
@@ -295,11 +323,13 @@ namespace sdk {
                             builder.comment(fmt::format("{} \"{}\"", field_metadata.m_name, data));
                     }
 
-                    // @note: @es3n1n: parsing type
+                    // @note: @es3n1n: update state
                     //
+                    state.last_field_offset = field->m_single_inheritance_offset;
+                    state.last_field_size = static_cast<std::size_t>(field_size);
 
-                    auto [type, mod] = get_type(field->m_type);
-                    const auto var_info = name_parser::parse(type, field->m_name, mod);
+                    // @note: @es3n1n: push prop
+                    //
                     const auto offset_str = fmt::format("{:#x}", field->m_single_inheritance_offset);
                     builder.prop(var_info.m_type, var_info.formatted_name(), false).comment(offset_str);
                 }
@@ -310,7 +340,7 @@ namespace sdk {
                     auto [name, m_type, m_instance, pad_0x0018] = class_info->m_static_fiels[s];
 
                     auto [type, mod] = get_type(m_type);
-                    const auto var_info = name_parser::parse(type, name, mod);
+                    const auto var_info = field_parser::parse(type, name, mod);
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
                 }
 

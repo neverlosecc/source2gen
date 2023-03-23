@@ -84,7 +84,7 @@ namespace codegen {
             return begin_block(fmt::format("class {}", class_name), "public:");
         }
 
-        self_ref begin_class(const std::string& class_name, std::string_view base_type) {
+        self_ref begin_class(const std::string& class_name, const std::string& base_type) {
             if (base_type.empty())
                 return begin_class(std::cref(class_name));
 
@@ -120,7 +120,7 @@ namespace codegen {
             return begin_block(fmt::format("struct {}", escape_name(name)), "public:");
         }
 
-        self_ref begin_struct(const std::string& name, std::string_view base_type) {
+        self_ref begin_struct(const std::string& name, const std::string& base_type) {
             if (base_type.empty())
                 return begin_struct(std::cref(name));
 
@@ -185,6 +185,11 @@ namespace codegen {
             // @fixme: split method to class_forward_declaration & struct_forward_declaration
             // one for `struct uwu_t` and the other one for `class c_uwu`
             return push_line(fmt::format("struct {};", text));
+        }
+
+        self_ref struct_padding(const std::ptrdiff_t pad_offset, const std::size_t padding_size, bool move_cursor_to_next_line = true) {
+            return prop("uint8_t", fmt::format("__pad{}[{}]", fmt::format("{:04x}", pad_offset), fmt::format("{:#x}", padding_size)),
+                        move_cursor_to_next_line);
         }
     public:
         [[nodiscard]] std::string str() {
