@@ -147,11 +147,12 @@ enum ETypeCategory {
 };
 
 enum EAtomicCategory {
-    Atomic_Basic = 0,
-    Atomic_T = 1,
-    Atomic_TT = 2,
-    Atomic_I = 3,
-    Atomic_None = 4
+    Atomic_Basic,
+    Atomic_T,
+    Atomic_CollectionOfT,
+    Atomic_TT,
+    Atomic_I,
+    Atomic_None
 };
 
 class CSchemaType {
@@ -165,7 +166,7 @@ public:
 
     CSchemaSystemTypeScope* m_type_scope_; // 0x0010
     uint8_t type_category; // ETypeCategory 0x0018
-    uint8_t _unknown; // 0x0019
+    uint8_t atomic_category; // EAtomicCategory 0x0019
 
     // find out to what class pointer points.
     CSchemaType* GetRefClass() {
@@ -185,12 +186,32 @@ public:
         CSchemaType* element_type_;
     };
 
+    struct atomic_t { // same goes for CollectionOfT
+        uint64_t gap[2];
+        CSchemaType* template_typename;
+    };
+
+    struct atomic_tt {
+        uint64_t gap[2];
+        CSchemaType* templates[2];
+    };
+
+    struct atomic_i {
+        uint64_t gap[2];
+        uint64_t integer;
+    };
+
+    // this union depends on CSchema implementation, all members above
+    // is from base class ( CSchemaType )
     union // 0x020
     {
         CSchemaType* m_schema_type_;
         CSchemaClassInfo* m_class_info;
         CSchemaEnumBinding* m_enum_binding_;
         array_t m_array_;
+        atomic_t m_atomic_t_;
+        atomic_tt m_atomic_tt_;
+        atomic_i m_atomic_i_;
     };
 };
 static_assert(offsetof(CSchemaType, m_schema_type_) == 0x20);
