@@ -1,9 +1,12 @@
 #pragma once
 #include <cstdint>
 #include <fmt/format.h>
+#include <set>
 #include <sstream>
 #include <string>
 #include <type_traits>
+
+#include "tools/fnv.h"
 
 namespace codegen {
     constexpr char kTabSym = '\t';
@@ -81,11 +84,11 @@ namespace codegen {
             return begin_block(fmt::format("class {}", class_name), "public:");
         }
 
-        self_ref begin_class(const std::string& class_name, std::vector<std::string_view>& base_types) {
-            if (base_types.empty())
+        self_ref begin_class(const std::string& class_name, std::string_view base_type) {
+            if (base_type.empty())
                 return begin_class(std::cref(class_name));
 
-            return begin_block(fmt::format("class {} : public {}", class_name, fmt::join(base_types, ", ")), "public:");
+            return begin_block(fmt::format("class {} : public {}", class_name, base_type), "public:");
         }
 
         self_ref end_class() {
@@ -117,11 +120,11 @@ namespace codegen {
             return begin_block(fmt::format("struct {}", escape_name(name)), "public:");
         }
 
-        self_ref begin_struct(const std::string& name, std::vector<std::string_view>& base_types) {
-            if (base_types.empty())
+        self_ref begin_struct(const std::string& name, std::string_view base_type) {
+            if (base_type.empty())
                 return begin_struct(std::cref(name));
 
-            return begin_block(fmt::format("struct {} : public {}", escape_name(name), fmt::join(base_types, ", ")), "public:");
+            return begin_block(fmt::format("struct {} : public {}", escape_name(name), base_type), "public:");
         }
 
         self_ref end_struct() {
@@ -170,11 +173,19 @@ namespace codegen {
         self_ref prop(const std::string& type_name, const std::string& name, bool move_cursor_to_next_line = true) {
             return push_line(fmt::format("{} {}; ", type_name, name), move_cursor_to_next_line);
         }
-        
-        self_ref forward_declartion(const std::string& text) {
-            return push_line(fmt::format("struct {};\n", text));
-        }
 
+        self_ref forward_declartion(const std::string& text) {
+            // @note: @es3n1n: forward decl only once
+            const auto fwd_decl_hash = fnv32::hash_runtime(text.data());
+            if (_forward_decls.contains(fwd_decl_hash))
+                return *this;
+
+            _forward_decls.insert(fwd_decl_hash);
+
+            // @fixme: split method to class_forward_declaration & struct_forward_declaration
+            // one for `struct uwu_t` and the other one for `class c_uwu`
+            return push_line(fmt::format("struct {};", text));
+        }
     public:
         [[nodiscard]] std::string str() {
             return _stream.str();
@@ -213,6 +224,7 @@ namespace codegen {
     private:
         std::stringstream _stream = {};
         std::size_t _tabs_count = 0;
+        std::set<fnv32::hash> _forward_decls = {};
     };
 
     __forceinline generator_t get() {

@@ -139,6 +139,7 @@ namespace sdk {
             // sort all classes based on refs and inherit, and then print it.
             // ==================
             std::list<class_t> classes_to_dump;
+            bool did_forward_decls = false;
 
             for (const auto schema_class_binding : classes.GetElements()) {
                 const auto class_info = current->FindDeclaredClass(schema_class_binding->m_binary_name);
@@ -156,12 +157,17 @@ namespace sdk {
                     auto ptr = field->m_type->GetRefClass();
                     auto actual_type = ptr ? ptr : field->m_type;
 
-                    if (actual_type->type_category == Schema_DeclaredClass)
+                    if (actual_type->type_category == Schema_DeclaredClass) {
                         builder.forward_declartion(actual_type->m_name_);
+                        did_forward_decls = true;
+                    }
 
                     class_dump.AddRefToClass(field->m_type);
                 }
             }
+
+            if (did_forward_decls)
+                builder.next_line();
 
             bool did_change = false;
             do {
@@ -205,12 +211,14 @@ namespace sdk {
 
                 std::string base_type;
                 std::stringstream mods;
+
                 if (actual_type->type_category == Schema_FixedArray) {
                     // dump all sizes.
                     auto schema = actual_type;
                     while (true) {
                         mods << fmt::format("[{}]", schema->m_array_.array_size);
                         schema = schema->m_array_.element_type_;
+
                         if (schema->type_category != Schema_FixedArray) {
                             base_type = schema->m_name_;
                             break;
@@ -229,7 +237,7 @@ namespace sdk {
                 if (!t.empty() && !mods.empty())
                     return {t, mods};
 
-                return { type->m_name_, ""};
+                return {type->m_name_, ""};
             };
 
             for (const auto& class_dump : classes_to_dump) {
@@ -241,17 +249,16 @@ namespace sdk {
 
                 // @note: @es3n1n: get parent names
                 //
-                std::vector<std::string_view> parents;
-                for (auto parent = class_info->m_schema_parent ? class_info->m_schema_parent->m_class : nullptr; parent;
-                     parent = parent->m_schema_parent ? parent->m_schema_parent->m_class : nullptr)
-                    parents.emplace_back(parent->m_name);
+                std::string_view parent_cls_name;
+                if (auto parent = class_info->m_schema_parent ? class_info->m_schema_parent->m_class : nullptr; parent)
+                    parent_cls_name = parent->m_name;
 
                 // @note: @es3n1n: start class
                 //
                 if (is_struct)
-                    builder.begin_struct(class_info->m_name, parents);
+                    builder.begin_struct(class_info->m_name, {parent_cls_name});
                 else
-                    builder.begin_class(class_info->m_name, parents);
+                    builder.begin_class(class_info->m_name, {parent_cls_name});
 
                 for (auto k = 0; k < class_info->m_align; k++) {
                     const auto field = &class_info->m_fields[k];
