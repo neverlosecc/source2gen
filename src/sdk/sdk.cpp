@@ -267,6 +267,8 @@ namespace sdk {
                 struct {
                     std::size_t last_field_size = 0ull;
                     std::size_t last_field_offset = 0ull;
+                    bool assembling_bitfield = false;
+                    std::size_t total_bits_count_in_union = 0ull;
                 } state;
 
                 for (auto k = 0; k < class_info->m_align; k++) {
@@ -307,13 +309,44 @@ namespace sdk {
                     // @note: @es3n1n: insert padding if needed
                     //
                     const auto expected_offset = state.last_field_offset + state.last_field_size;
-                    if (state.last_field_offset && state.last_field_size && expected_offset < field->m_single_inheritance_offset) {
+                    if (state.last_field_offset && state.last_field_size && expected_offset < field->m_single_inheritance_offset &&
+                        !state.assembling_bitfield) {
                         builder.access_modifier("private");
 
                         const auto pad_offset_str = fmt::format("{:#x}", expected_offset);
-                        builder.struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false).comment(pad_offset_str);
+                        builder.struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false, true).comment(pad_offset_str);
 
                         builder.access_modifier("public");
+                    }
+
+                    // @note: @es3n1n: begin union if we're assembling bitfields
+                    //
+                    if (!state.assembling_bitfield && var_info.is_bitfield()) {
+                        builder.begin_union();
+                        state.assembling_bitfield = true;
+                    }
+
+                    // @note: @es3n1n: if we are done with bitfields we should insert a pad and finish union
+                    //
+                    if (state.assembling_bitfield && !var_info.is_bitfield()) {
+                        const auto expected_union_size_bytes = field->m_single_inheritance_offset - state.last_field_offset;
+                        const auto expected_union_size_bits = expected_union_size_bytes * 8;
+
+                        const auto actual_union_size_bits = state.total_bits_count_in_union;
+
+                        if (expected_union_size_bits < state.total_bits_count_in_union)
+                            __debugbreak(); // smh
+
+                        if (expected_union_size_bits > state.total_bits_count_in_union)
+                            builder.struct_padding(0, 0, true, false, expected_union_size_bits - actual_union_size_bits);
+
+                        state.last_field_offset += expected_union_size_bytes;
+                        state.last_field_size = expected_union_size_bytes;
+
+                        builder.end_union(false).reset_tabs_count().comment(fmt::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
+
+                        state.total_bits_count_in_union = 0ull;
+                        state.assembling_bitfield = false;
                     }
 
                     // @note: @es3n1n: dump metadata
@@ -329,13 +362,41 @@ namespace sdk {
 
                     // @note: @es3n1n: update state
                     //
-                    state.last_field_offset = field->m_single_inheritance_offset;
-                    state.last_field_size = static_cast<std::size_t>(field_size);
+                    if (field->m_single_inheritance_offset && field_size) {
+                        state.last_field_offset = field->m_single_inheritance_offset;
+                        state.last_field_size = static_cast<std::size_t>(field_size);
+                    }
+                    if (var_info.is_bitfield())
+                        state.total_bits_count_in_union += var_info.m_bitfield_size;
 
                     // @note: @es3n1n: push prop
                     //
-                    const auto offset_str = fmt::format("{:#x}", field->m_single_inheritance_offset);
-                    builder.prop(var_info.m_type, var_info.formatted_name(), false).comment(offset_str);
+                    builder.prop(var_info.m_type, var_info.formatted_name(), false);
+                    if (field->m_single_inheritance_offset)
+                        builder.reset_tabs_count().comment(fmt::format("{:#x}", field->m_single_inheritance_offset), false).restore_tabs_count();
+                    builder.next_line();
+                }
+
+                // @note: @es3n1n: if struct ends with union we should end union before ending the class
+                //
+                if (state.assembling_bitfield) {
+                    const auto actual_union_size_bits = state.total_bits_count_in_union;
+
+                    // @note: @es3n1n: apply 8 bytes align
+                    //
+                    const auto expected_union_size_bits =
+                        actual_union_size_bits % 8 ? actual_union_size_bits + (actual_union_size_bits % 8) : actual_union_size_bits;
+
+                    if (expected_union_size_bits > actual_union_size_bits)
+                        builder.struct_padding(0, 0, false, false, expected_union_size_bits - actual_union_size_bits)
+                            .reset_tabs_count()
+                            .comment("@note: autoaligned")
+                            .restore_tabs_count();
+
+                    builder.end_union(false).reset_tabs_count().comment(fmt::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
+
+                    state.total_bits_count_in_union = 0;
+                    state.assembling_bitfield = false;
                 }
 
                 // @note: @es3n1n: dump static fields

@@ -13,6 +13,33 @@ namespace codegen {
     constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many \t characters shall we place per each block
     constexpr std::initializer_list<char> kBlacklistedCharacters = {':', ';', '\\', '/'};
 
+    // @note: @es3n1n: a list of possible integral types for bitfields (would be used in `guess_bitfield_type`)
+    //
+    // clang-format off
+    constexpr std::initializer_list<std::pair<std::size_t, std::string_view>> kBitfieldIntegralTypes = {
+        {8, "uint8_t"},
+        {16, "uint16_t"},
+        {32, "uint32_t"},
+        {64, "uint64_t"},
+
+        // @todo: @es3n1n: define uint128_t/uint256_t/... as custom structs in the very beginning of the file
+        {128, "uint128_t"},
+        {256, "uint256_t"},
+        {512, "uint512_t"},
+    };
+    // clang-format on
+
+    inline std::string guess_bitfield_type(const std::size_t bits_count) {
+        for (auto p : kBitfieldIntegralTypes) {
+            if (bits_count > p.first)
+                continue;
+
+            return p.second.data();
+        }
+
+        throw std::runtime_error(fmt::format("{} : Unable to guess bitfield type with size {}", __FUNCTION__, bits_count));
+    }
+
     struct generator_t {
         using self_ref = std::add_lvalue_reference_t<generator_t>;
     public:
@@ -45,11 +72,9 @@ namespace codegen {
         // @todo: @es3n1n: `self_ref prev_line()`
 
         self_ref access_modifier(const std::string& modifier) {
-            auto backup_tabs_count = _tabs_count;
-
             dec_tabs_count(1);
             push_line(fmt::format("{}:", modifier));
-            _tabs_count = backup_tabs_count;
+            restore_tabs_count();
 
             return *this;
         }
@@ -176,12 +201,13 @@ namespace codegen {
             return *this;
         }
 
-        self_ref comment(const std::string& text) {
-            return push_line(fmt::format("// {}", text));
+        self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) {
+            return push_line(fmt::format("// {}", text), move_cursor_to_next_line);
         }
 
         self_ref prop(const std::string& type_name, const std::string& name, bool move_cursor_to_next_line = true) {
-            return push_line(fmt::format("{} {}; ", type_name, name), move_cursor_to_next_line);
+            const auto line = move_cursor_to_next_line ? fmt::format("{} {};", type_name, name) : fmt::format("{} {}; ", type_name, name);
+            return push_line(line, move_cursor_to_next_line);
         }
 
         self_ref forward_declartion(const std::string& text) {
@@ -197,9 +223,29 @@ namespace codegen {
             return push_line(fmt::format("struct {};", text));
         }
 
-        self_ref struct_padding(const std::ptrdiff_t pad_offset, const std::size_t padding_size, bool move_cursor_to_next_line = true) {
-            return prop("[[maybe_unused]] uint8_t", fmt::format("__pad{}[{}]", fmt::format("{:04x}", pad_offset), fmt::format("{:#x}", padding_size)),
-                        move_cursor_to_next_line);
+        self_ref struct_padding(const std::ptrdiff_t pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
+                                const bool is_private_field = false, const std::size_t bitfield_size = 0ull) {
+            // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
+            std::string type_name = bitfield_size ? guess_bitfield_type(bitfield_size) : "uint8_t";
+            if (is_private_field)
+                type_name = "[[maybe_unused]] " + type_name;
+
+            auto pad_name = pad_offset ? fmt::format("__pad{:04x}", pad_offset) : fmt::format("__pad{:d}", _pads_count++);
+            if (!bitfield_size)
+                pad_name = pad_name + fmt::format("[{:#x}]", padding_size);
+
+            return prop(type_name, bitfield_size ? fmt::format("{}: {}", pad_name, bitfield_size) : pad_name, move_cursor_to_next_line);
+        }
+
+        self_ref begin_union(std::string name = "") {
+            if (name.empty())
+                name = fmt::format("_union_{}", _unions_count++);
+            return begin_block(fmt::format("union {}", name));
+        }
+
+        self_ref end_union(const bool move_cursor_to_next_line = true) {
+            dec_tabs_count(1);
+            return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
         }
     public:
         [[nodiscard]] std::string str() {
@@ -225,20 +271,35 @@ namespace codegen {
 
             return result;
         }
-    protected:
+    public:
         self_ref inc_tabs_count(std::size_t count = 1) {
+            _tabs_count_backup = _tabs_count;
             _tabs_count += count;
             return *this;
         }
 
         self_ref dec_tabs_count(std::size_t count = 1) {
+            _tabs_count_backup = _tabs_count;
             if (_tabs_count)
                 _tabs_count -= count;
             return *this;
         }
+
+        self_ref restore_tabs_count() {
+            _tabs_count = _tabs_count_backup;
+            return *this;
+        }
+
+        self_ref reset_tabs_count() {
+            _tabs_count_backup = _tabs_count;
+            _tabs_count = 0;
+            return *this;
+        }
     private:
         std::stringstream _stream = {};
-        std::size_t _tabs_count = 0;
+        std::size_t _tabs_count = 0, _tabs_count_backup = 0;
+        std::size_t _unions_count = 0;
+        std::size_t _pads_count = 0;
         std::set<fnv32::hash> _forward_decls = {};
     };
 
