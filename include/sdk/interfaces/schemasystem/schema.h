@@ -161,6 +161,11 @@ public:
         return reinterpret_cast<int(__thiscall*)(void*, int*, uint8_t*)>(_vtable[3])(this, out_size1, unk_probably_not_size);
     }
 public:
+    bool GetSize(int* out_size) {
+        uint8_t smh = 0;
+        return GetSizes(out_size, &smh);
+    }
+public:
     uintptr_t* _vtable; // 0x0000
     const char* m_name_; // 0x0008
 
