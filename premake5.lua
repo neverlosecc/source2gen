@@ -50,6 +50,7 @@ workspace "source2gen"
     filter "configurations:Debug"
       defines { "_DEBUG" }
       symbols "On"
+	  flags { "MultiProcessorCompile" }
     filter "not configurations:Debug"
       defines { "NDEBUG" }
   end
@@ -96,6 +97,7 @@ workspace "source2gen"
 	
     files
     {
+	  ".clang-format",
       "include/**.h",
 	  "include/**.hpp",
       "src/**.cpp",
