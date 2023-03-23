@@ -6,15 +6,24 @@
 namespace {
     using namespace std::string_view_literals;
 
-    constexpr std::initializer_list<std::string_view> kRequiredGameModules = {"client.dll"sv, "engine2.dll"sv, "schemasystem.dll"sv,
-                                                                              // @note: @soufiw: latest modules that getting loaded
-                                                                              "matchmaking.dll"sv, "navsystem.dll"sv};
+    // clang-format off
+    constexpr std::initializer_list<std::string_view> kRequiredGameModules = {
+        // @note: @es3n1n: modules that we'll use in our code
+        "client.dll"sv,
+        "engine2.dll"sv,
+        "schemasystem.dll"sv,
+        
+        // @note: @soufiw: latest modules that gets loaded in the main menu
+        "matchmaking.dll"sv, 
+        "navsystem.dll"sv
+    };
+    // clang-format on
+
+    std::atomic_bool is_finished = false;
 } // namespace
 
 namespace source2_gen {
-    std::atomic_bool is_finished = false;
-
-    void Setup() {
+    void Setup() try {
         // @note: @es3n1n: Waiting for game init
         //
         const auto required_modules_present = []() [[msvc::forceinline]] -> bool {
@@ -49,6 +58,9 @@ namespace source2_gen {
 
         // @note: @es3n1n: We are done here
         //
+        is_finished = true;
+    } catch (std::runtime_error& err) {
+        fmt::print("{} :: ERROR :: {}", __FUNCTION__, err.what());
         is_finished = true;
     }
 
