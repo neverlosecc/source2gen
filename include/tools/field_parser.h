@@ -1,6 +1,8 @@
 #include <cstdint>
 #include <string>
 
+#include "codegen.h"
+
 namespace field_parser {
     struct field_info_t {
         constexpr field_info_t() = default;
@@ -112,9 +114,7 @@ namespace field_parser {
 
             // @note: @es3n1n: saving parsed value
             result.m_bitfield_size = bitfield_size;
-
-            // @fixme: @es3n1n: -
-            result.m_type = "uint8_t";
+            result.m_type = codegen::guess_bitfield_type(bitfield_size);
         }
 
         // @note: @es3n1n: we are assuming that this function would be executed right after
