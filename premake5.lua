@@ -50,6 +50,7 @@ workspace "source2gen"
     filter "configurations:Debug"
       defines { "_DEBUG" }
       symbols "On"
+	  flags { "MultiProcessorCompile" }
     filter "not configurations:Debug"
       defines { "NDEBUG" }
   end
