@@ -84,11 +84,11 @@ namespace codegen {
             return begin_block(fmt::format("class {}", class_name), "public:");
         }
 
-        self_ref begin_class(const std::string& class_name, std::vector<std::string_view> base_types) {
-            if (base_types.empty())
+        self_ref begin_class(const std::string& class_name, std::string_view base_type) {
+            if (base_type.empty())
                 return begin_class(std::cref(class_name));
 
-            return begin_block(fmt::format("class {} : public {}", class_name, fmt::join(base_types, ", ")), "public:");
+            return begin_block(fmt::format("class {} : public {}", class_name, base_type), "public:");
         }
 
         self_ref end_class() {
@@ -120,11 +120,11 @@ namespace codegen {
             return begin_block(fmt::format("struct {}", escape_name(name)), "public:");
         }
 
-        self_ref begin_struct(const std::string& name, std::vector<std::string_view> base_types) {
-            if (base_types.empty())
+        self_ref begin_struct(const std::string& name, std::string_view base_type) {
+            if (base_type.empty())
                 return begin_struct(std::cref(name));
 
-            return begin_block(fmt::format("struct {} : public {}", escape_name(name), fmt::join(base_types, ", ")), "public:");
+            return begin_block(fmt::format("struct {} : public {}", escape_name(name), base_type), "public:");
         }
 
         self_ref end_struct() {
