@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <string>
 
-namespace name_parser {
+namespace field_parser {
     struct field_info_t {
         constexpr field_info_t() = default;
         constexpr ~field_info_t() = default;
@@ -9,28 +9,49 @@ namespace name_parser {
         std::string m_type = ""; // var type
         std::string m_name = ""; // var name
 
-        // array post-fix, for example "[13][37]"
-        // @todo: @soufiw: maybe make this as std::vector< int > sizes
-        // and print as fmt::format( "{} {}{};\n", m_type, m_name fmt::join( sizes ) );
-        std::string m_array = ""; 
+        // array sizes, for example {13, 37} for multi demensional array "[13][37]"
+        std::vector<std::size_t> m_array_sizes = {};
 
         std::size_t m_bitfield_size = 0ull; // bitfield size, set to 0 if var isn't a bitfield
-
     public:
         __forceinline bool is_bitfield() const {
             return static_cast<bool>(m_bitfield_size);
         }
 
         __forceinline bool is_array() const {
-            return !m_array.empty();
+            return !m_array_sizes.empty();
         }
     public:
-        __forceinline std::string formatted_name() const {
+        std::size_t total_array_size() const {
+            std::size_t result = 0ull;
+
+            for (auto size : m_array_sizes) {
+                if (!result) {
+                    result = size;
+                    continue;
+                }
+
+                result *= size;
+            }
+
+            return result;
+        }
+    public:
+        std::string formatted_array_sizes() const {
+            std::string result;
+
+            for (std::size_t size : m_array_sizes)
+                result += fmt::format("[{}]", size);
+
+            return result;
+        }
+
+        std::string formatted_name() const {
             if (is_bitfield())
                 return std::format("{}: {}", m_name, m_bitfield_size);
 
             if (is_array())
-                return std::format("{}{}", m_name, m_array);
+                return std::format("{}{}", m_name, formatted_array_sizes());
 
             return m_name;
         }
@@ -115,14 +136,15 @@ namespace name_parser {
         }
     } // namespace detail
 
-    inline field_info_t parse(const std::string& type_name, const std::string& name, const std::string& arrays_postfix) {
+    inline field_info_t parse(const std::string& type_name, const std::string& name, const std::vector<std::size_t>& array_sizes) {
         field_info_t result = {};
         result.m_name = name;
-        result.m_array = arrays_postfix;
+
+        std::copy(array_sizes.begin(), array_sizes.end(), std::back_inserter(result.m_array_sizes));
 
         detail::parse_bitfield(result, type_name);
         detail::parse_type(result, type_name);
 
         return result;
     }
-} // namespace name_parser
+} // namespace field_parser

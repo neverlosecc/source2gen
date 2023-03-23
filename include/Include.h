@@ -25,8 +25,8 @@ using namespace std::this_thread;
 
 #pragma region Tools
 #include "tools/codegen.h"
+#include "tools/field_parser.h"
 #include "tools/fnv.h"
-#include "tools/name_parser.h"
 #pragma endregion Tools
 
 namespace source2_gen {
