@@ -313,7 +313,10 @@ namespace sdk {
                         builder.access_modifier("private");
 
                         const auto pad_offset_str = fmt::format("{:#x}", expected_offset);
-                        builder.struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false, true).comment(pad_offset_str);
+                        builder.struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false, true)
+                            .reset_tabs_count()
+                            .comment(pad_offset_str)
+                            .restore_tabs_count();
 
                         builder.access_modifier("public");
                     }
@@ -335,7 +338,7 @@ namespace sdk {
 
                         if (expected_union_size_bits < state.total_bits_count_in_union)
                             throw std::runtime_error(
-                                fmt::format("Unexpected union size {} vs {}", state.total_bits_count_in_union, expected_union_size_bits));
+                                fmt::format("Unexpected union size: {}. Expected: {}", state.total_bits_count_in_union, expected_union_size_bits));
 
                         if (expected_union_size_bits > state.total_bits_count_in_union)
                             builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
@@ -392,7 +395,7 @@ namespace sdk {
                     if (expected_union_size_bits > actual_union_size_bits)
                         builder.struct_padding(std::nullopt, 0, false, false, expected_union_size_bits - actual_union_size_bits)
                             .reset_tabs_count()
-                            .comment("@note: autoaligned")
+                            .comment("Autoaligned")
                             .restore_tabs_count();
 
                     builder.end_bitfield_block(false).reset_tabs_count().comment(fmt::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
@@ -413,9 +416,9 @@ namespace sdk {
 
                 if ((!class_info->m_align && class_info->m_size)) {
                     if (CSchemaClassInfo* parent = class_dump.GetParent(); !parent)
-                        builder.struct_padding(0, class_info->m_size, false).comment("@note: autoaligned");
+                        builder.struct_padding(0, class_info->m_size, false).reset_tabs_count().comment("Autoaligned").restore_tabs_count();
                     else
-                        builder.comment("@note: no members available");
+                        builder.comment("No members available");
                 }
 
                 builder.end_block();
