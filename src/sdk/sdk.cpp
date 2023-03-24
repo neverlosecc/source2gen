@@ -40,7 +40,7 @@ namespace sdk {
             builder.comment(fmt::format("Alignment: {}", alignment)).comment(fmt::format("Size: {:#x}", size));
         }
 
-        __forceinline void AssembleEnums(codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
+        void AssembleEnums(codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
             for (auto schema_enum_binding : enums.GetElements()) {
                 // @note: @es3n1n: get type name by align size
                 //
@@ -93,8 +93,7 @@ namespace sdk {
             }
         }
 
-        __forceinline void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_t::self_ref builder,
-                                           CUtlTSHash<CSchemaClassBinding*> classes) {
+        void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
             struct class_t {
                 CSchemaClassInfo* target_;
                 std::set<CSchemaClassInfo*> refs_;
@@ -242,7 +241,7 @@ namespace sdk {
                 return {type->m_name_, {}};
             };
 
-            for (const auto& class_dump : classes_to_dump) {
+            for (auto& class_dump : classes_to_dump) {
                 // @note: @es3n1n: get class info, assemble it
                 //
                 const auto class_info = class_dump.target_;
@@ -335,10 +334,11 @@ namespace sdk {
                         const auto actual_union_size_bits = state.total_bits_count_in_union;
 
                         if (expected_union_size_bits < state.total_bits_count_in_union)
-                            __debugbreak(); // smh
+                            throw std::runtime_error(
+                                fmt::format("Unexpected union size {} vs {}", state.total_bits_count_in_union, expected_union_size_bits));
 
                         if (expected_union_size_bits > state.total_bits_count_in_union)
-                            builder.struct_padding(0, 0, true, false, expected_union_size_bits - actual_union_size_bits);
+                            builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
 
                         state.last_field_offset += expected_union_size_bytes;
                         state.last_field_size = expected_union_size_bytes;
@@ -375,7 +375,7 @@ namespace sdk {
                     // @note: @es3n1n: push prop
                     //
                     builder.prop(var_info.m_type, var_info.formatted_name(), false);
-                    if (field->m_single_inheritance_offset)
+                    if (!var_info.is_bitfield())
                         builder.reset_tabs_count().comment(fmt::format("{:#x}", field->m_single_inheritance_offset), false).restore_tabs_count();
                     builder.next_line();
                 }
@@ -387,10 +387,10 @@ namespace sdk {
 
                     // @note: @es3n1n: apply 8 bytes align
                     //
-                    const auto expected_union_size_bits = actual_union_size_bits + (actual_union_size_bits % class_info->m_align);
+                    const auto expected_union_size_bits = actual_union_size_bits + (actual_union_size_bits % 8);
 
                     if (expected_union_size_bits > actual_union_size_bits)
-                        builder.struct_padding(0, 0, false, false, expected_union_size_bits - actual_union_size_bits)
+                        builder.struct_padding(std::nullopt, 0, false, false, expected_union_size_bits - actual_union_size_bits)
                             .reset_tabs_count()
                             .comment("@note: autoaligned")
                             .restore_tabs_count();
@@ -404,15 +404,19 @@ namespace sdk {
                 // @note: @es3n1n: dump static fields
                 //
                 for (auto s = 0; s < class_info->m_static_size; s++) {
-                    auto [name, m_type, m_instance, pad_0x0018] = class_info->m_static_fiels[s];
+                    auto static_field = &class_info->m_static_fiels[s];
 
-                    auto [type, mod] = get_type(m_type);
-                    const auto var_info = field_parser::parse(type, name, mod);
+                    auto [type, mod] = get_type(static_field->m_type);
+                    const auto var_info = field_parser::parse(type, static_field->name, mod);
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
                 }
 
-                if (!class_info->m_align)
-                    builder.comment("no members available");
+                if ((!class_info->m_align && class_info->m_size)) {
+                    if (CSchemaClassInfo* parent = class_dump.GetParent(); !parent)
+                        builder.struct_padding(0, class_info->m_size, false).comment("@note: autoaligned");
+                    else
+                        builder.comment("@note: no members available");
+                }
 
                 builder.end_block();
             }
