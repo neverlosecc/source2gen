@@ -14,8 +14,10 @@ namespace {
         "schemasystem.dll"sv,
         
         // @note: @soufiw: latest modules that gets loaded in the main menu
-        "matchmaking.dll"sv, 
-        "navsystem.dll"sv
+        "navsystem.dll"sv,
+        #if defined(CSGO2)
+        "matchmaking.dll"sv,
+        #endif
     };
     // clang-format on
 
