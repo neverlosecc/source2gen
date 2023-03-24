@@ -7,26 +7,36 @@
 #define CSGO2
 
 #ifdef SBOX
+// untested, CSchemaType::m_schema_type_ might be wrong
+    #define CSCHEMATYPE_GETSIZES_INDEX 5
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
 #elif defined ARTIFACT2
+// untested, CSchemaType::m_schema_type_ might be wrong
+    #define CSCHEMATYPE_GETSIZES_INDEX 5
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5430
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
 #elif defined ARTIFACT1
+// untested, CSchemaType::m_schema_type_ might be wrong
+    #define CSCHEMATYPE_GETSIZES_INDEX 5
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x4428
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x4B8
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2001
 #elif defined DOTA2
+    #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
 #elif defined UNDERLORDS
+// untested, CSchemaType::m_schema_type_ might be wrong
+    #define CSCHEMATYPE_GETSIZES_INDEX 5
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
 #elif defined DESKJOB
+    #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x3A0
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
@@ -35,6 +45,7 @@
 #elif defined THE_LAB_ROBOT_REPAIR
     #error "unimplemented"
 #elif defined CSGO2
+    #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
@@ -158,7 +169,7 @@ enum EAtomicCategory {
 class CSchemaType {
 public:
     bool GetSizes(int* out_size1, uint8_t* unk_probably_not_size) {
-        return reinterpret_cast<int(__thiscall*)(void*, int*, uint8_t*)>(_vtable[3])(this, out_size1, unk_probably_not_size);
+        return reinterpret_cast<int(__thiscall*)(void*, int*, uint8_t*)>(_vtable[CSCHEMATYPE_GETSIZES_INDEX])(this, out_size1, unk_probably_not_size);
     }
 public:
     bool GetSize(int* out_size) {

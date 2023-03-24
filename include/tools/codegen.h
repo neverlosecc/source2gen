@@ -223,14 +223,14 @@ namespace codegen {
             return push_line(fmt::format("struct {};", text));
         }
 
-        self_ref struct_padding(const std::ptrdiff_t pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
+        self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
                                 const bool is_private_field = false, const std::size_t bitfield_size = 0ull) {
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
             std::string type_name = bitfield_size ? guess_bitfield_type(bitfield_size) : "uint8_t";
             if (is_private_field)
                 type_name = "[[maybe_unused]] " + type_name;
 
-            auto pad_name = pad_offset ? fmt::format("__pad{:04x}", pad_offset) : fmt::format("__pad{:d}", _pads_count++);
+            auto pad_name = pad_offset.has_value() ? fmt::format("__pad{:04x}", pad_offset.value()) : fmt::format("__pad{:d}", _pads_count++);
             if (!bitfield_size)
                 pad_name = pad_name + fmt::format("[{:#x}]", padding_size);
 
