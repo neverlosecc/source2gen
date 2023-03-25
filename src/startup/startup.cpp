@@ -68,7 +68,7 @@ namespace source2_gen {
 
     void WINAPI main(const HMODULE module) {
         auto console = std::make_unique<DebugConsole>();
-        console->start("source2gen :: github.com/neverlosecc/source2gen");
+        console->start(kConsoleTitleMessage.data());
 
         std::jthread setup_thread(&Setup);
 
