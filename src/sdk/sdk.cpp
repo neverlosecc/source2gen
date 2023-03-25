@@ -132,6 +132,20 @@ namespace sdk {
                     // otherwise, order doesn`t matter.
                     return false;
                 }
+
+                SchemaClassFieldData_t* GetFirstField() {
+                    if (target_->m_align)
+                        return &target_->m_fields[0];
+                    return nullptr;
+                }
+
+                // @note: @es3n1n: Returns the struct size without its parent's size
+                //
+                std::ptrdiff_t ClassSizeWithoutParent() {
+                    if (CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
+                        return this->target_->m_size - class_parent->m_size;
+                    return this->target_->m_size;
+                }
             };
 
             // @note: @soufiw:
@@ -244,6 +258,7 @@ namespace sdk {
             for (auto& class_dump : classes_to_dump) {
                 // @note: @es3n1n: get class info, assemble it
                 //
+                const auto class_parent = class_dump.GetParent();
                 const auto class_info = class_dump.target_;
                 const auto is_struct = ends_with(class_info->m_name, "_t");
                 PrintClassInfo(builder, class_info->m_align, class_info->m_size);
@@ -257,9 +272,9 @@ namespace sdk {
                 // @note: @es3n1n: start class
                 //
                 if (is_struct)
-                    builder.begin_struct_with_base_type(class_info->m_name, parent_cls_name);
+                    builder.begin_struct_with_base_type(class_info->m_name, parent_cls_name, "");
                 else
-                    builder.begin_class_with_base_type(class_info->m_name, parent_cls_name);
+                    builder.begin_class_with_base_type(class_info->m_name, parent_cls_name, "");
 
                 // @note: @es3n1n: field assembling state
                 //
@@ -269,6 +284,28 @@ namespace sdk {
                     bool assembling_bitfield = false;
                     std::size_t total_bits_count_in_union = 0ull;
                 } state;
+
+                // @note: @es3n1n: if we need to pad first field or if there's no fields in this class
+                // and we need to properly pad it to make sure its size is the same as we expect it
+                //
+                std::ptrdiff_t expected_pad_size = class_dump.ClassSizeWithoutParent();
+                if (const auto first_field = class_dump.GetFirstField(); first_field)
+                    expected_pad_size = first_field->m_single_inheritance_offset;
+                if (expected_pad_size)
+                    expected_pad_size -= class_parent ? class_parent->m_size : 0;
+
+                // @note: @es3n1n: and finally insert a pad
+                //
+                if (expected_pad_size)
+                    builder.access_modifier("private")
+                        .struct_padding(0, expected_pad_size, false, true)
+                        .reset_tabs_count()
+                        .comment("0x0")
+                        .restore_tabs_count();
+
+                // @note: @es3n1n: begin public members
+                //
+                builder.access_modifier("public");
 
                 for (auto k = 0; k < class_info->m_align; k++) {
                     const auto field = &class_info->m_fields[k];
@@ -310,15 +347,13 @@ namespace sdk {
                     const auto expected_offset = state.last_field_offset + state.last_field_size;
                     if (state.last_field_offset && state.last_field_size && expected_offset < field->m_single_inheritance_offset &&
                         !state.assembling_bitfield) {
-                        builder.access_modifier("private");
 
-                        const auto pad_offset_str = std::format("{:#x}", expected_offset);
-                        builder.struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false, true)
+                        builder.access_modifier("private")
+                            .struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false, true)
                             .reset_tabs_count()
-                            .comment(pad_offset_str)
-                            .restore_tabs_count();
-
-                        builder.access_modifier("public");
+                            .comment(std::format("{:#x}", expected_offset))
+                            .restore_tabs_count()
+                            .access_modifier("public");
                     }
 
                     // @note: @es3n1n: begin union if we're assembling bitfields
@@ -393,10 +428,7 @@ namespace sdk {
                     const auto expected_union_size_bits = actual_union_size_bits + (actual_union_size_bits % 8);
 
                     if (expected_union_size_bits > actual_union_size_bits)
-                        builder.struct_padding(std::nullopt, 0, false, false, expected_union_size_bits - actual_union_size_bits)
-                            .reset_tabs_count()
-                            .comment("Autoaligned")
-                            .restore_tabs_count();
+                        builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
 
                     builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
 
@@ -406,6 +438,11 @@ namespace sdk {
 
                 // @note: @es3n1n: dump static fields
                 //
+                if (class_info->m_static_size) {
+                    if (class_info->m_align)
+                        builder.next_line();
+                    builder.comment("Static fields:");
+                }
                 for (auto s = 0; s < class_info->m_static_size; s++) {
                     auto static_field = &class_info->m_static_fiels[s];
 
@@ -414,12 +451,8 @@ namespace sdk {
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
                 }
 
-                if ((!class_info->m_align && class_info->m_size)) {
-                    if (CSchemaClassInfo* parent = class_dump.GetParent(); !parent)
-                        builder.struct_padding(0, class_info->m_size, false).reset_tabs_count().comment("Autoaligned").restore_tabs_count();
-                    else
-                        builder.comment("No members available");
-                }
+                if (!class_info->m_align && !class_info->m_static_size)
+                    builder.comment("No members available");
 
                 builder.end_block();
             }
