@@ -1,8 +1,8 @@
-# NEVERLOSE :: Source2Gen
+# Source2Gen
 
-NEVERLOSE Source2Gen is a tool to generate Source 2 SDKs. \
+Source2Gen is a tool to generate Source 2 SDKs. \
 This project aims to provide an easy way to generate SDKs for various Source 2 games. \
-An example of such SDKs could be found at [neverlosecc/source2sdk](https://github.com/neverlosecc/source2sdk/tree/cs2).
+An example of such SDKs could be found at [source2sdk](https://github.com/neverlosecc/source2sdk/tree/cs2).
 
 ---
 
@@ -45,13 +45,15 @@ premake5 vs2019
 
 ## Credits
 
-This project is made possible by the contributions of various individuals and projects. Special thanks to the following:
-
-- **[praydog](https://github.com/praydog)** - Original Source2Gen project
+This project is made possible by the contributions of various individuals and projects. Special thanks to the following: 
+- **[es3n1n](https://github.com/es3n1n)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=es3n1n)
+- **[cpz](https://github.com/cpz)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=cpz)
+- **[Soufiw](https://github.com/Soufiw)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=Soufiw)
+- **[anarh1st47](https://github.com/anarh1st47)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=anarh1st47)
+- **[praydog](https://github.com/praydog)** - the author of the original [Source2Gen](https://github.com/praydog/Source2Gen) project
 
 This project also utilizes the following open-source libraries:
-
 - **[fmt](https://github.com/fmtlib/fmt)** - Modern C++ formatting library
 - **[Premake](https://github.com/premake/premake-core)** - Build configuration tool
 
-If you've contributed to the project and would like to be listed here, please submit a pull request with your information added to the credits.
+If you've contributed to the project and would like to be listed here, please submit a [pull request](https://github.com/neverlosecc/source2gen/pulls) with your information added to the credits.
