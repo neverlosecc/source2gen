@@ -120,7 +120,7 @@ namespace codegen {
 
         self_ref begin_class_with_base_type(const std::string& class_name, const std::string& base_type, const std::string access_modifier = "public") {
             if (base_type.empty())
-                return begin_class(std::cref(class_name));
+                return begin_class(std::cref(class_name), access_modifier);
 
             return begin_block(std::format("class {} : public {}", class_name, base_type), access_modifier);
         }
@@ -156,7 +156,7 @@ namespace codegen {
 
         self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type, const std::string access_modifier = "public") {
             if (base_type.empty())
-                return begin_struct(std::cref(name));
+                return begin_struct(std::cref(name), access_modifier);
 
             return begin_block(std::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
         }
