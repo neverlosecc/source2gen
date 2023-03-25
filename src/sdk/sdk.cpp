@@ -283,26 +283,39 @@ namespace sdk {
                     std::size_t last_field_offset = 0ull;
                     bool assembling_bitfield = false;
                     std::size_t total_bits_count_in_union = 0ull;
+
+                    std::ptrdiff_t collision_end_offset = 0ull; // @fixme: @es3n1n: todo proper collision fix and remove this var
                 } state;
 
                 // @note: @es3n1n: if we need to pad first field or if there's no fields in this class
                 // and we need to properly pad it to make sure its size is the same as we expect it
                 //
-                const std::ptrdiff_t first_pad_offset = class_parent ? class_parent->m_size : 0;
-                std::ptrdiff_t expected_pad_size = class_dump.ClassSizeWithoutParent();
+                std::optional<std::ptrdiff_t> first_field_offset = std::nullopt;
                 if (const auto first_field = class_dump.GetFirstField(); first_field)
-                    expected_pad_size = first_field->m_single_inheritance_offset;
-                if (expected_pad_size)
-                    expected_pad_size -= first_pad_offset;
+                    first_field_offset = first_field->m_single_inheritance_offset;
+
+                const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_size : 0;
+
+                std::ptrdiff_t expected_pad_size = first_field_offset.value_or(class_dump.ClassSizeWithoutParent());
+                if (expected_pad_size) // @note: @es3n1n: if there's a pad size we should account the parent class size
+                    expected_pad_size -= parent_class_size;
 
                 // @note: @es3n1n: and finally insert a pad
                 //
-                if (expected_pad_size)
+                if (expected_pad_size > 0) // @fixme: @es3n1n: this is wrong, i probably should check for collisions instead
                     builder.access_modifier("private")
-                        .struct_padding(first_pad_offset, expected_pad_size, false, true)
+                        .struct_padding(parent_class_size, expected_pad_size, false, true)
                         .reset_tabs_count()
-                        .comment(std::format("{:#x}", first_pad_offset))
+                        .comment(std::format("{:#x}", parent_class_size))
                         .restore_tabs_count();
+
+                // @todo: @es3n1n: if for some mysterious reason this class describes fields
+                // of the base class we should handle it too.
+                if (class_parent && first_field_offset.has_value() && first_field_offset.value() <= class_parent->m_size) {
+                    builder.comment(
+                        std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_size));
+                    state.collision_end_offset = class_parent->m_size;
+                }
 
                 // @note: @es3n1n: begin public members
                 //
@@ -312,6 +325,13 @@ namespace sdk {
                     const auto field = &class_info->m_fields[k];
                     if (!field)
                         continue;
+
+                    // @fixme: @es3n1n: todo proper collision fix and remove this block
+                    if (state.collision_end_offset && field->m_single_inheritance_offset < state.collision_end_offset) {
+                        builder.comment(std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field->m_name,
+                                                    field->m_single_inheritance_offset));
+                        continue;
+                    }
 
                     // @note: @es3n1n: some more utils
                     //
