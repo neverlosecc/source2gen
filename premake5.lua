@@ -13,8 +13,6 @@ workspace "source2gen"
 
   IncludeDir = {}
 
-  IncludeDir["fmt"] = "external/fmt/include"
-  
   CppVersion = "C++latest"
   MsvcToolset = "v143"
   WindowsSdkVersion = "10.0"
@@ -39,10 +37,10 @@ workspace "source2gen"
         "4100", -- C4100: unreferenced formal parameter
         "4201", -- C4201: nameless struct/union
         "4307", -- C4307: integral constant overflow
-	    "4311", -- C4311: 'variable' : pointer truncation from 'type' to 'type'
+        "4311", -- C4311: 'variable' : pointer truncation from 'type' to 'type'
         "4302", -- C4302: 'conversion' : truncation from 'type 1' to 'type 2'
-	    "4267", -- C4267: 'var' : conversion from 'size_t' to 'type', possible loss of data
-	    "4244"  -- C4244: 'conversion' conversion from 'type1' to 'type2', possible loss of data
+        "4267", -- C4267: 'var' : conversion from 'size_t' to 'type', possible loss of data
+        "4244"  -- C4244: 'conversion' conversion from 'type1' to 'type2', possible loss of data
     }
   end
    
@@ -54,34 +52,7 @@ workspace "source2gen"
     filter "not configurations:Debug"
       defines { "NDEBUG" }
   end
-	
-  project "fmt"
-    location "external/%{prj.name}"
-    kind "StaticLib"
-    language "C++"
 
-    targetdir ("bin/lib/" .. outputdir)
-    objdir ("bin/lib/int/" .. outputdir .. "/%{prj.name}")
-
-    files
-    {
-      "external/%{prj.name}/include/**.h",
-      "external/%{prj.name}/src/**.cc"
-    }
-
-	  removefiles 
-	  { 
-	    "external/%{prj.name}/src/fmt.cc"
-	  }
-	
-    includedirs
-    {
-      "external/%{prj.name}/include"
-    }
-
-    DeclareMSVCOptions()
-    DeclareDebugOptions()
-	
   project "source2gen"
     location "source2gen"
     kind "SharedLib"
@@ -97,15 +68,14 @@ workspace "source2gen"
 	
     files
     {
-	  ".clang-format",
+      ".clang-format",
       "include/**.h",
-	  "include/**.hpp",
+      "include/**.hpp",
       "src/**.cpp",
     }
 
     includedirs
     {
-	  "%{IncludeDir.fmt}",
       "include",
       "src"
     }
@@ -113,11 +83,6 @@ workspace "source2gen"
     libdirs
     {
       "bin/lib"
-    }
-
-    links
-    {
-	    "fmt"
     }
 
     DeclareMSVCOptions()

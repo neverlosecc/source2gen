@@ -12,12 +12,10 @@
 using namespace std::chrono_literals;
 using namespace std::this_thread;
 
-#pragma region FMT
-#include <fmt/color.h>
-#include <fmt/core.h>
-#include <fmt/os.h>
-#include <fmt/printf.h>
-#pragma endregion FMT
+#pragma region Format
+#include <format>
+#include <iostream>
+#pragma endregion Format
 
 #pragma region Source Engine 2
 #include <SDK/SDK.h>

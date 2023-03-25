@@ -37,7 +37,7 @@ namespace {
 namespace sdk {
     namespace {
         __forceinline void PrintClassInfo(codegen::generator_t::self_ref builder, std::int16_t alignment, std::int16_t size) {
-            builder.comment(fmt::format("Alignment: {}", alignment)).comment(fmt::format("Size: {:#x}", size));
+            builder.comment(std::format("Alignment: {}", alignment)).comment(std::format("Size: {:#x}", size));
         }
 
         void AssembleEnums(codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
@@ -284,11 +284,11 @@ namespace sdk {
 
                         // clang-format off
                         if (std::find(kStringMetadataEntries.begin(), kStringMetadataEntries.end(), value_hash_name) != kStringMetadataEntries.end())
-                            value = fmt::to_string(metadata_entry.m_value->m_sz_value);
+                            value = metadata_entry.m_value->m_sz_value;
                         else if (std::find(kIntegerMetadataEntries.begin(), kIntegerMetadataEntries.end(), value_hash_name) != kIntegerMetadataEntries.end())
-                            value = fmt::to_string(metadata_entry.m_value->m_n_value);
+                            value = std::to_string(metadata_entry.m_value->m_n_value);
                         else if (std::find(kFloatMetadataEntries.begin(), kFloatMetadataEntries.end(), value_hash_name) != kFloatMetadataEntries.end())
-                            value = fmt::to_string(metadata_entry.m_value->m_f_value);
+                            value = std::to_string(metadata_entry.m_value->m_f_value);
                         // clang-format on
 
                         return value;
@@ -312,7 +312,7 @@ namespace sdk {
                         !state.assembling_bitfield) {
                         builder.access_modifier("private");
 
-                        const auto pad_offset_str = fmt::format("{:#x}", expected_offset);
+                        const auto pad_offset_str = std::format("{:#x}", expected_offset);
                         builder.struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false, true)
                             .reset_tabs_count()
                             .comment(pad_offset_str)
@@ -338,7 +338,7 @@ namespace sdk {
 
                         if (expected_union_size_bits < state.total_bits_count_in_union)
                             throw std::runtime_error(
-                                fmt::format("Unexpected union size: {}. Expected: {}", state.total_bits_count_in_union, expected_union_size_bits));
+                                std::format("Unexpected union size: {}. Expected: {}", state.total_bits_count_in_union, expected_union_size_bits));
 
                         if (expected_union_size_bits > state.total_bits_count_in_union)
                             builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
@@ -348,7 +348,7 @@ namespace sdk {
 
                         builder.end_bitfield_block(false)
                             .reset_tabs_count()
-                            .comment(fmt::format("{:d} bits", expected_union_size_bits))
+                            .comment(std::format("{:d} bits", expected_union_size_bits))
                             .restore_tabs_count();
 
                         state.total_bits_count_in_union = 0ull;
@@ -363,7 +363,7 @@ namespace sdk {
                         if (auto data = get_metadata_type(field_metadata); data.empty())
                             builder.comment(field_metadata.m_name);
                         else
-                            builder.comment(fmt::format("{} \"{}\"", field_metadata.m_name, data));
+                            builder.comment(std::format("{} \"{}\"", field_metadata.m_name, data));
                     }
 
                     // @note: @es3n1n: update state
@@ -379,7 +379,7 @@ namespace sdk {
                     //
                     builder.prop(var_info.m_type, var_info.formatted_name(), false);
                     if (!var_info.is_bitfield())
-                        builder.reset_tabs_count().comment(fmt::format("{:#x}", field->m_single_inheritance_offset), false).restore_tabs_count();
+                        builder.reset_tabs_count().comment(std::format("{:#x}", field->m_single_inheritance_offset), false).restore_tabs_count();
                     builder.next_line();
                 }
 
@@ -398,7 +398,7 @@ namespace sdk {
                             .comment("Autoaligned")
                             .restore_tabs_count();
 
-                    builder.end_bitfield_block(false).reset_tabs_count().comment(fmt::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
+                    builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
 
                     state.total_bits_count_in_union = 0;
                     state.assembling_bitfield = false;
@@ -436,13 +436,13 @@ namespace sdk {
 
         // @note: @es3n1n: print debug info
         //
-        fmt::print("{}: Assembling {}\n", __FUNCTION__, scope_name);
+        std::cout << std::format("{}: Assembling {}", __FUNCTION__, scope_name) << std::endl;
 
         // @note: @es3n1n: build file path
         //
         if (!std::filesystem::exists(kOutDirName))
             std::filesystem::create_directories(kOutDirName);
-        const std::string out_file_path = fmt::format("{}\\{}.hpp", kOutDirName, scope_name);
+        const std::string out_file_path = std::format("{}\\{}.hpp", kOutDirName, scope_name);
 
         // @note: @es3n1n: init codegen
         //
@@ -463,9 +463,9 @@ namespace sdk {
         //
         builder.next_line()
             .comment("/////////////////////////////////////////////////////////////")
-            .comment(fmt::format("Binary: {}", current->GetScopeName()))
-            .comment(fmt::format("Classes count: {}", current_classes.Count()))
-            .comment(fmt::format("Enums count: {}", current_enums.Count()))
+            .comment(std::format("Binary: {}", current->GetScopeName()))
+            .comment(std::format("Classes count: {}", current_classes.Count()))
+            .comment(std::format("Enums count: {}", current_enums.Count()))
             .comment(kCreatedBySource2genMessage.data())
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();
