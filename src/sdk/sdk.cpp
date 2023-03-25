@@ -311,7 +311,7 @@ namespace sdk {
 
                 // @todo: @es3n1n: if for some mysterious reason this class describes fields
                 // of the base class we should handle it too.
-                if (class_parent && first_field_offset.has_value() && first_field_offset.value() <= class_parent->m_size) {
+                if (class_parent && first_field_offset.has_value() && first_field_offset.value() < class_parent->m_size) {
                     builder.comment(
                         std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_size));
                     state.collision_end_offset = class_parent->m_size;
