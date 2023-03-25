@@ -12,12 +12,10 @@
 using namespace std::chrono_literals;
 using namespace std::this_thread;
 
-#pragma region FMT
-#include <fmt/color.h>
-#include <fmt/core.h>
-#include <fmt/os.h>
-#include <fmt/printf.h>
-#pragma endregion FMT
+#pragma region Format
+#include <format>
+#include <iostream>
+#pragma endregion Format
 
 #pragma region Source Engine 2
 #include <SDK/SDK.h>
@@ -33,5 +31,6 @@ namespace source2_gen {
     void WINAPI main(HMODULE h_module);
 }
 
-constexpr std::string_view kPoweredByMessage = {"Powered by neverlose.cc & es3n.in"};
+constexpr std::string_view kConsoleTitleMessage = {"source2gen :: github.com/neverlosecc/source2gen"};
+constexpr std::string_view kPoweredByMessage = {"Powered by github.com/neverlosecc/source2gen"};
 constexpr std::string_view kCreatedBySource2genMessage = {"Created using source2gen - github.com/neverlosecc/source2gen"};

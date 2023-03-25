@@ -40,13 +40,13 @@ namespace source2_gen {
         while (!required_modules_present())
             sleep_for(std::chrono::seconds(5));
 
-        fmt::print("{}: Starting\n", __FUNCTION__);
+        std::cout << std::format("{}: Starting", __FUNCTION__) << std::endl;
 
         // @note: @es3n1n: Capture interfaces
         //
         sdk::g_schema = CSchemaSystem::GetInstance();
         if (!sdk::g_schema)
-            throw std::runtime_error(fmt::format("Unable to obtain Schema interface"));
+            throw std::runtime_error(std::format("Unable to obtain Schema interface"));
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk
         //
@@ -62,13 +62,13 @@ namespace source2_gen {
         //
         is_finished = true;
     } catch (std::runtime_error& err) {
-        fmt::print("{} :: ERROR :: {}", __FUNCTION__, err.what());
+        std::cout << std::format("{} :: ERROR :: {}", __FUNCTION__, err.what()) << std::endl;
         is_finished = true;
     }
 
     void WINAPI main(const HMODULE module) {
         auto console = std::make_unique<DebugConsole>();
-        console->start("source2gen :: github.com/neverlosecc/source2gen");
+        console->start(kConsoleTitleMessage.data());
 
         std::jthread setup_thread(&Setup);
 
@@ -77,8 +77,8 @@ namespace source2_gen {
             sleep_for(std::chrono::milliseconds(1));
         }
 
-        fmt::print("Successfuly dumped Source 2 SDK, now you can safely close this console.\n");
-        fmt::print("{}\n", kPoweredByMessage);
+        std::cout << std::format("Successfuly dumped Source 2 SDK, now you can safely close this console.") << std::endl;
+        std::cout << kPoweredByMessage << std::endl;
 
         console->stop();
         console.reset();

@@ -37,7 +37,7 @@ namespace {
 namespace sdk {
     namespace {
         __forceinline void PrintClassInfo(codegen::generator_t::self_ref builder, std::int16_t alignment, std::int16_t size) {
-            builder.comment(fmt::format("Alignment: {}", alignment)).comment(fmt::format("Size: {:#x}", size));
+            builder.comment(std::format("Alignment: {}", alignment)).comment(std::format("Size: {:#x}", size));
         }
 
         void AssembleEnums(codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
@@ -131,6 +131,20 @@ namespace sdk {
 
                     // otherwise, order doesn`t matter.
                     return false;
+                }
+
+                SchemaClassFieldData_t* GetFirstField() {
+                    if (target_->m_align)
+                        return &target_->m_fields[0];
+                    return nullptr;
+                }
+
+                // @note: @es3n1n: Returns the struct size without its parent's size
+                //
+                std::ptrdiff_t ClassSizeWithoutParent() {
+                    if (CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
+                        return this->target_->m_size - class_parent->m_size;
+                    return this->target_->m_size;
                 }
             };
 
@@ -244,6 +258,7 @@ namespace sdk {
             for (auto& class_dump : classes_to_dump) {
                 // @note: @es3n1n: get class info, assemble it
                 //
+                const auto class_parent = class_dump.GetParent();
                 const auto class_info = class_dump.target_;
                 const auto is_struct = ends_with(class_info->m_name, "_t");
                 PrintClassInfo(builder, class_info->m_align, class_info->m_size);
@@ -257,9 +272,9 @@ namespace sdk {
                 // @note: @es3n1n: start class
                 //
                 if (is_struct)
-                    builder.begin_struct_with_base_type(class_info->m_name, parent_cls_name);
+                    builder.begin_struct_with_base_type(class_info->m_name, parent_cls_name, "");
                 else
-                    builder.begin_class_with_base_type(class_info->m_name, parent_cls_name);
+                    builder.begin_class_with_base_type(class_info->m_name, parent_cls_name, "");
 
                 // @note: @es3n1n: field assembling state
                 //
@@ -268,12 +283,55 @@ namespace sdk {
                     std::size_t last_field_offset = 0ull;
                     bool assembling_bitfield = false;
                     std::size_t total_bits_count_in_union = 0ull;
+
+                    std::ptrdiff_t collision_end_offset = 0ull; // @fixme: @es3n1n: todo proper collision fix and remove this var
                 } state;
+
+                // @note: @es3n1n: if we need to pad first field or if there's no fields in this class
+                // and we need to properly pad it to make sure its size is the same as we expect it
+                //
+                std::optional<std::ptrdiff_t> first_field_offset = std::nullopt;
+                if (const auto first_field = class_dump.GetFirstField(); first_field)
+                    first_field_offset = first_field->m_single_inheritance_offset;
+
+                const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_size : 0;
+
+                std::ptrdiff_t expected_pad_size = first_field_offset.value_or(class_dump.ClassSizeWithoutParent());
+                if (expected_pad_size) // @note: @es3n1n: if there's a pad size we should account the parent class size
+                    expected_pad_size -= parent_class_size;
+
+                // @note: @es3n1n: and finally insert a pad
+                //
+                if (expected_pad_size > 0) // @fixme: @es3n1n: this is wrong, i probably should check for collisions instead
+                    builder.access_modifier("private")
+                        .struct_padding(parent_class_size, expected_pad_size, false, true)
+                        .reset_tabs_count()
+                        .comment(std::format("{:#x}", parent_class_size))
+                        .restore_tabs_count();
+
+                // @todo: @es3n1n: if for some mysterious reason this class describes fields
+                // of the base class we should handle it too.
+                if (class_parent && first_field_offset.has_value() && first_field_offset.value() < class_parent->m_size) {
+                    builder.comment(
+                        std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_size));
+                    state.collision_end_offset = class_parent->m_size;
+                }
+
+                // @note: @es3n1n: begin public members
+                //
+                builder.access_modifier("public");
 
                 for (auto k = 0; k < class_info->m_align; k++) {
                     const auto field = &class_info->m_fields[k];
                     if (!field)
                         continue;
+
+                    // @fixme: @es3n1n: todo proper collision fix and remove this block
+                    if (state.collision_end_offset && field->m_single_inheritance_offset < state.collision_end_offset) {
+                        builder.comment(std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field->m_name,
+                                                    field->m_single_inheritance_offset));
+                        continue;
+                    }
 
                     // @note: @es3n1n: some more utils
                     //
@@ -284,11 +342,11 @@ namespace sdk {
 
                         // clang-format off
                         if (std::find(kStringMetadataEntries.begin(), kStringMetadataEntries.end(), value_hash_name) != kStringMetadataEntries.end())
-                            value = fmt::to_string(metadata_entry.m_value->m_sz_value);
+                            value = metadata_entry.m_value->m_sz_value;
                         else if (std::find(kIntegerMetadataEntries.begin(), kIntegerMetadataEntries.end(), value_hash_name) != kIntegerMetadataEntries.end())
-                            value = fmt::to_string(metadata_entry.m_value->m_n_value);
+                            value = std::to_string(metadata_entry.m_value->m_n_value);
                         else if (std::find(kFloatMetadataEntries.begin(), kFloatMetadataEntries.end(), value_hash_name) != kFloatMetadataEntries.end())
-                            value = fmt::to_string(metadata_entry.m_value->m_f_value);
+                            value = std::to_string(metadata_entry.m_value->m_f_value);
                         // clang-format on
 
                         return value;
@@ -310,15 +368,13 @@ namespace sdk {
                     const auto expected_offset = state.last_field_offset + state.last_field_size;
                     if (state.last_field_offset && state.last_field_size && expected_offset < field->m_single_inheritance_offset &&
                         !state.assembling_bitfield) {
-                        builder.access_modifier("private");
 
-                        const auto pad_offset_str = fmt::format("{:#x}", expected_offset);
-                        builder.struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false, true)
+                        builder.access_modifier("private")
+                            .struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false, true)
                             .reset_tabs_count()
-                            .comment(pad_offset_str)
-                            .restore_tabs_count();
-
-                        builder.access_modifier("public");
+                            .comment(std::format("{:#x}", expected_offset))
+                            .restore_tabs_count()
+                            .access_modifier("public");
                     }
 
                     // @note: @es3n1n: begin union if we're assembling bitfields
@@ -338,7 +394,7 @@ namespace sdk {
 
                         if (expected_union_size_bits < state.total_bits_count_in_union)
                             throw std::runtime_error(
-                                fmt::format("Unexpected union size: {}. Expected: {}", state.total_bits_count_in_union, expected_union_size_bits));
+                                std::format("Unexpected union size: {}. Expected: {}", state.total_bits_count_in_union, expected_union_size_bits));
 
                         if (expected_union_size_bits > state.total_bits_count_in_union)
                             builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
@@ -348,7 +404,7 @@ namespace sdk {
 
                         builder.end_bitfield_block(false)
                             .reset_tabs_count()
-                            .comment(fmt::format("{:d} bits", expected_union_size_bits))
+                            .comment(std::format("{:d} bits", expected_union_size_bits))
                             .restore_tabs_count();
 
                         state.total_bits_count_in_union = 0ull;
@@ -363,7 +419,7 @@ namespace sdk {
                         if (auto data = get_metadata_type(field_metadata); data.empty())
                             builder.comment(field_metadata.m_name);
                         else
-                            builder.comment(fmt::format("{} \"{}\"", field_metadata.m_name, data));
+                            builder.comment(std::format("{} \"{}\"", field_metadata.m_name, data));
                     }
 
                     // @note: @es3n1n: update state
@@ -379,7 +435,7 @@ namespace sdk {
                     //
                     builder.prop(var_info.m_type, var_info.formatted_name(), false);
                     if (!var_info.is_bitfield())
-                        builder.reset_tabs_count().comment(fmt::format("{:#x}", field->m_single_inheritance_offset), false).restore_tabs_count();
+                        builder.reset_tabs_count().comment(std::format("{:#x}", field->m_single_inheritance_offset), false).restore_tabs_count();
                     builder.next_line();
                 }
 
@@ -393,12 +449,9 @@ namespace sdk {
                     const auto expected_union_size_bits = actual_union_size_bits + (actual_union_size_bits % 8);
 
                     if (expected_union_size_bits > actual_union_size_bits)
-                        builder.struct_padding(std::nullopt, 0, false, false, expected_union_size_bits - actual_union_size_bits)
-                            .reset_tabs_count()
-                            .comment("Autoaligned")
-                            .restore_tabs_count();
+                        builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
 
-                    builder.end_bitfield_block(false).reset_tabs_count().comment(fmt::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
+                    builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
 
                     state.total_bits_count_in_union = 0;
                     state.assembling_bitfield = false;
@@ -406,20 +459,21 @@ namespace sdk {
 
                 // @note: @es3n1n: dump static fields
                 //
+                if (class_info->m_static_size) {
+                    if (class_info->m_align)
+                        builder.next_line();
+                    builder.comment("Static fields:");
+                }
                 for (auto s = 0; s < class_info->m_static_size; s++) {
-                    auto static_field = &class_info->m_static_fiels[s];
+                    auto static_field = &class_info->m_static_fields[s];
 
                     auto [type, mod] = get_type(static_field->m_type);
                     const auto var_info = field_parser::parse(type, static_field->name, mod);
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
                 }
 
-                if ((!class_info->m_align && class_info->m_size)) {
-                    if (CSchemaClassInfo* parent = class_dump.GetParent(); !parent)
-                        builder.struct_padding(0, class_info->m_size, false).reset_tabs_count().comment("Autoaligned").restore_tabs_count();
-                    else
-                        builder.comment("No members available");
-                }
+                if (!class_info->m_align && !class_info->m_static_size)
+                    builder.comment("No members available");
 
                 builder.end_block();
             }
@@ -436,13 +490,13 @@ namespace sdk {
 
         // @note: @es3n1n: print debug info
         //
-        fmt::print("{}: Assembling {}\n", __FUNCTION__, scope_name);
+        std::cout << std::format("{}: Assembling {}", __FUNCTION__, scope_name) << std::endl;
 
         // @note: @es3n1n: build file path
         //
         if (!std::filesystem::exists(kOutDirName))
             std::filesystem::create_directories(kOutDirName);
-        const std::string out_file_path = fmt::format("{}\\{}.hpp", kOutDirName, scope_name);
+        const std::string out_file_path = std::format("{}\\{}.hpp", kOutDirName, scope_name);
 
         // @note: @es3n1n: init codegen
         //
@@ -463,9 +517,9 @@ namespace sdk {
         //
         builder.next_line()
             .comment("/////////////////////////////////////////////////////////////")
-            .comment(fmt::format("Binary: {}", current->GetScopeName()))
-            .comment(fmt::format("Classes count: {}", current_classes.Count()))
-            .comment(fmt::format("Enums count: {}", current_enums.Count()))
+            .comment(std::format("Binary: {}", current->GetScopeName()))
+            .comment(std::format("Classes count: {}", current_classes.Count()))
+            .comment(std::format("Enums count: {}", current_enums.Count()))
             .comment(kCreatedBySource2genMessage.data())
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();

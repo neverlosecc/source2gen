@@ -43,7 +43,7 @@ namespace field_parser {
             std::string result;
 
             for (std::size_t size : m_array_sizes)
-                result += fmt::format("[{}]", size);
+                result += std::format("[{}]", size);
 
             return result;
         }
