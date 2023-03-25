@@ -53,7 +53,6 @@ This project is made possible by the contributions of various individuals and pr
 - **[praydog](https://github.com/praydog)** - the author of the original [Source2Gen](https://github.com/praydog/Source2Gen) project
 
 This project also utilizes the following open-source libraries:
-- **[fmt](https://github.com/fmtlib/fmt)** - Modern C++ formatting library
 - **[Premake](https://github.com/premake/premake-core)** - Build configuration tool
 
 If you've contributed to the project and would like to be listed here, please submit a [pull request](https://github.com/neverlosecc/source2gen/pulls) with your information added to the credits.
