@@ -288,19 +288,20 @@ namespace sdk {
                 // @note: @es3n1n: if we need to pad first field or if there's no fields in this class
                 // and we need to properly pad it to make sure its size is the same as we expect it
                 //
+                const std::ptrdiff_t first_pad_offset = class_parent ? class_parent->m_size : 0;
                 std::ptrdiff_t expected_pad_size = class_dump.ClassSizeWithoutParent();
                 if (const auto first_field = class_dump.GetFirstField(); first_field)
                     expected_pad_size = first_field->m_single_inheritance_offset;
                 if (expected_pad_size)
-                    expected_pad_size -= class_parent ? class_parent->m_size : 0;
+                    expected_pad_size -= first_pad_offset;
 
                 // @note: @es3n1n: and finally insert a pad
                 //
                 if (expected_pad_size)
                     builder.access_modifier("private")
-                        .struct_padding(0, expected_pad_size, false, true)
+                        .struct_padding(first_pad_offset, expected_pad_size, false, true)
                         .reset_tabs_count()
-                        .comment("0x0")
+                        .comment(std::format("{:#x}", first_pad_offset))
                         .restore_tabs_count();
 
                 // @note: @es3n1n: begin public members
@@ -444,7 +445,7 @@ namespace sdk {
                     builder.comment("Static fields:");
                 }
                 for (auto s = 0; s < class_info->m_static_size; s++) {
-                    auto static_field = &class_info->m_static_fiels[s];
+                    auto static_field = &class_info->m_static_fields[s];
 
                     auto [type, mod] = get_type(static_field->m_type);
                     const auto var_info = field_parser::parse(type, static_field->name, mod);

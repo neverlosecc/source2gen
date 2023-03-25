@@ -281,7 +281,7 @@ struct SchemaClassInfoData_t {
 
     SchemaClassFieldData_t* m_fields; // 0x0028
 
-    SchemaStaticFieldData_t* m_static_fiels; // 0x0030
+    SchemaStaticFieldData_t* m_static_fields; // 0x0030
     SchemaBaseClassInfoData_t* m_schema_parent; // 0x0038
 
     char pad_0x0038[0x10]; // 0x0038
