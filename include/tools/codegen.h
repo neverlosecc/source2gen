@@ -68,9 +68,21 @@ namespace codegen {
             return push_line("");
         }
 
+        self_ref push_static_assert(std::string condition, std::optional<std::string> message = std::nullopt) {
+            // return *this;
+
+            if (message.has_value()) {
+                return push_line(std::format("static_assert({}, \"{}\");", condition, message.value()));
+            }
+
+            return push_line(std::format("static_assert({});", condition));
+        }
+
         // @todo: @es3n1n: `self_ref prev_line()`
 
         self_ref access_modifier(const std::string& modifier) {
+            return *this;
+
             dec_tabs_count(1);
             push_line(std::format("{}:", modifier));
             restore_tabs_count();
@@ -138,7 +150,7 @@ namespace codegen {
         }
 
         self_ref begin_enum_class(const std::string& enum_name, const std::string& base_typename = "") {
-            return begin_block(std::format("enum class {}{}", escape_name(enum_name), base_typename.empty() ? base_typename : (" : " + base_typename)));
+            return begin_block(std::format("enum {}{}", escape_name(enum_name), base_typename.empty() ? base_typename : (" : " + base_typename)));
         }
 
         self_ref end_enum_class() {
@@ -158,7 +170,7 @@ namespace codegen {
             if (base_type.empty())
                 return begin_struct(std::cref(name), access_modifier);
 
-            return begin_block(std::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
+            return begin_block(std::format("struct {} : {}", escape_name(name), base_type), access_modifier);
         }
 
         self_ref end_struct() {
@@ -205,7 +217,8 @@ namespace codegen {
         }
 
         self_ref prop(const std::string& type_name, const std::string& name, bool move_cursor_to_next_line = true) {
-            const auto line = move_cursor_to_next_line ? std::format("{} {};", type_name, name) : std::format("{} {}; ", type_name, name);
+            const auto line =
+                move_cursor_to_next_line ? std::format("{} {};", escape_name(type_name), name) : std::format("{} {}; ", escape_name(type_name), name);
             return push_line(line, move_cursor_to_next_line);
         }
 
@@ -219,14 +232,14 @@ namespace codegen {
 
             // @fixme: split method to class_forward_declaration & struct_forward_declaration
             // one for `struct uwu_t` and the other one for `class c_uwu`
-            return push_line(std::format("struct {};", text));
+            return push_line(std::format("struct {};", escape_name(text)));
         }
 
         self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
                                 const bool is_private_field = false, const std::size_t bitfield_size = 0ull) {
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
             std::string type_name = bitfield_size ? guess_bitfield_type(bitfield_size) : "uint8_t";
-            if (is_private_field)
+            if (false && is_private_field)
                 type_name = "[[maybe_unused]] " + type_name;
 
             auto pad_name = pad_offset.has_value() ? std::format("__pad{:04x}", pad_offset.value()) : std::format("__pad{:d}", _pads_count++);
@@ -268,7 +281,7 @@ namespace codegen {
                 _stream << std::endl;
             return *this;
         }
-
+    public:
         std::string escape_name(const std::string& name) {
             std::string result;
             result.resize(name.size());
@@ -279,7 +292,7 @@ namespace codegen {
 
             return result;
         }
-    public:
+
         self_ref inc_tabs_count(std::size_t count = 1) {
             _tabs_count_backup = _tabs_count;
             _tabs_count += count;

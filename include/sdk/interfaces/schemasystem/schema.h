@@ -186,14 +186,22 @@ public:
 
     // find out to what class pointer points.
     CSchemaType* GetRefClass() {
-        if (type_category != Schema_Ptr)
-            return nullptr;
+        auto t = this;
+        while (t && t->type_category == Schema_Ptr) {
+            t = t->m_schema_type_;
+        }
 
-        auto ptr = m_schema_type_;
-        while (ptr && ptr->type_category == ETypeCategory::Schema_Ptr)
-            ptr = ptr->m_schema_type_;
+        return t;
+    }
 
-        return ptr;
+    // find out to what class pointer points.
+    CSchemaType* GetArrayType() {
+        auto t = this;
+        while (t && t->type_category == Schema_FixedArray) {
+            t = t->m_array_.element_type_;
+        }
+
+        return t;
     }
 
     struct array_t {
@@ -275,7 +283,8 @@ struct SchemaClassInfoData_t {
 
     std::int16_t m_static_size; // 0x001E
     std::int16_t m_metadata_size; // 0x0020
-    std::int16_t m_i_unk1; // 0x0022
+    std::int8_t m_class_alignment; // 0x0022
+    std::uint8_t m_i_unk1; // 0x0022
     std::int16_t m_i_unk2; // 0x0024
     std::int16_t m_i_unk3; // 0x0026
 

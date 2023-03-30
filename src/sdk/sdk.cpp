@@ -35,162 +35,178 @@ namespace {
 } // namespace
 
 namespace sdk {
+    std::unordered_map<int, std::set<std::string>> type_sizes;
+
     namespace {
         __forceinline void PrintClassInfo(codegen::generator_t::self_ref builder, std::int16_t alignment, std::int16_t size) {
             builder.comment(std::format("Alignment: {}", alignment)).comment(std::format("Size: {:#x}", size));
         }
 
-        void AssembleEnums(codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
-            for (auto schema_enum_binding : enums.GetElements()) {
-                // @note: @es3n1n: get type name by align size
-                //
-                const auto get_type_name = [schema_enum_binding]() [[msvc::forceinline]] {
-                    std::string type_storage;
+        void PrintEnum(codegen::generator_t::self_ref builder, CSchemaEnumBinding* schema_enum_binding, std::set<CSchemaEnumBinding*>& parsed_enums) {
+            // @note: @es3n1n: get type name by align size
+            //
+            const auto get_type_name = [schema_enum_binding]() [[msvc::forceinline]] {
+                std::string type_storage;
 
-                    switch (schema_enum_binding->m_align_) {
-                    case 1:
-                        type_storage = "uint8_t";
-                        break;
-                    case 2:
-                        type_storage = "uint16_t";
-                        break;
-                    case 4:
-                        type_storage = "uint32_t";
-                        break;
-                    case 8:
-                        type_storage = "uint64_t";
-                        break;
-                    default:
-                        type_storage = "INVALID_TYPE";
-                    }
-
-                    return type_storage;
-                };
-
-                // @todo: @es3n1n: assemble flags
-                //
-                // if (schema_enum_binding->m_flags_) out.print("// Flags: MEnumFlagsWithOverlappingBits\n");
-
-                // @note: @es3n1n: print meta info
-                //
-                PrintClassInfo(builder, schema_enum_binding->m_align_, schema_enum_binding->m_size_);
-
-                // @note: @es3n1n: begin enum class
-                //
-                builder.begin_enum_class(schema_enum_binding->m_binding_name_, get_type_name());
-
-                // @note: @es3n1n: assemble enum items
-                //
-                for (auto l = 0; l < schema_enum_binding->m_size_; l++) {
-                    auto& field = schema_enum_binding->m_enum_info_[l];
-
-                    builder.enum_item(field.m_name, field.m_value == std::numeric_limits<std::size_t>::max() ? -1 : field.m_value);
+                switch (schema_enum_binding->m_align_) {
+                case 1:
+                    type_storage = "uint8_t";
+                    break;
+                case 2:
+                    type_storage = "uint16_t";
+                    break;
+                case 4:
+                    type_storage = "uint32_t";
+                    break;
+                case 8:
+                    type_storage = "uint64_t";
+                    break;
+                default:
+                    type_storage = "uINVALID_TYPE";
                 }
 
-                // @note: @es3n1n: we are done with this enum
-                //
-                builder.end_enum_class();
+                return type_storage;
+            };
+
+            parsed_enums.emplace(schema_enum_binding);
+
+            // @todo: @es3n1n: assemble flags
+            //
+            // if (schema_enum_binding->m_flags_) out.print("// Flags: MEnumFlagsWithOverlappingBits\n");
+
+            // @note: @es3n1n: print meta info
+            //
+            PrintClassInfo(builder, schema_enum_binding->m_align_, schema_enum_binding->m_size_);
+
+            // @note: @es3n1n: begin enum class
+            //
+            builder.begin_enum_class(schema_enum_binding->m_binding_name_, get_type_name());
+
+            // @note: @es3n1n: assemble enum items
+            //
+            for (auto l = 0; l < schema_enum_binding->m_size_; l++) {
+                auto& field = schema_enum_binding->m_enum_info_[l];
+                switch (schema_enum_binding->m_align_) {
+                case 1:
+                    builder.enum_item(field.m_name, field.m_value == std::numeric_limits<uint8_t>::max() ? -1 : (uint8_t)field.m_value);
+                    break;
+                case 2:
+                    builder.enum_item(field.m_name, field.m_value == std::numeric_limits<uint16_t>::max() ? -1 : (uint16_t)field.m_value);
+                    break;
+                case 4:
+                    builder.enum_item(field.m_name, field.m_value == std::numeric_limits<uint32_t>::max() ? -1 : (uint32_t)field.m_value);
+                    break;
+                case 8:
+                    builder.enum_item(field.m_name, field.m_value == std::numeric_limits<uint64_t>::max() ? -1 : (uint64_t)field.m_value);
+                    break;
+                default:
+                    continue;
+                }
+            }
+
+            // @note: @es3n1n: we are done with this enum
+            //
+            builder.end_enum_class();
+        }
+
+        void AssembleEnums(codegen::generator_t::self_ref builder, std::set<CSchemaEnumBinding*>& parsed_enums, CUtlTSHash<CSchemaEnumBinding*> enums) {
+            for (auto schema_enum_binding : enums.GetElements()) {
+                PrintEnum(builder, schema_enum_binding, parsed_enums);
             }
         }
 
-        void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
-            struct class_t {
-                CSchemaClassInfo* target_;
-                std::set<CSchemaClassInfo*> refs_;
+        struct class_t {
+            // all classes that will be dumped.
+            inline static std::list<class_t> classes_to_dump;
 
-                CSchemaClassInfo* GetParent() {
-                    if (!target_->m_schema_parent)
-                        return nullptr;
+            // fast access by class info pointer.
+            inline static std::unordered_map<CSchemaClassInfo*, class_t*> class_info_pointers;
 
-                    return target_->m_schema_parent->m_class;
-                }
+            // fast access by name.
+            inline static std::unordered_map<std::string_view, class_t*> name_to_class;
 
-                void AddRefToClass(CSchemaType* type) {
-                    if (type->type_category == Schema_DeclaredClass) {
-                        refs_.insert(type->m_class_info);
-                        return;
-                    }
+            CSchemaClassInfo* target_;
+            std::set<CSchemaClassInfo*> refs_;
+            std::vector<SchemaClassFieldData_t*> fields_;
 
-                    // auto ptr = type->GetRefClass();
-                    // if (ptr && ptr->type_category == Schema_DeclaredClass)
-                    // {
-                    // 	refs_.insert(ptr->m_class_info);
-                    // 	return;
-                    // }
-                }
+            class_t() = default;
 
-                bool IsDependsOn(const class_t& other) {
-                    // if current class inherit other.
-                    auto parent = this->GetParent();
-                    if (parent == other.target_)
-                        return true;
+            class_t(CSchemaClassInfo* info): target_(info) { }
 
-                    // if current class contains ref to other.
-                    if (this->refs_.contains(other.target_))
-                        return true;
+            void Parse(codegen::generator_t::self_ref builder, std::set<CSchemaEnumBinding*>& parsed_enums, bool& did_forward_decls);
 
-                    // otherwise, order doesn`t matter.
-                    return false;
-                }
-
-                SchemaClassFieldData_t* GetFirstField() {
-                    if (target_->m_align)
-                        return &target_->m_fields[0];
+            CSchemaClassInfo* GetParent() {
+                if (!target_->m_schema_parent)
                     return nullptr;
+
+                return target_->m_schema_parent->m_class;
+            }
+
+            void AddRefToClass(CSchemaType* type) {
+                if (type->type_category == Schema_DeclaredClass) {
+                    refs_.insert(type->m_class_info);
+                    return;
                 }
 
-                // @note: @es3n1n: Returns the struct size without its parent's size
-                //
-                std::ptrdiff_t ClassSizeWithoutParent() {
-                    if (CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
-                        return this->target_->m_size - class_parent->m_size;
-                    return this->target_->m_size;
-                }
-            };
-
-            // @note: @soufiw:
-            // sort all classes based on refs and inherit, and then print it.
-            // ==================
-            std::list<class_t> classes_to_dump;
-            bool did_forward_decls = false;
-
-            for (const auto schema_class_binding : classes.GetElements()) {
-                const auto class_info = current->FindDeclaredClass(schema_class_binding->m_binary_name);
-
-                auto& class_dump = classes_to_dump.emplace_back();
-                class_dump.target_ = class_info;
-
-                for (auto k = 0; k < class_info->m_align; k++) {
-                    const auto field = &class_info->m_fields[k];
-                    if (!field)
-                        continue;
-
-                    // forward declare all classes.
-                    // @todo: maybe we need to forward declare only pointers to classes?
-                    auto ptr = field->m_type->GetRefClass();
-                    auto actual_type = ptr ? ptr : field->m_type;
-
-                    if (actual_type->type_category == Schema_DeclaredClass) {
-                        builder.forward_declartion(actual_type->m_name_);
-                        did_forward_decls = true;
-                    }
-
-                    class_dump.AddRefToClass(field->m_type);
+                auto ptr = type->GetArrayType();
+                if (ptr && ptr->type_category == Schema_DeclaredClass) {
+                    refs_.insert(ptr->m_class_info);
+                    return;
                 }
             }
 
-            if (did_forward_decls)
-                builder.next_line();
+            bool IsDependsOn(const class_t& other) {
+                // if current class inherit other.
+                auto parent = this->GetParent();
+                if (parent == other.target_)
+                    return true;
 
+                // if current class contains ref to other.
+                if (this->refs_.contains(other.target_))
+                    return true;
+
+                // otherwise, order doesn`t matter.
+                return false;
+            }
+
+            SchemaClassFieldData_t* GetFirstField() {
+                if (!fields_.empty())
+                    return fields_.front();
+                return nullptr;
+            }
+
+            // @note: @es3n1n: Returns the struct size without its parent's size
+            //
+            std::ptrdiff_t ClassSizeWithoutParent() {
+                if (CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
+                    return this->target_->m_size - class_parent->m_size;
+                return this->target_->m_size;
+            }
+
+            // @note: if class is derived, get offset where its starts
+            //
+            std::intptr_t GetStartOffset() {
+                auto parent = this->GetParent();
+                if (!parent)
+                    return 0;
+
+                // expect that we start derived class where parent ends.
+                return parent->m_size;
+            }
+
+            static void SortClasses();
+        };
+
+        void class_t::SortClasses() {
             bool did_change = false;
             do {
                 did_change = false;
 
                 // swap until we done.
-                for (auto first = classes_to_dump.begin(); first != classes_to_dump.end(); ++first) {
+                for (auto first = class_t::classes_to_dump.begin(); first != class_t::classes_to_dump.end(); ++first) {
                     bool second_below_first = false;
 
-                    for (auto second = classes_to_dump.begin(); second != classes_to_dump.end(); ++second) {
+                    for (auto second = class_t::classes_to_dump.begin(); second != class_t::classes_to_dump.end(); ++second) {
                         if (second == first) {
                             second_below_first = true;
                             continue;
@@ -216,6 +232,133 @@ namespace sdk {
                     }
                 }
             } while (did_change);
+        }
+
+        void class_t::Parse(codegen::generator_t::self_ref builder, std::set<CSchemaEnumBinding*>& parsed_enums, bool& did_forward_decls) {
+            class_info_pointers[target_] = this;
+            name_to_class[target_->m_name] = this;
+
+            // @note: parse parent at first.
+            auto p = GetParent();
+            class_t* parent_dump = nullptr;
+
+            if (p) {
+                if (!class_info_pointers.contains(p)) {
+                    if (!name_to_class.contains(p->m_name)) {
+                        auto& class_dump = classes_to_dump.emplace_back(p);
+                        class_dump.Parse(builder, parsed_enums, did_forward_decls);
+                    } else {
+                        std::cout << "\n";
+                    }
+                }
+
+                auto it = class_info_pointers.find(p);
+                if (it != class_info_pointers.end()) {
+                    parent_dump = it->second;
+                } else {
+                    auto it = name_to_class.find(p->m_name);
+                    if (it != name_to_class.end())
+                        parent_dump = it->second;
+                }
+            }
+
+            auto start_offset = this->GetStartOffset();
+
+            for (auto k = 0; k < target_->m_align; k++) {
+                const auto field = &target_->m_fields[k];
+                if (!field)
+                    continue;
+
+                auto actual_type = field->m_type->GetRefClass()->GetArrayType()->GetRefClass();
+                if (actual_type->type_category == Schema_Bitfield)
+                    continue;
+
+                if (actual_type->type_category == Schema_DeclaredEnum && !parsed_enums.contains(actual_type->m_enum_binding_)) {
+                    parsed_enums.emplace(actual_type->m_enum_binding_);
+                    PrintEnum(builder, actual_type->m_enum_binding_, parsed_enums);
+                }
+
+                // @note: for some reason, derived classes sometimes describes field of
+                // base classes, so check if offset of this field is lower.
+                auto target_dump = this;
+
+                if (parent_dump && start_offset > field->m_single_inheritance_offset) {
+                    std::cout << std::format("skipped collision: {}->{}\n", target_->m_name, field->m_name);
+                    continue;
+#if 0
+                    // @note: verify that base class have enough space.
+                    // @todo: fix this for bitfield!
+                    int field_size = 0;
+                    if (field->m_type->GetSize(&field_size)) {
+                        auto field_end = field->m_single_inheritance_offset + field_size;
+                        if (field_end > p->m_size)
+                            continue;
+                    
+                        target_dump = parent_dump;
+                    
+                        // @note: check if some of derived classes already pushed field.
+                        if (std::find(target_dump->fields_.begin(), target_dump->fields_.end(), field) != target_dump->fields_.end()) {
+                            continue;
+                        }
+                    }
+#endif
+                }
+
+                // forward declare all classes.
+                // @todo: maybe we need to forward declare only pointers to classes?
+
+                if (actual_type->type_category == Schema_DeclaredClass) {
+                    builder.forward_declartion(actual_type->m_name_);
+                    did_forward_decls = true;
+
+                    auto cl = actual_type->m_class_info;
+                    int f_size = 0;
+                    if (!actual_type->GetSize(&f_size))
+                        continue;
+
+                    if (cl) {
+                        if (!class_info_pointers.contains(cl)) {
+                            if (!name_to_class.contains(cl->m_name)) {
+                                auto& class_dump = classes_to_dump.emplace_back(cl);
+                                class_dump.Parse(builder, parsed_enums, did_forward_decls);
+                            } else {
+                                std::cout << "\n";
+                            }
+                        }
+                    }
+                }
+
+                target_dump->fields_.push_back(field);
+                target_dump->AddRefToClass(field->m_type);
+            }
+        }
+
+        void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_t::self_ref builder, std::set<CSchemaEnumBinding*>& parsed_enums,
+                             CUtlTSHash<CSchemaClassBinding*> classes) {
+            // @note: @soufiw:
+            // sort all classes based on refs and inherit, and then print it.
+            // ==================
+            class_t::classes_to_dump.clear();
+            class_t::class_info_pointers.clear();
+            class_t::name_to_class.clear();
+
+            bool did_forward_decls = false;
+            for (const auto schema_class_binding : classes.GetElements()) {
+                const auto class_info = current->FindDeclaredClass(schema_class_binding->m_binary_name);
+                if (class_t::class_info_pointers.contains(class_info))
+                    continue;
+
+                if (class_t::name_to_class.contains(schema_class_binding->m_binary_name))
+                    continue;
+
+                auto& class_dump = class_t::classes_to_dump.emplace_back(class_info);
+                class_dump.Parse(builder, parsed_enums, did_forward_decls);
+            }
+
+            if (did_forward_decls)
+                builder.next_line();
+
+            class_t::SortClasses();
             // ==================
 
             // returns {type_name, array_sizes}
@@ -252,16 +395,118 @@ namespace sdk {
                 if (!type_name.empty() && !mods.empty())
                     return {type_name, mods};
 
+                auto name_wt = std::string_view(type->m_name_);
+
+                auto start = name_wt.find('<');
+                auto end = name_wt.find_last_of('>');
+
+                if (start != end && start != std::string::npos) {
+                    name_wt = std::string_view(type->m_name_, start);
+                }
+
+                int size = 0;
+                type->GetSize(&size);
+
+                if (name_wt.contains("CBitVec")) {
+                    int size = 0;
+                    if (type->GetSize(&size)) {
+                        switch (size) {
+                        case 1:
+                            return {"uint8_t", {}};
+                        case 2:
+                            return {"uint16_t", {}};
+                        case 4:
+                            return {"uint32_t", {}};
+                        case 8:
+                            return {"uint64_t", {}};
+                        default:
+                            return {"uint8_t", {(size_t)size}};
+                        }
+                    }
+                }
+
+                if (name_wt == ("CUtlVectorEmbeddedNetworkVar")) {
+                    if (size == 0x50)
+                        return {type->m_name_, {}};
+
+                    return {"uint8_t", {(size_t)size}};
+                }
+
+                if (name_wt == ("C_UtlVectorEmbeddedNetworkVar")) {
+                    if (size == 0x50)
+                        return {type->m_name_, {}};
+
+                    return {"uint8_t", {(size_t)size}};
+                }
+
+                if (name_wt.contains("CUtlVector")) {
+                    int size = 0;
+                    if (type->GetSize(&size)) {
+                        switch (size) {
+                        case 8:
+                            return {"uintptr_t", {}};
+                        case 0x10:
+                            return {"CUtlVectorBasic", {}};
+                        case 0x14:
+                            return {"CUtlVector", {}};
+                        default:
+                            return {"uint8_t", {(size_t)size}};
+                        }
+                    }
+                }
+
+                if (name_wt.contains("CNetworkUtlVectorBase")) {
+                    int size = 0;
+                    if (type->GetSize(&size)) {
+                        switch (size) {
+                        case 8:
+                            return {"uintptr_t", {}};
+                        case 0x10:
+                            return {"CUtlVectorBasic", {}};
+                        case 0x18:
+                            return {"CNetworkUtlVectorBase", {}};
+                        default:
+                            return {"uint8_t", {(size_t)size}};
+                        }
+                    }
+                }
+                if (name_wt.contains("C_NetworkUtlVectorBase")) {
+                    int size = 0;
+                    if (type->GetSize(&size)) {
+                        switch (size) {
+                        case 8:
+                            return {"uintptr_t", {}};
+                        case 0x10:
+                            return {"CUtlVectorBasic", {}};
+                        case 0x18:
+                            return {"C_NetworkUtlVectorBase", {}};
+                        default:
+                            return {"uint8_t", {(size_t)size}};
+                        }
+                    }
+                }
+
                 return {type->m_name_, {}};
             };
 
-            for (auto& class_dump : classes_to_dump) {
+            for (auto& class_dump : class_t::classes_to_dump) {
                 // @note: @es3n1n: get class info, assemble it
                 //
                 const auto class_parent = class_dump.GetParent();
                 const auto class_info = class_dump.target_;
-                const auto is_struct = ends_with(class_info->m_name, "_t");
+                const auto is_struct = true; // ends_with(class_info->m_name, "_t");
                 PrintClassInfo(builder, class_info->m_align, class_info->m_size);
+
+                // if (std::string_view(class_dump.target_->m_name).contains("CParticleFunctionInitializer")) {
+                //     std::cout << "debugme\n";
+                // }
+
+                auto cl_align = class_info->m_class_alignment;
+                if (cl_align == -1) // @use default align then
+                    cl_align = sizeof(uintptr_t);
+
+                if (cl_align != sizeof(uintptr_t))
+                    builder.pragma(std::format("pack(push, {})", cl_align));
 
                 // @note: @es3n1n: get parent name
                 //
@@ -296,7 +541,7 @@ namespace sdk {
 
                 const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_size : 0;
 
-                std::ptrdiff_t expected_pad_size = first_field_offset.value_or(class_dump.ClassSizeWithoutParent());
+                std::ptrdiff_t expected_pad_size = first_field_offset.value_or(class_dump.target_->m_size);
                 if (expected_pad_size) // @note: @es3n1n: if there's a pad size we should account the parent class size
                     expected_pad_size -= parent_class_size;
 
@@ -309,30 +554,15 @@ namespace sdk {
                         .comment(std::format("{:#x}", parent_class_size))
                         .restore_tabs_count();
 
-                // @todo: @es3n1n: if for some mysterious reason this class describes fields
-                // of the base class we should handle it too.
-                if (class_parent && first_field_offset.has_value() && first_field_offset.value() < class_parent->m_size) {
-                    builder.comment(
-                        std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_size));
-                    state.collision_end_offset = class_parent->m_size;
-                }
-
                 // @note: @es3n1n: begin public members
                 //
                 builder.access_modifier("public");
 
-                for (auto k = 0; k < class_info->m_align; k++) {
-                    const auto field = &class_info->m_fields[k];
-                    if (!field)
-                        continue;
+                bool did_init = false;
 
-                    // @fixme: @es3n1n: todo proper collision fix and remove this block
-                    if (state.collision_end_offset && field->m_single_inheritance_offset < state.collision_end_offset) {
-                        builder.comment(std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field->m_name,
-                                                    field->m_single_inheritance_offset));
-                        continue;
-                    }
+                std::vector<std::string> offset_asserts;
 
+                for (auto field : class_dump.fields_) {
                     // @note: @es3n1n: some more utils
                     //
                     auto get_metadata_type = [&](SchemaMetadataEntryData_t metadata_entry) -> std::string {
@@ -360,14 +590,22 @@ namespace sdk {
 
                     // @note: @es3n1n: parsing type
                     //
-                    const auto [type, mod] = get_type(field->m_type);
+                    auto [type, mod] = get_type(field->m_type);
+                    {
+                        auto start = type.find('<');
+                        auto end = type.find_last_of('>');
+
+                        if (start != end && start != std::string::npos) {
+                            type.erase(start, end);
+                        }
+                    }
+
                     const auto var_info = field_parser::parse(type, field->m_name, mod);
 
                     // @note: @es3n1n: insert padding if needed
                     //
                     const auto expected_offset = state.last_field_offset + state.last_field_size;
-                    if (state.last_field_offset && state.last_field_size && expected_offset < field->m_single_inheritance_offset &&
-                        !state.assembling_bitfield) {
+                    if (did_init && expected_offset < field->m_single_inheritance_offset && !state.assembling_bitfield) {
 
                         builder.access_modifier("private")
                             .struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false, true)
@@ -424,18 +662,26 @@ namespace sdk {
 
                     // @note: @es3n1n: update state
                     //
-                    if (field->m_single_inheritance_offset && field_size) {
+                    if (field->m_type->type_category != Schema_Bitfield && field_size) {
                         state.last_field_offset = field->m_single_inheritance_offset;
                         state.last_field_size = static_cast<std::size_t>(field_size);
+
+                        did_init = true;
                     }
+
                     if (var_info.is_bitfield())
                         state.total_bits_count_in_union += var_info.m_bitfield_size;
 
                     // @note: @es3n1n: push prop
                     //
                     builder.prop(var_info.m_type, var_info.formatted_name(), false);
-                    if (!var_info.is_bitfield())
+                    if (!var_info.is_bitfield()) {
+                        offset_asserts.push_back(std::format(" offsetof( {}, {} ) == {:#x} ", builder.escape_name(class_info->m_name), var_info.m_name,
+                                                             field->m_single_inheritance_offset));
+
                         builder.reset_tabs_count().comment(std::format("{:#x}", field->m_single_inheritance_offset), false).restore_tabs_count();
+                    }
+
                     builder.next_line();
                 }
 
@@ -457,6 +703,16 @@ namespace sdk {
                     state.assembling_bitfield = false;
                 }
 
+                if (did_init) {
+                    auto end_gap_start = state.last_field_size + state.last_field_offset;
+
+                    if (class_info->m_size > end_gap_start) {
+                        auto end_gap_size = class_info->m_size - end_gap_start;
+                        builder.struct_padding(end_gap_start, end_gap_size, true, false);
+                    }
+                }
+
+#if 0
                 // @note: @es3n1n: dump static fields
                 //
                 if (class_info->m_static_size) {
@@ -471,11 +727,21 @@ namespace sdk {
                     const auto var_info = field_parser::parse(type, static_field->name, mod);
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
                 }
+#endif
 
                 if (!class_info->m_align && !class_info->m_static_size)
                     builder.comment("No members available");
 
                 builder.end_block();
+                for (const auto& off : offset_asserts)
+                    builder.push_static_assert(off);
+
+                builder.push_static_assert(std::format(" sizeof( {} ) == {:#x} ", builder.escape_name(class_info->m_name), class_info->m_size));
+
+                if (cl_align != sizeof(uintptr_t))
+                    builder.pragma(std::format("pack(pop)"));
+
+                builder.next_line();
             }
         }
     } // namespace
@@ -505,8 +771,8 @@ namespace sdk {
 
         // @note: @es3n1n: include files
         //
-        for (auto&& include_path : kIncludePaths)
-            builder.include(include_path.data());
+        // for (auto&& include_path : kIncludePaths)
+        //     builder.include(include_path.data());
 
         // @note: @es3n1n: get stuff from schema that we'll use later
         //
@@ -526,8 +792,22 @@ namespace sdk {
 
         // @note: @es3n1n: assemble props
         //
-        AssembleEnums(builder, current_enums);
-        AssembleClasses(current, builder, current_classes);
+        std::set<CSchemaEnumBinding*> parsed_enums;
+        AssembleEnums(builder, parsed_enums, current_enums);
+        AssembleClasses(current, builder, parsed_enums, current_classes);
+
+        // @note: lmao.
+        if (scope_name == "!GlobalTypes") {
+            for (auto& [size, types] : type_sizes) {
+                std::cout << std::format("{}: current_size: ", size) << std::endl;
+
+                for (auto& type : types) {
+                    std::cout << std::format("\"{}\"", type) << std::endl;
+                }
+
+                std::cout << "\n";
+            }
+        }
 
         // @note: @es3n1n: write generated data to output file
         //

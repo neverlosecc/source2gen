@@ -83,6 +83,7 @@ namespace source2_gen {
         console->stop();
         console.reset();
 
+        FreeLibrary(module);
         FreeLibraryAndExitThread(module, EXIT_SUCCESS);
     }
 } // namespace source2_gen
