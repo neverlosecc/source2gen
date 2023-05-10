@@ -3,6 +3,8 @@
 #include <set>
 #include <string_view>
 
+constexpr std::string_view kCreatedBySource2genMessage = {"Created using source2gen - github.com/neverlosecc/source2gen"};
+
 namespace {
     using namespace std::string_view_literals;
 
@@ -10,23 +12,23 @@ namespace {
     constexpr std::initializer_list<std::string_view> kIncludePaths = {"<cstdint>"sv, "\"!GlobalTypes.hpp\""sv};
 
     constexpr std::initializer_list<fnv32::hash> kStringMetadataEntries = {
-        FNV32("MNetworkChangeCallback"),  FNV32("MPropertyFriendlyName"), FNV32("MPropertyDescription"),
-        FNV32("MPropertyAttributeRange"), FNV32("MPropertyStartGroup"),   FNV32("MPropertyAttributeChoiceName"),
-        FNV32("MPropertyGroupName"),      FNV32("MNetworkUserGroup"),     FNV32("MNetworkAlias"),
-        FNV32("MNetworkTypeAlias"),       FNV32("MNetworkSerializer"),    FNV32("MPropertyAttributeEditor"),
-        FNV32("MPropertySuppressExpr"),   FNV32("MKV3TransferName"),
+        "MNetworkChangeCallback"_fnv32,  "MPropertyFriendlyName"_fnv32, "MPropertyDescription"_fnv32,
+        "MPropertyAttributeRange"_fnv32, "MPropertyStartGroup"_fnv32,   "MPropertyAttributeChoiceName"_fnv32,
+        "MPropertyGroupName"_fnv32,      "MNetworkUserGroup"_fnv32,     "MNetworkAlias"_fnv32,
+        "MNetworkTypeAlias"_fnv32,       "MNetworkSerializer"_fnv32,    "MPropertyAttributeEditor"_fnv32,
+        "MPropertySuppressExpr"_fnv32,   "MKV3TransferName"_fnv32,
     };
 
     constexpr std::initializer_list<fnv32::hash> kIntegerMetadataEntries = {
-        FNV32("MNetworkVarEmbeddedFieldOffsetDelta"),
-        FNV32("MNetworkBitCount"),
-        FNV32("MNetworkPriority"),
-        FNV32("MPropertySortPriority"),
+        "MNetworkVarEmbeddedFieldOffsetDelta"_fnv32,
+        "MNetworkBitCount"_fnv32,
+        "MNetworkPriority"_fnv32,
+        "MPropertySortPriority"_fnv32,
     };
 
-    constexpr std::initializer_list<fnv32::hash> kFloatMetadataEntries = {
-        FNV32("MNetworkMinValue"),
-        FNV32("MNetworkMaxValue"),
+    constexpr std::initializer_list<std::size_t> kFloatMetadataEntries = {
+        "MNetworkMinValue"_fnv32,
+        "MNetworkMaxValue"_fnv32,
     };
 
     inline bool ends_with(const std::string& str, const std::string& suffix) {
@@ -38,11 +40,11 @@ namespace sdk {
     std::unordered_map<int, std::set<std::string>> type_sizes;
 
     namespace {
-        __forceinline void PrintClassInfo(codegen::generator_t::self_ref builder, std::int16_t alignment, std::int16_t size) {
+        __forceinline void PrintClassInfo(GENERATOR_REF_T builder, std::int16_t alignment, std::int16_t size) {
             builder.comment(std::format("Alignment: {}", alignment)).comment(std::format("Size: {:#x}", size));
         }
 
-        void PrintEnum(codegen::generator_t::self_ref builder, CSchemaEnumBinding* schema_enum_binding, std::set<CSchemaEnumBinding*>& parsed_enums) {
+        void PrintEnum(GENERATOR_REF_T builder, CSchemaEnumBinding* schema_enum_binding, std::set<CSchemaEnumBinding*>& parsed_enums) {
             // @note: @es3n1n: get type name by align size
             //
             const auto get_type_name = [schema_enum_binding]() [[msvc::forceinline]] {
@@ -109,7 +111,7 @@ namespace sdk {
             builder.end_enum_class();
         }
 
-        void AssembleEnums(codegen::generator_t::self_ref builder, std::set<CSchemaEnumBinding*>& parsed_enums, CUtlTSHash<CSchemaEnumBinding*> enums) {
+        void AssembleEnums(GENERATOR_REF_T builder, std::set<CSchemaEnumBinding*>& parsed_enums, CUtlTSHash<CSchemaEnumBinding*> enums) {
             for (auto schema_enum_binding : enums.GetElements()) {
                 PrintEnum(builder, schema_enum_binding, parsed_enums);
             }
@@ -133,7 +135,7 @@ namespace sdk {
 
             class_t(CSchemaClassInfo* info): target_(info) { }
 
-            void Parse(codegen::generator_t::self_ref builder, std::set<CSchemaEnumBinding*>& parsed_enums, bool& did_forward_decls);
+            void Parse(GENERATOR_REF_T builder, std::set<CSchemaEnumBinding*>& parsed_enums, bool& did_forward_decls);
 
             CSchemaClassInfo* GetParent() {
                 if (!target_->m_schema_parent)
@@ -234,7 +236,7 @@ namespace sdk {
             } while (did_change);
         }
 
-        void class_t::Parse(codegen::generator_t::self_ref builder, std::set<CSchemaEnumBinding*>& parsed_enums, bool& did_forward_decls) {
+        void class_t::Parse(GENERATOR_REF_T builder, std::set<CSchemaEnumBinding*>& parsed_enums, bool& did_forward_decls) {
             class_info_pointers[target_] = this;
             name_to_class[target_->m_name] = this;
 
@@ -266,11 +268,19 @@ namespace sdk {
 
             for (auto k = 0; k < target_->m_align; k++) {
                 const auto field = &target_->m_fields[k];
-                if (!field)
+                if (!field || !field->m_type)
                     continue;
 
-                auto actual_type = field->m_type->GetRefClass()->GetArrayType()->GetRefClass();
-                if (actual_type->type_category == Schema_Bitfield)
+                auto ref = field->m_type->GetRefClass();
+                if (!ref) [[unlikely]]
+                    continue;
+
+                auto array_type = ref->GetArrayType();
+                if (!array_type) [[unlikely]]
+                    continue;
+
+                auto actual_type = array_type->GetRefClass();
+                if (!actual_type || actual_type->type_category == Schema_Bitfield)
                     continue;
 
                 if (actual_type->type_category == Schema_DeclaredEnum && !parsed_enums.contains(actual_type->m_enum_binding_)) {
@@ -333,7 +343,7 @@ namespace sdk {
             }
         }
 
-        void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_t::self_ref builder, std::set<CSchemaEnumBinding*>& parsed_enums,
+        void AssembleClasses(CSchemaSystemTypeScope* current, GENERATOR_REF_T builder, std::set<CSchemaEnumBinding*>& parsed_enums,
                              CUtlTSHash<CSchemaClassBinding*> classes) {
             // @note: @soufiw:
             // sort all classes based on refs and inherit, and then print it.
@@ -497,13 +507,8 @@ namespace sdk {
                 const auto is_struct = true; // ends_with(class_info->m_name, "_t");
                 PrintClassInfo(builder, class_info->m_align, class_info->m_size);
 
-                // if (std::string_view(class_dump.target_->m_name).contains("CParticleFunctionInitializer")) {
-                //     std::cout << "debugme\n";
-                // }
-
                 auto cl_align = class_info->m_class_alignment;
-                if (cl_align == -1) // @use default align then
-                    cl_align = sizeof(uintptr_t);
+                cl_align = cl_align == -1 ? sizeof(uintptr_t) : cl_align;
 
                 if (cl_align != sizeof(uintptr_t))
                     builder.pragma(std::format("pack(push, {})", cl_align));
@@ -676,7 +681,7 @@ namespace sdk {
                     //
                     builder.prop(var_info.m_type, var_info.formatted_name(), false);
                     if (!var_info.is_bitfield()) {
-                        offset_asserts.push_back(std::format(" offsetof( {}, {} ) == {:#x} ", builder.escape_name(class_info->m_name), var_info.m_name,
+                        offset_asserts.push_back(std::format("offsetof({}, {}) == {:#x}", builder.escape_name(class_info->m_name), var_info.m_name,
                                                              field->m_single_inheritance_offset));
 
                         builder.reset_tabs_count().comment(std::format("{:#x}", field->m_single_inheritance_offset), false).restore_tabs_count();
@@ -708,13 +713,16 @@ namespace sdk {
 
                     if (class_info->m_size > end_gap_start) {
                         auto end_gap_size = class_info->m_size - end_gap_start;
-                        builder.struct_padding(end_gap_start, end_gap_size, true, false);
+
+                        builder
+                            .access_modifier("private") //
+                            .struct_padding(end_gap_start, end_gap_size, true, true);
                     }
                 }
 
-#if 0
                 // @note: @es3n1n: dump static fields
                 //
+#if defined(DUMP_STATIC_GETTERS)
                 if (class_info->m_static_size) {
                     if (class_info->m_align)
                         builder.next_line();
@@ -727,16 +735,16 @@ namespace sdk {
                     const auto var_info = field_parser::parse(type, static_field->name, mod);
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
                 }
-#endif
 
                 if (!class_info->m_align && !class_info->m_static_size)
                     builder.comment("No members available");
+#endif
 
                 builder.end_block();
+
                 for (const auto& off : offset_asserts)
                     builder.push_static_assert(off);
-
-                builder.push_static_assert(std::format(" sizeof( {} ) == {:#x} ", builder.escape_name(class_info->m_name), class_info->m_size));
+                builder.push_static_assert(std::format("sizeof({}) == {:#x}", builder.escape_name(class_info->m_name), class_info->m_size));
 
                 if (cl_align != sizeof(uintptr_t))
                     builder.pragma(std::format("pack(pop)"));

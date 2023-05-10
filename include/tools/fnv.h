@@ -39,12 +39,17 @@ namespace detail {
             return (current ^ byte) * k_prime;
         }
 
-        template <std::size_t N>
-        static __forceinline constexpr auto hash_constexpr(const char (&str)[N], const std::size_t size = N - 1 /* do not hash the null */
-                                                           ) -> hash {
+        static __forceinline constexpr auto hash_constexpr(const char* str, const std::size_t size) -> hash {
             const auto prev_hash = size == 1 ? hash_init() : hash_constexpr(str, size - 1);
             const auto cur_hash = hash_byte(prev_hash, str[size - 1]);
             return cur_hash;
+        }
+
+        template <std::size_t N>
+        static __forceinline constexpr auto hash_constexpr(const char (&str)[N], //
+                                                           const std::size_t size = N - 1 /* do not hash the null */
+                                                           ) -> hash {
+            return hash_constexpr((const char*)str, size);
         }
 
         static auto __forceinline hash_runtime_data(const void* data, const size_t sz) -> hash {
@@ -106,3 +111,11 @@ using fnv = ::detail::FnvHash<sizeof(void*) * 8>;
 #define FNV(str) (std::integral_constant<fnv::hash, fnv::hash_constexpr(str)>::value)
 #define FNV32(str) (std::integral_constant<fnv32::hash, fnv32::hash_constexpr(str)>::value)
 #define FNV64(str) (std::integral_constant<fnv64::hash, fnv64::hash_constexpr(str)>::value)
+
+constexpr fnv32::hash operator"" _fnv32(const char* s, size_t len) {
+    return fnv32::hash_constexpr(s, len);
+}
+
+constexpr fnv64::hash operator"" _fnv64(const char* s, size_t len) {
+    return fnv64::hash_constexpr(s, len);
+}

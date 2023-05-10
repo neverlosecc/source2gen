@@ -60,37 +60,35 @@ namespace field_parser {
     };
 
     namespace detail {
-        namespace {
-            using namespace std::string_view_literals;
+        using namespace std::string_view_literals;
 
-            constexpr std::string_view kBitfieldTypePrefix = "bitfield:"sv;
+        constexpr std::string_view kBitfieldTypePrefix = "bitfield:"sv;
 
-            constexpr std::string_view kArraySizePrefix = "["sv;
-            constexpr std::string_view kArraySizePostfix = "]"sv;
+        constexpr std::string_view kArraySizePrefix = "["sv;
+        constexpr std::string_view kArraySizePostfix = "]"sv;
 
-            // clang-format off
-            constexpr std::initializer_list<std::pair<std::string_view, std::string_view>> kTypeNameToCpp = {
-                {"float32"sv, "float"sv}, 
-                {"float64"sv, "double"sv},
+        // clang-format off
+        constexpr std::initializer_list<std::pair<std::string_view, std::string_view>> kTypeNameToCpp = {
+            {"float32"sv, "float"sv}, 
+            {"float64"sv, "double"sv},
     
-                {"int8"sv, "int8_t"sv},   
-                {"int16"sv, "int16_t"sv},   
-                {"int32"sv, "int32_t"sv},   
-                {"int64"sv, "int64_t"sv},
+            {"int8"sv, "int8_t"sv},   
+            {"int16"sv, "int16_t"sv},   
+            {"int32"sv, "int32_t"sv},   
+            {"int64"sv, "int64_t"sv},
     
-                {"uint8"sv, "uint8_t"sv}, 
-                {"uint16"sv, "uint16_t"sv}, 
-                {"uint32"sv, "uint32_t"sv}, 
-                {"uint64"sv, "uint64_t"sv}
-            };
-            // clang-format on
-        } // namespace
+            {"uint8"sv, "uint8_t"sv}, 
+            {"uint16"sv, "uint16_t"sv}, 
+            {"uint32"sv, "uint32_t"sv}, 
+            {"uint64"sv, "uint64_t"sv}
+        };
+        // clang-format on
 
         // @note: @es3n1n: basically the same thing as std::atoi
         // but an exception would be thrown if we are unable to parse the string
         //
         __forceinline int wrapped_atoi(const char* s) {
-            const int result = std::atoi(s);
+            const int result = std::atoi(s); // -V595
 
             if (result == 0 && s && s[0] != '0')
                 throw std::runtime_error(std::format("{} : Unable to parse '{}'", __FUNCTION__, s));

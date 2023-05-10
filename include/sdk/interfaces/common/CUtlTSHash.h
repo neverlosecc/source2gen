@@ -89,9 +89,9 @@ public:
 
     struct HashUnallocatedDataT {
         HashUnallocatedDataT* m_next_ = nullptr; // 0x0000
-        Keytype m_6114; // 0x0008
-        Keytype m_ui_key; // 0x0010
-        Keytype m_i_unk_1; // 0x0018
+        Keytype m_6114 = {}; // 0x0008
+        Keytype m_ui_key = {}; // 0x0010
+        Keytype m_i_unk_1 = {}; // 0x0018
         std::array<HashBucketDataT, 256> m_current_block_list; // 0x0020
     };
 

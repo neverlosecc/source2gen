@@ -55,9 +55,6 @@ public:
         const auto h_con_out = CreateFileA("CONOUT$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
                                            FILE_ATTRIBUTE_NORMAL, nullptr);
 
-        const auto h_con_in = CreateFileA("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
-                                          FILE_ATTRIBUTE_NORMAL, nullptr);
-
         status = SetStdHandle(STD_OUTPUT_HANDLE, h_con_out);
         if (!status) {
             throw std::runtime_error("cannot set std output handle!");
@@ -67,6 +64,9 @@ public:
         if (!status) {
             throw std::runtime_error("cannot set std error handle!");
         }
+
+        const auto h_con_in = CreateFileA("CONIN$", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+                                          FILE_ATTRIBUTE_NORMAL, nullptr);
 
         status = SetStdHandle(STD_INPUT_HANDLE, h_con_in);
         if (!status) {

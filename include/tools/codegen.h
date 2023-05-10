@@ -5,7 +5,12 @@
 #include <string>
 #include <type_traits>
 
-#include "tools/fnv.h"
+#define CXX_VERSION CXX23
+#define __IDA_GEN__
+
+#if !defined(__IDA_GEN__)
+    #define DUMP_STATIC_GETTERS
+#endif
 
 namespace codegen {
     constexpr char kTabSym = '\t';
@@ -39,14 +44,23 @@ namespace codegen {
         throw std::runtime_error(std::format("{} : Unable to guess bitfield type with size {}", __FUNCTION__, bits_count));
     }
 
-    struct generator_t {
-        using self_ref = std::add_lvalue_reference_t<generator_t>;
+    enum e_cxx_ver : std::uint8_t {
+        // @todo: @es3n1n: maybe someday i'll add cxx03/cxx11 support. definitely not today though
+        //
+        CXX03 = 03, // c++03
+        CXX11 = 11, // c++11
+        CXX14 = 14, // c++14
+        CXX17 = 17, // c++17
+        CXX20 = 20, // c++20
+        CXX23 = 23, // c++23
+    };
+
+    template <e_cxx_ver cxx_ver = CXX_VERSION>
+    struct cxx_generator_t {
+        using self_ref = std::add_lvalue_reference_t<cxx_generator_t>;
     public:
-        constexpr generator_t() = default;
-        constexpr ~generator_t() = default;
-        constexpr self_ref operator=(self_ref v) {
-            return v;
-        }
+        constexpr cxx_generator_t() = default;
+        constexpr ~cxx_generator_t() = default;
     public:
         self_ref pragma(const std::string& val) {
             return push_line(std::format("#pragma {}", val));
@@ -69,20 +83,18 @@ namespace codegen {
         }
 
         self_ref push_static_assert(std::string condition, std::optional<std::string> message = std::nullopt) {
-            // return *this;
+            if constexpr (cxx_ver < CXX11)
+                return *this; // no static asserts in cxx <11
 
-            if (message.has_value()) {
+            if (message.has_value())
                 return push_line(std::format("static_assert({}, \"{}\");", condition, message.value()));
-            }
 
             return push_line(std::format("static_assert({});", condition));
         }
 
         // @todo: @es3n1n: `self_ref prev_line()`
 
-        self_ref access_modifier(const std::string& modifier) {
-            return *this;
-
+        virtual self_ref access_modifier(const std::string& modifier) {
             dec_tabs_count(1);
             push_line(std::format("{}:", modifier));
             restore_tabs_count();
@@ -119,7 +131,7 @@ namespace codegen {
             if (decrement_tabs_count)
                 dec_tabs_count(kTabsPerBlock);
 
-            push_line("};");
+            push_line(move_cursor_to_next_line ? "};" : "}; ");
             if (move_cursor_to_next_line)
                 next_line();
 
@@ -149,12 +161,21 @@ namespace codegen {
             return end_block();
         }
 
-        self_ref begin_enum_class(const std::string& enum_name, const std::string& base_typename = "") {
-            return begin_block(std::format("enum {}{}", escape_name(enum_name), base_typename.empty() ? base_typename : (" : " + base_typename)));
+        self_ref begin_enum(const std::string& enum_name, const std::string& base_typename = "", const std::string& enum_type = "") {
+            return begin_block(std::format("enum{}{}{}", enum_type.empty() ? " " : (" " + enum_type + " "), escape_name(enum_name),
+                                           base_typename.empty() ? base_typename : (" : " + base_typename)));
+        }
+
+        self_ref end_enum() {
+            return end_block();
+        }
+
+        virtual self_ref begin_enum_class(const std::string& enum_name, const std::string& base_typename = "") {
+            return begin_enum(enum_name, base_typename, "class");
         }
 
         self_ref end_enum_class() {
-            return end_block();
+            return end_enum();
         }
 
         template <typename T>
@@ -170,7 +191,7 @@ namespace codegen {
             if (base_type.empty())
                 return begin_struct(std::cref(name), access_modifier);
 
-            return begin_block(std::format("struct {} : {}", escape_name(name), base_type), access_modifier);
+            return begin_block(std::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
         }
 
         self_ref end_struct() {
@@ -200,9 +221,9 @@ namespace codegen {
             auto backup_tabs_count = _tabs_count;
             _tabs_count = 0;
 
-            auto getter = std::format(
-                "*reinterpret_cast<{}*>(interfaces::g_schema->FindTypeScopeForModule(\"{}\")->FindDeclaredClass(\"{}\")->m_static_fields[{}]->m_instance)",
-                type_name, mod_name, decl_class, index);
+            auto getter = std::format("*reinterpret_cast<{}*>(interfaces::g_schema->FindTypeScopeForModule(\"{}\")"
+                                      "->FindDeclaredClass(\"{}\")->m_static_fields[{}]->m_instance)",
+                                      type_name, mod_name, decl_class, index);
             return_value(getter, false);
             end_function(false, false);
 
@@ -224,7 +245,7 @@ namespace codegen {
 
         self_ref forward_declartion(const std::string& text) {
             // @note: @es3n1n: forward decl only once
-            const auto fwd_decl_hash = fnv32::hash_runtime(text.data());
+            const auto fwd_decl_hash = std::hash<std::string>{}(text);
             if (_forward_decls.contains(fwd_decl_hash))
                 return *this;
 
@@ -237,10 +258,12 @@ namespace codegen {
 
         self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
                                 const bool is_private_field = false, const std::size_t bitfield_size = 0ull) {
-            // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
             std::string type_name = bitfield_size ? guess_bitfield_type(bitfield_size) : "uint8_t";
-            if (false && is_private_field)
-                type_name = "[[maybe_unused]] " + type_name;
+
+            // @note: @es3n1n: mark private fields as maybe_unused to suppress -Wunused-private-field
+            if constexpr (cxx_ver >= CXX17)
+                if (is_private_field)
+                    type_name = "[[maybe_unused]] " + type_name;
 
             auto pad_name = pad_offset.has_value() ? std::format("__pad{:04x}", pad_offset.value()) : std::format("__pad{:d}", _pads_count++);
             if (!bitfield_size)
@@ -256,8 +279,7 @@ namespace codegen {
         }
 
         self_ref end_union(const bool move_cursor_to_next_line = true) {
-            dec_tabs_count(1);
-            return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
+            return end_block(true, move_cursor_to_next_line);
         }
 
         self_ref begin_bitfield_block() {
@@ -265,8 +287,7 @@ namespace codegen {
         }
 
         self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) {
-            dec_tabs_count(1);
-            return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
+            return end_block(true, move_cursor_to_next_line);
         }
     public:
         [[nodiscard]] std::string str() {
@@ -321,10 +342,31 @@ namespace codegen {
         std::size_t _tabs_count = 0, _tabs_count_backup = 0;
         std::size_t _unions_count = 0;
         std::size_t _pads_count = 0;
-        std::set<fnv32::hash> _forward_decls = {};
+        std::set<std::size_t> _forward_decls = {};
     };
 
-    __forceinline generator_t get() {
-        return generator_t{};
+    struct ida_generator_t : public cxx_generator_t<CXX03> {
+    public:
+        self_ref access_modifier(const std::string& modifier) override {
+            return *this; // no access modifiers for ilfak :^)
+        }
+
+        self_ref begin_enum_class(const std::string& enum_name, const std::string& base_typename = "") override {
+            return begin_enum(enum_name, base_typename);
+        }
+    };
+
+    __forceinline auto get() {
+#if defined(__IDA_GEN__)
+        return ida_generator_t{};
+#else
+        return cxx_generator_t{};
+#endif
     }
 } // namespace codegen
+
+#if defined(__IDA_GEN__)
+    #define GENERATOR_REF_T ::codegen::ida_generator_t::self_ref
+#else
+    #define GENERATOR_REF_T ::codegen::cxx_generator_t<>::self_ref
+#endif

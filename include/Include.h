@@ -30,7 +30,3 @@ using namespace std::this_thread;
 namespace source2_gen {
     void WINAPI main(HMODULE h_module);
 }
-
-constexpr std::string_view kConsoleTitleMessage = {"source2gen :: github.com/neverlosecc/source2gen"};
-constexpr std::string_view kPoweredByMessage = {"Powered by github.com/neverlosecc/source2gen"};
-constexpr std::string_view kCreatedBySource2genMessage = {"Created using source2gen - github.com/neverlosecc/source2gen"};

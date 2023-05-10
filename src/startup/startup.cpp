@@ -3,6 +3,9 @@
 
 #include "tools/console/console.h"
 
+constexpr std::string_view kConsoleTitleMessage = {"source2gen :: github.com/neverlosecc/source2gen"};
+constexpr std::string_view kPoweredByMessage = {"Powered by github.com/neverlosecc/source2gen"};
+
 namespace {
     using namespace std::string_view_literals;
 
