@@ -11,11 +11,11 @@ public:
     }
 
     void* ReAlloc(const void* p, std::size_t size) {
-        return Virtual::Get<void*(__thiscall*)(IMemAlloc*, const void*, std::size_t)>(this, 3)(this, p, size);
+        return Virtual::Get<void*(__thiscall*)(IMemAlloc*, const void*, std::size_t)>(this, 2)(this, p, size);
     }
 
     void Free(const void* p) {
-        return Virtual::Get<void(__thiscall*)(IMemAlloc*, const void*)>(this, 5)(this, p);
+        return Virtual::Get<void(__thiscall*)(IMemAlloc*, const void*)>(this, 3)(this, p);
     }
 
     std::size_t GetSize(const void* p) {
