@@ -376,7 +376,7 @@ public:
     }
 
     CSchemaSystemTypeScope* FindTypeScopeForModule(const char* m_module_name) {
-        return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*, const char*)>(this, 13)(this, m_module_name);
+        return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*, const char*, void*)>(this, 13)(this, m_module_name, nullptr);
     }
 
     [[nodiscard]] CUtlVector<CSchemaSystemTypeScope*> GetTypeScopes(void) const {
