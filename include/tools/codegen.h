@@ -204,8 +204,19 @@ namespace codegen {
             return push_line(std::format("// {}", text), move_cursor_to_next_line);
         }
 
+        static void replace_all(std::string& text, const std::string& to_remove, const std::string& to_insert) {
+            auto pos = text.find(to_remove);
+            while (pos != std::string::npos) {
+                text.replace(pos, to_remove.length(), to_insert);
+                pos = text.find(to_remove, pos);
+            }
+        }
+
         self_ref prop(const std::string& type_name, const std::string& name, bool move_cursor_to_next_line = true) {
-            const auto line = move_cursor_to_next_line ? std::format("{} {};", type_name, name) : std::format("{} {}; ", type_name, name);
+            auto type_name_fixed = type_name;
+            replace_all(type_name_fixed, "< ", "<");
+            replace_all(type_name_fixed, " >", ">");
+            const auto line = move_cursor_to_next_line ? std::format("{} {};", type_name_fixed, name) : std::format("{} {}; ", type_name_fixed, name);
             return push_line(line, move_cursor_to_next_line);
         }
 
