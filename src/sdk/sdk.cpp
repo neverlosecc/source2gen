@@ -156,6 +156,7 @@ namespace sdk {
 
             for (const auto schema_class_binding : classes.GetElements()) {
                 const auto class_info = current->FindDeclaredClass(schema_class_binding->m_binary_name);
+
                 auto& class_dump = classes_to_dump.emplace_back();
                 class_dump.target_ = class_info;
 
