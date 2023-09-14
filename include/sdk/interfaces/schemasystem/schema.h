@@ -310,9 +310,15 @@ private:
 
 class CSchemaSystemTypeScope {
 public:
+#if defined CSGO2
     void FindDeclaredClass(CSchemaClassInfo** ret_class, const char* class_name) {
         Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, ret_class, class_name);
     }
+#else
+    CSchemaClassInfo* FindDeclaredClass(const char* class_name) {
+        return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, class_name);
+    }
+#endif
 
     CSchemaEnumBinding* FindDeclaredEnum(const char* name) {
         return Virtual::Get<CSchemaEnumBinding*(__thiscall*)(void*, const char*)>(this, 3)(this, name);
