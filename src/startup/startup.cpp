@@ -48,6 +48,9 @@ namespace source2_gen {
         if (!sdk::g_schema)
             throw std::runtime_error(std::format("Unable to obtain Schema interface"));
 
+        while(!sdk::g_schema->SchemaSystemIsReady())
+            sleep_for(std::chrono::seconds(5));
+
         // @note: @es3n1n: Obtaining type scopes and generating sdk
         //
         const auto type_scopes = sdk::g_schema->GetTypeScopes();
@@ -57,6 +60,13 @@ namespace source2_gen {
         // @note: @es3n1n: Generating sdk for global type scope
         //
         sdk::GenerateTypeScopeSdk(sdk::g_schema->GlobalTypeScope());
+
+        static const auto pretiffy_num_fn = reinterpret_cast<const char*(*)(int)>(GetProcAddress(GetModuleHandleA("tier0.dll"), "V_PrettifyNum"));
+
+        std::cout << std::format("Schema stats: {} registrations; {} were redundant; {} were ignored ({} bytes of ignored data)",
+                                 pretiffy_num_fn(sdk::g_schema->GetRegistration()), pretiffy_num_fn(sdk::g_schema->GetRedundant()),
+                                 pretiffy_num_fn(sdk::g_schema->GetIgnored()), pretiffy_num_fn(sdk::g_schema->GetIgnoredBytes()))
+                  << std::endl;
 
         // @note: @es3n1n: We are done here
         //

@@ -14,7 +14,23 @@ namespace {
         FNV32("MPropertyAttributeRange"), FNV32("MPropertyStartGroup"),   FNV32("MPropertyAttributeChoiceName"),
         FNV32("MPropertyGroupName"),      FNV32("MNetworkUserGroup"),     FNV32("MNetworkAlias"),
         FNV32("MNetworkTypeAlias"),       FNV32("MNetworkSerializer"),    FNV32("MPropertyAttributeEditor"),
-        FNV32("MPropertySuppressExpr"),   FNV32("MKV3TransferName"),
+        FNV32("MPropertySuppressExpr"),   FNV32("MKV3TransferName"),      FNV32("MFieldVerificationName"),
+        FNV32("MVectorIsSometimesCoordinate"), FNV32("MNetworkEncoder"), FNV32("MPropertyCustomFGDType"),
+        FNV32("MVDataUniqueMonotonicInt"),
+    };
+
+    constexpr std::initializer_list<fnv32::hash> kStringClassMetadataEntries = {
+        FNV32("MResourceTypeForInfoType"),
+    };
+
+    constexpr std::initializer_list<fnv32::hash> kVarNameStringClassMetadataEntries = {
+        FNV32("MNetworkVarNames"), /* FNV32("MNetworkOverride"), FNV32("MNetworkVarTypeOverride"), */
+    };
+
+    constexpr std::initializer_list<fnv32::hash> kVarStringClassMetadataEntries = {
+        FNV32("MPropertyArrayElementNameKey"), FNV32("MPropertyFriendlyName"),      FNV32("MPropertyDescription"),
+        FNV32("MNetworkExcludeByName"),        FNV32("MNetworkExcludeByUserGroup"), FNV32("MNetworkIncludeByName"),
+        FNV32("MNetworkIncludeByUserGroup"),   FNV32("MNetworkUserGroupProxy"),     FNV32("MNetworkReplayCompatField"), 
     };
 
     constexpr std::initializer_list<fnv32::hash> kIntegerMetadataEntries = {
@@ -22,6 +38,9 @@ namespace {
         FNV32("MNetworkBitCount"),
         FNV32("MNetworkPriority"),
         FNV32("MPropertySortPriority"),
+        FNV32("MParticleMinVersion"),
+        FNV32("MParticleMaxVersion"),
+        FNV32("MNetworkEncodeFlags"),
     };
 
     constexpr std::initializer_list<fnv32::hash> kFloatMetadataEntries = {
@@ -36,8 +55,67 @@ namespace {
 
 namespace sdk {
     namespace {
-        __forceinline void PrintClassInfo(codegen::generator_t::self_ref builder, std::int16_t alignment, std::int16_t size) {
-            builder.comment(std::format("Alignment: {}", alignment)).comment(std::format("Size: {:#x}", size));
+        __forceinline void PrintClassInfo(codegen::generator_t::self_ref builder, SchemaClassInfoData_t* class_info) {
+            builder
+                .comment(std::format("Registered binary: {} (project '{}')", sdk::g_schema->GetClassInfoBinaryName(class_info),
+                                     sdk::g_schema->GetClassProjectName(class_info)))
+                .comment(std::format("Alignment: {}", class_info->GetAligment()))
+                .comment(std::format("Size: {:#x}", class_info->m_size));
+            
+            if ((class_info->m_class_flags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
+                builder.comment("Is Polymorphic");
+            if ((class_info->m_class_flags & SCHEMA_CF1_IS_ABSTRACT) != 0)
+                builder.comment("Is Abstract");
+            if ((class_info->m_class_flags & SCHEMA_CF1_HAS_TRIVIAL_CONSTRUCTOR) != 0)
+                builder.comment("Has Trivial Constructor");
+            if ((class_info->m_class_flags & SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR) != 0)
+                builder.comment("Has Trivial Destructor");
+            if (class_info->m_has_base_class == 1)
+                builder.comment("Has Base Class");
+
+            builder.comment("");
+
+            auto get_metadata_type = [&](SchemaClassMetadataEntryData_t metadata_entry) -> std::string {
+                std::string value;
+
+                const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_name);
+
+                // clang-format off
+                if (std::find(kVarNameStringClassMetadataEntries.begin(), kVarNameStringClassMetadataEntries.end(), value_hash_name) != kVarNameStringClassMetadataEntries.end())
+                    value = std::format("{} {}", metadata_entry.m_value.m_var_name->m_type, metadata_entry.m_value.m_var_name->m_name);
+                else if (std::find(kStringClassMetadataEntries.begin(), kStringClassMetadataEntries.end(), value_hash_name) != kStringClassMetadataEntries.end())
+                    value = metadata_entry.m_value.m_sz_value;
+                else if (std::find(kVarStringClassMetadataEntries.begin(), kVarStringClassMetadataEntries.end(), value_hash_name) != kVarStringClassMetadataEntries.end())
+                    value = metadata_entry.m_value.m_var_name->m_name;
+                // clang-format on
+
+                return value;
+            };
+
+            for (auto i = 0; i < class_info->m_metadata_size; ++i) {
+                auto metadata = class_info->m_metadata[i];
+
+                if (const auto value = get_metadata_type(metadata.m_entry); !value.empty())
+                    builder.comment(std::format("{} {}", metadata.m_entry.m_name, value));
+                else
+                    builder.comment(metadata.m_entry.m_name);
+            }
+        }
+
+        __forceinline void PrintEnumInfo(codegen::generator_t::self_ref builder, CSchemaEnumBinding* enum_binding) {
+            builder
+                .comment(std::format("Registered binary: {} (project '{}')", sdk::g_schema->GetEnumBinaryName(enum_binding),
+                                     sdk::g_schema->GetEnumProjectName(enum_binding)))
+                .comment(std::format("Alignment: {}", enum_binding->m_align)) // @note: @og: I think this is wrong
+                .comment(std::format("Size: {:#x}", enum_binding->m_size));
+
+            for (auto i = 0; i < enum_binding->m_static_metadata_size; ++i) {
+                auto metadata = enum_binding->m_static_metadata[i];
+                if (!metadata.m_name)
+                    continue;
+
+                builder.comment(metadata.m_name);
+            }
         }
 
         void AssembleEnums(codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
@@ -47,7 +125,7 @@ namespace sdk {
                 const auto get_type_name = [schema_enum_binding]() [[msvc::forceinline]] {
                     std::string type_storage;
 
-                    switch (schema_enum_binding->m_align_) {
+                    switch (schema_enum_binding->m_align) {
                     case 1:
                         type_storage = "uint8_t";
                         break;
@@ -73,16 +151,16 @@ namespace sdk {
 
                 // @note: @es3n1n: print meta info
                 //
-                PrintClassInfo(builder, schema_enum_binding->m_align_, schema_enum_binding->m_size_);
+                PrintEnumInfo(builder, schema_enum_binding);
 
                 // @note: @es3n1n: begin enum class
                 //
-                builder.begin_enum_class(schema_enum_binding->m_binding_name_, get_type_name());
+                builder.begin_enum_class(schema_enum_binding->m_binding_name, get_type_name());
 
                 // @note: @es3n1n: assemble enum items
                 //
-                for (auto l = 0; l < schema_enum_binding->m_size_; l++) {
-                    auto& field = schema_enum_binding->m_enum_info_[l];
+                for (auto l = 0; l < schema_enum_binding->m_size; l++) {
+                    auto& field = schema_enum_binding->m_enum_info[l];
 
                     builder.enum_item(field.m_name, field.m_value == std::numeric_limits<std::size_t>::max() ? -1 : field.m_value);
                 }
@@ -134,7 +212,7 @@ namespace sdk {
                 }
 
                 SchemaClassFieldData_t* GetFirstField() {
-                    if (target_->m_align)
+                    if (target_->m_fields_size)
                         return &target_->m_fields[0];
                     return nullptr;
                 }
@@ -160,7 +238,7 @@ namespace sdk {
                 auto& class_dump = classes_to_dump.emplace_back();
                 class_dump.target_ = class_info;
 
-                for (auto k = 0; k < class_info->m_align; k++) {
+                for (auto k = 0; k < class_info->m_fields_size; k++) {
                     const auto field = &class_info->m_fields[k];
                     if (!field)
                         continue;
@@ -261,7 +339,7 @@ namespace sdk {
                 const auto class_parent = class_dump.GetParent();
                 const auto class_info = class_dump.target_;
                 const auto is_struct = ends_with(class_info->m_name, "_t");
-                PrintClassInfo(builder, class_info->m_align, class_info->m_size);
+                PrintClassInfo(builder, class_info);
 
                 // @note: @es3n1n: get parent name
                 //
@@ -321,7 +399,7 @@ namespace sdk {
                 //
                 builder.access_modifier("public");
 
-                for (auto k = 0; k < class_info->m_align; k++) {
+                for (auto k = 0; k < class_info->m_fields_size; k++) {
                     const auto field = &class_info->m_fields[k];
                     if (!field)
                         continue;
@@ -460,7 +538,7 @@ namespace sdk {
                 // @note: @es3n1n: dump static fields
                 //
                 if (class_info->m_static_size) {
-                    if (class_info->m_align)
+                    if (class_info->m_fields_size)
                         builder.next_line();
                     builder.comment("Static fields:");
                 }
@@ -472,7 +550,7 @@ namespace sdk {
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
                 }
 
-                if (!class_info->m_align && !class_info->m_static_size)
+                if (!class_info->m_fields_size && !class_info->m_static_size)
                     builder.comment("No members available");
 
                 builder.end_block();

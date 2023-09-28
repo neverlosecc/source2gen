@@ -4,7 +4,7 @@
 #include <SDK/Interfaces/common/CUtlTSHash.h>
 #include <tools/virtual.h>
 
-#define CSGO2
+#define DOTA2
 
 #ifdef SBOX
 // untested, CSchemaType::m_schema_type_ might be wrong
@@ -39,7 +39,7 @@
     #error "unimplemented"
 #elif defined THE_LAB_ROBOT_REPAIR
     #error "unimplemented"
-#elif defined(CSGO2) || defined(DOTA2)0x47E
+#elif defined(CSGO2) || defined(DOTA2)
     #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x47E
@@ -57,6 +57,37 @@ struct SchemaClassInfoData_t;
 
 using SchemaString_t = const char*;
 
+enum SchemaClassFlags_t {
+    SCHEMA_CF1_HAS_VIRTUAL_MEMBERS = 1,
+    SCHEMA_CF1_IS_ABSTRACT = 2,
+    SCHEMA_CF1_HAS_TRIVIAL_CONSTRUCTOR = 4,
+    SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR = 8,
+    SCHEMA_CLASS_TEMP_HACK_HAS_NOSCHEMA_MEMBERS = 16,
+    SCHEMA_CLASS_TEMP_HACK_HAS_CONSTRUCTOR_LIKE_METHODS = 32,
+    SCHEMA_CLASS_TEMP_HACK_HAS_DESTRUCTOR_LIKE_METHODS = 64,
+    SCHEMA_CLASS_IS_NOSCHEMA_CLASS = 128,
+};
+
+enum ETypeCategory {
+    Schema_Builtin = 0,
+    Schema_Ptr = 1,
+    Schema_Bitfield = 2,
+    Schema_FixedArray = 3,
+    Schema_Atomic = 4,
+    Schema_DeclaredClass = 5,
+    Schema_DeclaredEnum = 6,
+    Schema_None = 7
+};
+
+enum EAtomicCategory {
+    Atomic_Basic,
+    Atomic_T,
+    Atomic_CollectionOfT,
+    Atomic_TT,
+    Atomic_I,
+    Atomic_None
+};
+
 template <typename T>
 struct SchemaArray {
 public:
@@ -72,12 +103,18 @@ public:
     unsigned int m_size;
 };
 
+struct CSchemaVarName {
+    const char* m_name;
+    const char* m_type;
+};
+
 struct CSchemaNetworkValue {
     union {
         const char* m_sz_value;
         int m_n_value;
         float m_f_value;
         std::uintptr_t m_p_value;
+        CSchemaVarName* m_var_name;
     };
 };
 
@@ -90,6 +127,24 @@ struct CSchemaClassBinding {
     void* m_class_info;
     void* m_this_module_binding_pointer;
     CSchemaType* m_schema_type;
+};
+
+struct SchemaMetadataEntryData_t {
+    SchemaString_t m_name;
+    CSchemaNetworkValue* m_value;
+    // CSchemaType* m_pDataType;
+    // void* unaccounted;
+};
+
+struct SchemaClassMetadataEntryData_t {
+    SchemaString_t m_name;
+    CSchemaNetworkValue m_value;
+    // CSchemaType* m_pDataType;
+    // void* unaccounted;
+};
+
+struct SchemaMetadataSetData_t {
+    SchemaClassMetadataEntryData_t m_entry;
 };
 
 struct SchemaEnumeratorInfoData_t {
@@ -118,48 +173,17 @@ public:
     virtual const char* GetBinaryName() = 0;
     virtual const char* GetProjectName() = 0;
 public:
-    char* m_binding_name_; // 0x0008
-    char* m_dll_name_; // 0x0010
-    std::int8_t m_align_; // 0x0018
+    char* m_binding_name; // 0x0008
+    char* m_dll_name; // 0x0010
+    std::int8_t m_align; // 0x0018
     char pad_0x0019[0x3]; // 0x0019
-    std::int16_t m_size_; // 0x001C
-    std::int16_t m_flags_; // 0x001E
-    SchemaEnumeratorInfoData_t* m_enum_info_;
-    char pad_0x0028[0x8]; // 0x0028
-    CSchemaSystemTypeScope* m_type_scope_; // 0x0030
+    std::int16_t m_size; // 0x001C
+    std::int16_t m_static_metadata_size; // 0x001E
+    SchemaEnumeratorInfoData_t* m_enum_info;
+    SchemaMetadataEntryData_t* m_static_metadata;
+    CSchemaSystemTypeScope* m_type_scope; // 0x0030
     char pad_0x0038[0x8]; // 0x0038
-    std::int32_t m_i_unk1_; // 0x0040
-};
-
-enum SchemaClassFlags_t {
-    SCHEMA_CLASS_HAS_VIRTUAL_MEMBERS = 1,
-    SCHEMA_CLASS_IS_ABSTRACT = 2,
-    SCHEMA_CLASS_HAS_TRIVIAL_CONSTRUCTOR = 4,
-    SCHEMA_CLASS_HAS_TRIVIAL_DESTRUCTOR = 8,
-    SCHEMA_CLASS_TEMP_HACK_HAS_NOSCHEMA_MEMBERS = 16,
-    SCHEMA_CLASS_TEMP_HACK_HAS_CONSTRUCTOR_LIKE_METHODS = 32,
-    SCHEMA_CLASS_TEMP_HACK_HAS_DESTRUCTOR_LIKE_METHODS = 64,
-    SCHEMA_CLASS_IS_NOSCHEMA_CLASS = 128,
-};
-
-enum ETypeCategory {
-    Schema_Builtin = 0,
-    Schema_Ptr = 1,
-    Schema_Bitfield = 2,
-    Schema_FixedArray = 3,
-    Schema_Atomic = 4,
-    Schema_DeclaredClass = 5,
-    Schema_DeclaredEnum = 6,
-    Schema_None = 7
-};
-
-enum EAtomicCategory {
-    Atomic_Basic,
-    Atomic_T,
-    Atomic_CollectionOfT,
-    Atomic_TT,
-    Atomic_I,
-    Atomic_None
+    std::int32_t m_i_unk1; // 0x0040
 };
 
 class CSchemaType {
@@ -228,17 +252,6 @@ public:
 };
 static_assert(offsetof(CSchemaType, m_schema_type_) == 0x20);
 
-struct SchemaMetadataEntryData_t {
-    SchemaString_t m_name;
-    CSchemaNetworkValue* m_value;
-    // CSchemaType* m_pDataType;
-    // void* unaccounted;
-};
-
-struct SchemaMetadataSetData_t {
-    SchemaMetadataEntryData_t m_static_entries;
-};
-
 struct SchemaClassFieldData_t {
     SchemaString_t m_name; // 0x0000
     CSchemaType* m_type; // 0x0008
@@ -259,33 +272,41 @@ struct SchemaBaseClassInfoData_t {
     CSchemaClassInfo* m_class;
 };
 
+constexpr auto gay = sizeof(bool);
+
 // Classes
 struct SchemaClassInfoData_t {
-    char pad_0x0000[0x8]; // 0x0000
+public:
+    SchemaClassInfoData_t* m_parent; // 0x0000
 
     const char* m_name; // 0x0008
     char* m_module; // 0x0010
 
     int m_size; // 0x0018
-    std::int16_t m_align; // 0x001C
 
+    std::int16_t m_fields_size; // 0x001C
     std::int16_t m_static_size; // 0x001E
     std::int16_t m_metadata_size; // 0x0020
-    std::int16_t m_i_unk1; // 0x0022
-    std::int16_t m_i_unk2; // 0x0024
-    std::int16_t m_i_unk3; // 0x0026
+    std::uint8_t m_align_of; // 0x0022
+    std::uint8_t m_has_base_class; // 0x0023
+    std::int16_t m_i_unk_1; // 0x0024
+    std::int16_t m_i_unk_2; // 0x0026
 
     SchemaClassFieldData_t* m_fields; // 0x0028
-
     SchemaStaticFieldData_t* m_static_fields; // 0x0030
     SchemaBaseClassInfoData_t* m_schema_parent; // 0x0038
 
-    char pad_0x0038[0x10]; // 0x0038
+    char pad_0x0038[8];
 
     SchemaMetadataSetData_t* m_metadata; // 0x0048
     CSchemaSystemTypeScope* m_type_scope; // 0x0050
     CSchemaType* m_shema_type; // 0x0058
-    SchemaClassFlags_t m_class_flags:8; // 0x0060
+    SchemaClassFlags_t m_class_flags : 8; // 0x0060
+
+public:
+    std::uint8_t GetAligment() {
+        return m_align_of == std::numeric_limits<std::uint8_t>::max() ? 4 : m_align_of;
+    }
 };
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
@@ -369,16 +390,60 @@ public:
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*)>(this, 11)(this);
     }
 
-    CSchemaSystemTypeScope* FindTypeScopeForModule(const char* m_module_name) {
-        return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*, const char*, void*)>(this, 13)(this, m_module_name, nullptr);
+    CSchemaSystemTypeScope* FindTypeScopeForModule(const char* module_name) {
+        return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*, const char*, void*)>(this, 13)(this, module_name, nullptr);
+    }
+
+    const char* GetClassInfoBinaryName(SchemaClassInfoData_t* class_info) {
+        return Virtual::Get<const char*(__thiscall*)(void*, SchemaClassInfoData_t*)>(this, 22)(this, class_info);
+    }
+
+    const char* GetClassProjectName(SchemaClassInfoData_t* class_info) {
+        return Virtual::Get<const char*(__thiscall*)(void*, SchemaClassInfoData_t*)>(this, 23)(this, class_info);
+    }
+
+    const char* GetEnumBinaryName(CSchemaEnumBinding* class_info) {
+        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, 24)(this, class_info);
+    }
+
+    const char* GetEnumProjectName(CSchemaEnumBinding* class_info) {
+        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, 25)(this, class_info);
+    }
+
+    bool SchemaSystemIsReady()
+    {
+        return Virtual::Get<bool(__thiscall*)(void*)>(this, 26)(this);
     }
 
     [[nodiscard]] CUtlVector<CSchemaSystemTypeScope*> GetTypeScopes(void) const {
         return m_type_scopes_;
     }
+
+    [[nodiscard]] std::int32_t GetRegistration() const {
+        return m_registrations_;
+    }
+    
+    [[nodiscard]] std::int32_t GetIgnored() const {
+        return m_ignored_;
+    }
+    
+    [[nodiscard]] std::int32_t GetRedundant() const {
+        return m_redundant_;
+    }
+    
+    [[nodiscard]] std::int32_t GetIgnoredBytes() const {
+        return m_ignored_bytes_;
+    }
 private:
     char pad_0x0000[SCHEMASYSTEM_TYPE_SCOPES_OFFSET]; // 0x0000
     CUtlVector<CSchemaSystemTypeScope*> m_type_scopes_ = {}; // SCHEMASYSTEM_TYPE_SCOPES_OFFSET
+    char pad_01A0[288]; // 0x01A0
+    std::int32_t m_registrations_; // 0x02C0
+    std::int32_t m_ignored_; // 0x02C4
+    std::int32_t m_redundant_; // 0x02C8
+    char pad_02CC[4]; // 0x02CC
+    std::int32_t m_ignored_bytes_; // 0x02D0
+
 public:
     static CSchemaSystem* GetInstance(void) {
         return sdk::GetInterface<CSchemaSystem>("schemasystem.dll", "SchemaSystem_0");
