@@ -39,7 +39,7 @@
     #error "unimplemented"
 #elif defined THE_LAB_ROBOT_REPAIR
     #error "unimplemented"
-#elif defined(CSGO2) || defined(DOTA2)0x47E
+#elif defined(CSGO2) || defined(DOTA2)
     #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x47E
