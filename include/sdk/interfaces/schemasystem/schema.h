@@ -24,11 +24,6 @@
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x4428
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x4B8
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2001
-#elif defined DOTA2
-    #define CSCHEMATYPE_GETSIZES_INDEX 3
-    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
-    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
-    #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
 #elif defined UNDERLORDS
 // untested, CSchemaType::m_schema_type_ might be wrong
     #define CSCHEMATYPE_GETSIZES_INDEX 5
@@ -44,11 +39,12 @@
     #error "unimplemented"
 #elif defined THE_LAB_ROBOT_REPAIR
     #error "unimplemented"
-#elif defined CSGO2
+#elif defined(CSGO2) || defined(DOTA2)
     #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x47E
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2808
+    #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 2
 #endif
 
 class CSchemaClassInfo;
@@ -310,15 +306,16 @@ private:
 
 class CSchemaSystemTypeScope {
 public:
-#if defined CSGO2
-    void FindDeclaredClass(CSchemaClassInfo** ret_class, const char* class_name) {
-        Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, ret_class, class_name);
-    }
-#else
     CSchemaClassInfo* FindDeclaredClass(const char* class_name) {
+#if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
+        CSchemaClassInfo* class_info;
+
+        Virtual::Get<void(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, class_name);
+        return class_info;
+#else
         return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, class_name);
-    }
 #endif
+    }
 
     CSchemaEnumBinding* FindDeclaredEnum(const char* name) {
         return Virtual::Get<CSchemaEnumBinding*(__thiscall*)(void*, const char*)>(this, 3)(this, name);
