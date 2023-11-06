@@ -249,6 +249,14 @@ struct SchemaClassFieldData_t {
     SchemaMetadataEntryData_t* m_metadata; // 0x0018
 };
 
+struct CSchemaClassInfoField_t {
+    char pad_0000[8]; // 0x0000
+    SchemaString_t m_name; // 0x0008
+    std::uint32_t m_single_inheritance_offset; // 0x0010
+    char pad_0014[84]; // 0x0014
+}; // Size: 0x0068
+static_assert(sizeof(CSchemaClassInfoField_t) == 0x68);
+
 struct SchemaStaticFieldData_t {
     const char* name; // 0x0000
     CSchemaType* m_type; // 0x0008
@@ -261,9 +269,11 @@ struct SchemaBaseClassInfoData_t {
     CSchemaClassInfo* m_class;
 };
 
-constexpr auto gay = sizeof(bool);
+struct CSchemaClassInfoFieldsData_t {
+    CSchemaClassInfoField_t* m_field;
+    std::int32_t m_size;
+};
 
-// Classes
 struct SchemaClassInfoData_t {
 private:
     enum class SchemaClassInitialization_t : std::int32_t {
@@ -279,13 +289,10 @@ private:
     using InitializationFn = void(*)(SchemaClassInitialization_t, SchemaClassInfoData_t*, SchemaClassInfoData_t*);
 
 public:
-    SchemaClassInfoData_t* m_parent; // 0x0000
-
+    SchemaClassInfoData_t* m_self; // 0x0000
     const char* m_name; // 0x0008
-    char* m_module; // 0x0010
-
+    const char* m_module; // 0x0010
     int m_size; // 0x0018
-
     std::int16_t m_fields_size; // 0x001C
     std::int16_t m_static_size; // 0x001E
     std::int16_t m_metadata_size; // 0x0020
@@ -293,18 +300,15 @@ public:
     std::uint8_t m_has_base_class; // 0x0023
     std::int16_t m_total_class_size; // 0x0024 // @note: @og: if there no derived or base class then it will be 1 otherwise derived class size + 1.
     std::int16_t m_derived_class_size; // 0x0026
-
     SchemaClassFieldData_t* m_fields; // 0x0028
     SchemaStaticFieldData_t* m_static_fields; // 0x0030
     SchemaBaseClassInfoData_t* m_schema_parent; // 0x0038
-
-    char pad_0x0038[8];
-
+    CSchemaClassInfoFieldsData_t* m_fields_backup; // 0x0040 // @note: @og: sometimes it duplicates m_fields, cant find where it being used
     SchemaMetadataEntryData_t* m_metadata; // 0x0048
     CSchemaSystemTypeScope* m_type_scope; // 0x0050
     CSchemaType* m_shema_type; // 0x0058
     SchemaClassFlags_t m_class_flags; // 0x0060
-    std::uint32_t m_i_unk_1; // 0x0064
+    std::uint32_t m_sequence; // 0x0064 // @note: @og: idk
     InitializationFn initialization_fn; // 0x0068
 
 public:
