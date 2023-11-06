@@ -52,7 +52,6 @@ class CSchemaSystemTypeScope;
 class CSchemaType;
 
 struct SchemaMetadataEntryData_t;
-struct SchemaMetadataSetData_t;
 struct SchemaClassInfoData_t;
 
 using SchemaString_t = const char*;
@@ -62,10 +61,9 @@ enum SchemaClassFlags_t {
     SCHEMA_CF1_IS_ABSTRACT = 2,
     SCHEMA_CF1_HAS_TRIVIAL_CONSTRUCTOR = 4,
     SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR = 8,
-    SCHEMA_CLASS_TEMP_HACK_HAS_NOSCHEMA_MEMBERS = 16,
-    SCHEMA_CLASS_TEMP_HACK_HAS_CONSTRUCTOR_LIKE_METHODS = 32,
-    SCHEMA_CLASS_TEMP_HACK_HAS_DESTRUCTOR_LIKE_METHODS = 64,
-    SCHEMA_CLASS_IS_NOSCHEMA_CLASS = 128,
+    SCHEMA_CF1_IS_LOCAL_TYPE_SCOPE = 64,
+    SCHEMA_CF1_IS_GLOBAL_TYPE_SCOPE = 128,
+    SCHEMA_CF1_IS_NOSCHEMA_CLASS = 2048,
 };
 
 enum ETypeCategory {
@@ -110,11 +108,12 @@ struct CSchemaVarName {
 
 struct CSchemaNetworkValue {
     union {
-        const char* m_sz_value;
+        const char* m_p_sz_value;
         int m_n_value;
         float m_f_value;
         std::uintptr_t m_p_value;
-        CSchemaVarName* m_var_name;
+        CSchemaVarName m_var_value;
+        std::array<char, 32> m_sz_value;
     };
 };
 
@@ -132,19 +131,6 @@ struct CSchemaClassBinding {
 struct SchemaMetadataEntryData_t {
     SchemaString_t m_name;
     CSchemaNetworkValue* m_value;
-    // CSchemaType* m_pDataType;
-    // void* unaccounted;
-};
-
-struct SchemaClassMetadataEntryData_t {
-    SchemaString_t m_name;
-    CSchemaNetworkValue m_value;
-    // CSchemaType* m_pDataType;
-    // void* unaccounted;
-};
-
-struct SchemaMetadataSetData_t {
-    SchemaClassMetadataEntryData_t m_entry;
 };
 
 struct SchemaEnumeratorInfoData_t {
@@ -298,7 +284,7 @@ public:
 
     char pad_0x0038[8];
 
-    SchemaMetadataSetData_t* m_metadata; // 0x0048
+    SchemaMetadataEntryData_t* m_metadata; // 0x0048
     CSchemaSystemTypeScope* m_type_scope; // 0x0050
     CSchemaType* m_shema_type; // 0x0058
     SchemaClassFlags_t m_class_flags : 8; // 0x0060

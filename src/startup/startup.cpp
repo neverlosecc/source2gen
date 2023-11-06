@@ -12,6 +12,7 @@ namespace {
         "client.dll"sv,
         "engine2.dll"sv,
         "schemasystem.dll"sv,
+        "tier0.dll"sv,
         
         // @note: @soufiw: latest modules that gets loaded in the main menu
         "navsystem.dll"sv,
@@ -61,11 +62,9 @@ namespace source2_gen {
         //
         sdk::GenerateTypeScopeSdk(sdk::g_schema->GlobalTypeScope());
 
-        static const auto pretiffy_num_fn = reinterpret_cast<const char*(*)(int)>(GetProcAddress(GetModuleHandleA("tier0.dll"), "V_PrettifyNum"));
-
         std::cout << std::format("Schema stats: {} registrations; {} were redundant; {} were ignored ({} bytes of ignored data)",
-                                 pretiffy_num_fn(sdk::g_schema->GetRegistration()), pretiffy_num_fn(sdk::g_schema->GetRedundant()),
-                                 pretiffy_num_fn(sdk::g_schema->GetIgnored()), pretiffy_num_fn(sdk::g_schema->GetIgnoredBytes()))
+                                 util::PrettifyNum(sdk::g_schema->GetRegistration()), util::PrettifyNum(sdk::g_schema->GetRedundant()),
+                                 util::PrettifyNum(sdk::g_schema->GetIgnored()), util::PrettifyNum(sdk::g_schema->GetIgnoredBytes()))
                   << std::endl;
 
         // @note: @es3n1n: We are done here

@@ -24,7 +24,7 @@ namespace {
     };
 
     constexpr std::initializer_list<fnv32::hash> kVarNameStringClassMetadataEntries = {
-        FNV32("MNetworkVarNames"), /* FNV32("MNetworkOverride"), FNV32("MNetworkVarTypeOverride"), */
+        FNV32("MNetworkVarNames"), FNV32("MNetworkOverride"), FNV32("MNetworkVarTypeOverride"),
     };
 
     constexpr std::initializer_list<fnv32::hash> kVarStringClassMetadataEntries = {
@@ -63,30 +63,45 @@ namespace sdk {
                 .comment(std::format("Size: {:#x}", class_info->m_size));
             
             if ((class_info->m_class_flags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
-                builder.comment("Is Polymorphic");
+                builder.comment("Has VTable");
             if ((class_info->m_class_flags & SCHEMA_CF1_IS_ABSTRACT) != 0)
                 builder.comment("Is Abstract");
             if ((class_info->m_class_flags & SCHEMA_CF1_HAS_TRIVIAL_CONSTRUCTOR) != 0)
                 builder.comment("Has Trivial Constructor");
             if ((class_info->m_class_flags & SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR) != 0)
                 builder.comment("Has Trivial Destructor");
+            if ((class_info->m_class_flags & SCHEMA_CF1_IS_LOCAL_TYPE_SCOPE) != 0)
+                builder.comment("Is Local Type Scope");
+            if ((class_info->m_class_flags & SCHEMA_CF1_IS_GLOBAL_TYPE_SCOPE) != 0)
+                builder.comment("Is Global Type Scope");
+            if ((class_info->m_class_flags & SCHEMA_CF1_IS_NOSCHEMA_CLASS) != 0)
+                builder.comment("Not schema class");
             if (class_info->m_has_base_class == 1)
                 builder.comment("Has Base Class");
 
-            builder.comment("");
+            if (class_info->m_metadata_size > 0)
+                builder.comment("");
 
-            auto get_metadata_type = [&](SchemaClassMetadataEntryData_t metadata_entry) -> std::string {
+            auto get_metadata_type = [&](SchemaMetadataEntryData_t metadata_entry) -> std::string {
                 std::string value;
 
                 const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_name);
 
                 // clang-format off
                 if (std::find(kVarNameStringClassMetadataEntries.begin(), kVarNameStringClassMetadataEntries.end(), value_hash_name) != kVarNameStringClassMetadataEntries.end())
-                    value = std::format("{} {}", metadata_entry.m_value.m_var_name->m_type, metadata_entry.m_value.m_var_name->m_name);
+                {
+                    const auto &var_value = metadata_entry.m_value->m_var_value;
+                    if (var_value.m_type && var_value.m_name)
+                        value = std::format("{} {}", var_value.m_type, var_value.m_name);
+                    else if (var_value.m_name && !var_value.m_type)
+                        value = var_value.m_name;
+                    else if (!var_value.m_name && var_value.m_type)
+                        value = var_value.m_type;
+                 }
                 else if (std::find(kStringClassMetadataEntries.begin(), kStringClassMetadataEntries.end(), value_hash_name) != kStringClassMetadataEntries.end())
-                    value = metadata_entry.m_value.m_sz_value;
+                    value = metadata_entry.m_value->m_sz_value.data();
                 else if (std::find(kVarStringClassMetadataEntries.begin(), kVarStringClassMetadataEntries.end(), value_hash_name) != kVarStringClassMetadataEntries.end())
-                    value = metadata_entry.m_value.m_var_name->m_name;
+                    value = metadata_entry.m_value->m_p_sz_value;
                 // clang-format on
 
                 return value;
@@ -95,10 +110,10 @@ namespace sdk {
             for (auto i = 0; i < class_info->m_metadata_size; ++i) {
                 auto metadata = class_info->m_metadata[i];
 
-                if (const auto value = get_metadata_type(metadata.m_entry); !value.empty())
-                    builder.comment(std::format("{} {}", metadata.m_entry.m_name, value));
+                if (const auto value = get_metadata_type(metadata); !value.empty())
+                    builder.comment(std::format("{} {}", metadata.m_name, value));
                 else
-                    builder.comment(metadata.m_entry.m_name);
+                    builder.comment(metadata.m_name);
             }
         }
 
@@ -108,6 +123,9 @@ namespace sdk {
                                      sdk::g_schema->GetEnumProjectName(enum_binding)))
                 .comment(std::format("Alignment: {}", enum_binding->m_align)) // @note: @og: I think this is wrong
                 .comment(std::format("Size: {:#x}", enum_binding->m_size));
+
+            if (enum_binding->m_static_metadata_size > 0)
+                builder.comment("");
 
             for (auto i = 0; i < enum_binding->m_static_metadata_size; ++i) {
                 auto metadata = enum_binding->m_static_metadata[i];
@@ -420,7 +438,7 @@ namespace sdk {
 
                         // clang-format off
                         if (std::find(kStringMetadataEntries.begin(), kStringMetadataEntries.end(), value_hash_name) != kStringMetadataEntries.end())
-                            value = metadata_entry.m_value->m_sz_value;
+                            value = metadata_entry.m_value->m_p_sz_value;
                         else if (std::find(kIntegerMetadataEntries.begin(), kIntegerMetadataEntries.end(), value_hash_name) != kIntegerMetadataEntries.end())
                             value = std::to_string(metadata_entry.m_value->m_n_value);
                         else if (std::find(kFloatMetadataEntries.begin(), kFloatMetadataEntries.end(), value_hash_name) != kFloatMetadataEntries.end())
