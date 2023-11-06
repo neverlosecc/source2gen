@@ -4,7 +4,7 @@
 #include <SDK/Interfaces/common/CUtlTSHash.h>
 #include <tools/virtual.h>
 
-#define CSGO2
+#define DOTA2
 
 #ifdef SBOX
 // untested, CSchemaType::m_schema_type_ might be wrong
@@ -61,11 +61,11 @@ enum SchemaClassFlags_t {
     SCHEMA_CF1_IS_ABSTRACT = 2,
     SCHEMA_CF1_HAS_TRIVIAL_CONSTRUCTOR = 4,
     SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR = 8,
-    SCHEMA_CF1_HAS_NOSCHEMA_MEMBERS = 16, // @note: @og: aint sure, since I cant find any class with these flags
-    SCHEMA_CF1_UNKNOWN = 32, // @note: @og: in old source2gen it was constructor like methods but now I cant find any reference to what it is
+    SCHEMA_CF1_HAS_NOSCHEMA_MEMBERS = 16,
+    SCHEMA_CF1_IS_PARENT_CLASSES_PARSED = 32,
     SCHEMA_CF1_IS_LOCAL_TYPE_SCOPE = 64,
     SCHEMA_CF1_IS_GLOBAL_TYPE_SCOPE = 128,
-    SCHEMA_CF1_UNKNOWN2 = 256, // @note: @og: same as above, idk what it is
+    SCHEMA_CF1_UNKNOWN2 = 256, // @note: @og: idk
     SCHEMA_CF1_IS_NOSCHEMA_CLASS = 2048,
 };
 
@@ -265,6 +265,19 @@ constexpr auto gay = sizeof(bool);
 
 // Classes
 struct SchemaClassInfoData_t {
+private:
+    enum class SchemaClassInitialization_t : std::int32_t {
+        kInitialize = 0,
+        kNone,
+        kMetadataInitialize,
+        kCreateSomeStruct,
+        kReInitialize,
+        kInitializeSomeStruct,
+        kDestroy,
+        kGetSomePtr
+    };
+    using InitializationFn = void(*)(SchemaClassInitialization_t, SchemaClassInfoData_t*, SchemaClassInfoData_t*);
+
 public:
     SchemaClassInfoData_t* m_parent; // 0x0000
 
@@ -278,8 +291,8 @@ public:
     std::int16_t m_metadata_size; // 0x0020
     std::uint8_t m_align_of; // 0x0022
     std::uint8_t m_has_base_class; // 0x0023
-    std::int16_t m_i_unk_1; // 0x0024
-    std::int16_t m_i_unk_2; // 0x0026
+    std::int16_t m_total_class_size; // 0x0024 // @note: @og: if there no derived or base class then it will be 1 otherwise derived class size + 1.
+    std::int16_t m_derived_class_size; // 0x0026
 
     SchemaClassFieldData_t* m_fields; // 0x0028
     SchemaStaticFieldData_t* m_static_fields; // 0x0030
@@ -291,10 +304,12 @@ public:
     CSchemaSystemTypeScope* m_type_scope; // 0x0050
     CSchemaType* m_shema_type; // 0x0058
     SchemaClassFlags_t m_class_flags; // 0x0060
+    std::uint32_t m_i_unk_1; // 0x0064
+    InitializationFn initialization_fn; // 0x0068
 
 public:
     [[nodiscard]] std::uint8_t GetAligment() const {
-        return m_align_of == std::numeric_limits<std::uint8_t>::max() ? 4 : m_align_of;
+        return m_align_of == std::numeric_limits<std::uint8_t>::max() ? 8 : m_align_of;
     }
 };
 
@@ -374,6 +389,12 @@ private:
 };
 
 class CSchemaSystem {
+private:
+    /**
+     * \brief (class_info->m_class_flags & 64) != 0;
+     */
+    using SchemaTypeScope_t = std::int32_t;
+
 public:
     CSchemaSystemTypeScope* GlobalTypeScope(void) {
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*)>(this, 11)(this);
@@ -381,6 +402,10 @@ public:
 
     CSchemaSystemTypeScope* FindTypeScopeForModule(const char* module_name) {
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*, const char*, void*)>(this, 13)(this, module_name, nullptr);
+    }
+
+    CSchemaSystemTypeScope* GetTypeScopeForBinding(const SchemaTypeScope_t type, const char* binding) {
+        return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*, SchemaTypeScope_t, const char*)>(this, 14)(this, type, binding);
     }
 
     const char* GetClassInfoBinaryName(SchemaClassInfoData_t* class_info) {
