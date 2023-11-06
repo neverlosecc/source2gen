@@ -4,7 +4,7 @@
 #include <SDK/Interfaces/common/CUtlTSHash.h>
 #include <tools/virtual.h>
 
-#define DOTA2
+#define CSGO2
 
 #ifdef SBOX
 // untested, CSchemaType::m_schema_type_ might be wrong
@@ -61,8 +61,11 @@ enum SchemaClassFlags_t {
     SCHEMA_CF1_IS_ABSTRACT = 2,
     SCHEMA_CF1_HAS_TRIVIAL_CONSTRUCTOR = 4,
     SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR = 8,
+    SCHEMA_CF1_HAS_NOSCHEMA_MEMBERS = 16, // @note: @og: aint sure, since I cant find any class with these flags
+    SCHEMA_CF1_UNKNOWN = 32, // @note: @og: in old source2gen it was constructor like methods but now I cant find any reference to what it is
     SCHEMA_CF1_IS_LOCAL_TYPE_SCOPE = 64,
     SCHEMA_CF1_IS_GLOBAL_TYPE_SCOPE = 128,
+    SCHEMA_CF1_UNKNOWN2 = 256, // @note: @og: same as above, idk what it is
     SCHEMA_CF1_IS_NOSCHEMA_CLASS = 2048,
 };
 
@@ -287,10 +290,10 @@ public:
     SchemaMetadataEntryData_t* m_metadata; // 0x0048
     CSchemaSystemTypeScope* m_type_scope; // 0x0050
     CSchemaType* m_shema_type; // 0x0058
-    SchemaClassFlags_t m_class_flags : 8; // 0x0060
+    SchemaClassFlags_t m_class_flags; // 0x0060
 
 public:
-    std::uint8_t GetAligment() {
+    [[nodiscard]] std::uint8_t GetAligment() const {
         return m_align_of == std::numeric_limits<std::uint8_t>::max() ? 4 : m_align_of;
     }
 };

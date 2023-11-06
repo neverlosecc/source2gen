@@ -70,12 +70,14 @@ namespace sdk {
                 builder.comment("Has Trivial Constructor");
             if ((class_info->m_class_flags & SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR) != 0)
                 builder.comment("Has Trivial Destructor");
+            if ((class_info->m_class_flags & SCHEMA_CF1_HAS_NOSCHEMA_MEMBERS) != 0)
+                builder.comment("Has No Schema Members");
             if ((class_info->m_class_flags & SCHEMA_CF1_IS_LOCAL_TYPE_SCOPE) != 0)
                 builder.comment("Is Local Type Scope");
             if ((class_info->m_class_flags & SCHEMA_CF1_IS_GLOBAL_TYPE_SCOPE) != 0)
                 builder.comment("Is Global Type Scope");
             if ((class_info->m_class_flags & SCHEMA_CF1_IS_NOSCHEMA_CLASS) != 0)
-                builder.comment("Not schema class");
+                builder.comment("Not Schema Class");
             if (class_info->m_has_base_class == 1)
                 builder.comment("Has Base Class");
 
