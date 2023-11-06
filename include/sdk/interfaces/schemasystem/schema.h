@@ -4,7 +4,7 @@
 #include <SDK/Interfaces/common/CUtlTSHash.h>
 #include <tools/virtual.h>
 
-#define DOTA2
+#define CSGO2
 
 #ifdef SBOX
 // untested, CSchemaType::m_schema_type_ might be wrong
