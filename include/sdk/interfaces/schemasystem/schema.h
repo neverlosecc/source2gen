@@ -4,7 +4,7 @@
 #include <SDK/Interfaces/common/CUtlTSHash.h>
 #include <tools/virtual.h>
 
-#define DOTA2
+#define CSGO2
 
 #ifdef SBOX
 // untested, CSchemaType::m_schema_type_ might be wrong
@@ -47,6 +47,7 @@
     #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 2
 #endif
 
+class ISaveRestoreOps;
 class CSchemaClassInfo;
 class CSchemaSystemTypeScope;
 class CSchemaType;
@@ -87,6 +88,92 @@ enum EAtomicCategory {
     Atomic_TT,
     Atomic_I,
     Atomic_None
+};
+
+// Registered binary: schemasystem.dll (project 'schemasystem')
+// Alignment: 1
+// Size: 0x50
+enum class fieldtype_t : uint8_t {
+    FIELD_VOID = 0x0,
+    FIELD_FLOAT32 = 0x1,
+    FIELD_STRING = 0x2,
+    FIELD_VECTOR = 0x3,
+    FIELD_QUATERNION = 0x4,
+    FIELD_INT32 = 0x5,
+    FIELD_BOOLEAN = 0x6,
+    FIELD_INT16 = 0x7,
+    FIELD_CHARACTER = 0x8,
+    FIELD_COLOR32 = 0x9,
+    FIELD_EMBEDDED = 0xa,
+    FIELD_CUSTOM = 0xb,
+    FIELD_CLASSPTR = 0xc,
+    FIELD_EHANDLE = 0xd,
+    FIELD_POSITION_VECTOR = 0xe,
+    FIELD_TIME = 0xf,
+    FIELD_TICK = 0x10,
+    FIELD_SOUNDNAME = 0x11,
+    FIELD_INPUT = 0x12,
+    FIELD_FUNCTION = 0x13,
+    FIELD_VMATRIX = 0x14,
+    FIELD_VMATRIX_WORLDSPACE = 0x15,
+    FIELD_MATRIX3X4_WORLDSPACE = 0x16,
+    FIELD_INTERVAL = 0x17,
+    FIELD_UNUSED = 0x18,
+    FIELD_VECTOR2D = 0x19,
+    FIELD_INT64 = 0x1a,
+    FIELD_VECTOR4D = 0x1b,
+    FIELD_RESOURCE = 0x1c,
+    FIELD_TYPEUNKNOWN = 0x1d,
+    FIELD_CSTRING = 0x1e,
+    FIELD_HSCRIPT = 0x1f,
+    FIELD_VARIANT = 0x20,
+    FIELD_UINT64 = 0x21,
+    FIELD_FLOAT64 = 0x22,
+    FIELD_POSITIVEINTEGER_OR_NULL = 0x23,
+    FIELD_HSCRIPT_NEW_INSTANCE = 0x24,
+    FIELD_UINT32 = 0x25,
+    FIELD_UTLSTRINGTOKEN = 0x26,
+    FIELD_QANGLE = 0x27,
+    FIELD_NETWORK_ORIGIN_CELL_QUANTIZED_VECTOR = 0x28,
+    FIELD_HMATERIAL = 0x29,
+    FIELD_HMODEL = 0x2a,
+    FIELD_NETWORK_QUANTIZED_VECTOR = 0x2b,
+    FIELD_NETWORK_QUANTIZED_FLOAT = 0x2c,
+    FIELD_DIRECTION_VECTOR_WORLDSPACE = 0x2d,
+    FIELD_QANGLE_WORLDSPACE = 0x2e,
+    FIELD_QUATERNION_WORLDSPACE = 0x2f,
+    FIELD_HSCRIPT_LIGHTBINDING = 0x30,
+    FIELD_V8_VALUE = 0x31,
+    FIELD_V8_OBJECT = 0x32,
+    FIELD_V8_ARRAY = 0x33,
+    FIELD_V8_CALLBACK_INFO = 0x34,
+    FIELD_UTLSTRING = 0x35,
+    FIELD_NETWORK_ORIGIN_CELL_QUANTIZED_POSITION_VECTOR = 0x36,
+    FIELD_HRENDERTEXTURE = 0x37,
+    FIELD_HPARTICLESYSTEMDEFINITION = 0x38,
+    FIELD_UINT8 = 0x39,
+    FIELD_UINT16 = 0x3a,
+    FIELD_CTRANSFORM = 0x3b,
+    FIELD_CTRANSFORM_WORLDSPACE = 0x3c,
+    FIELD_HPOSTPROCESSING = 0x3d,
+    FIELD_MATRIX3X4 = 0x3e,
+    FIELD_SHIM = 0x3f,
+    FIELD_CMOTIONTRANSFORM = 0x40,
+    FIELD_CMOTIONTRANSFORM_WORLDSPACE = 0x41,
+    FIELD_ATTACHMENT_HANDLE = 0x42,
+    FIELD_AMMO_INDEX = 0x43,
+    FIELD_CONDITION_ID = 0x44,
+    FIELD_AI_SCHEDULE_BITS = 0x45,
+    FIELD_MODIFIER_HANDLE = 0x46,
+    FIELD_ROTATION_VECTOR = 0x47,
+    FIELD_ROTATION_VECTOR_WORLDSPACE = 0x48,
+    FIELD_HVDATA = 0x49,
+    FIELD_SCALE32 = 0x4a,
+    FIELD_STRING_AND_TOKEN = 0x4b,
+    FIELD_ENGINE_TIME = 0x4c,
+    FIELD_ENGINE_TICK = 0x4d,
+    FIELD_WORLD_GROUP_ID = 0x4e,
+    FIELD_TYPECOUNT = 0x4f,
 };
 
 template <typename T>
@@ -252,10 +339,18 @@ struct SchemaClassFieldData_t {
 };
 
 struct SchemaFieldMetadataOverrideData_t {
-    char pad_0000[8]; // 0x0000
-    SchemaString_t m_name; // 0x0008
+    fieldtype_t m_field_type; //0x0000
+    char pad_0001[7]; // 0x0001
+    SchemaString_t m_field_name; // 0x0008
     std::uint32_t m_single_inheritance_offset; // 0x0010
-    char pad_0014[84]; // 0x0014
+    std::int32_t m_field_count; // 0x0014 // @note: @og: if its array or smth like this it will point to count of array
+    std::int32_t m_i_unk_1; // 0x0018
+    char pad_001C[12]; // 0x001C
+    ISaveRestoreOps* m_def_save_restore_ops; // 0x0028
+    char pad_0030[16]; // 0x0030
+    std::uint32_t m_align; // 0x0040
+    char pad_0044[36]; // 0x0044
+
 }; // Size: 0x0068
 static_assert(sizeof(SchemaFieldMetadataOverrideData_t) == 0x68);
 
@@ -272,7 +367,7 @@ struct SchemaBaseClassInfoData_t {
 };
 
 struct SchemaFieldMetadataOverrideSetData_t {
-    SchemaFieldMetadataOverrideData_t* m_field;
+    SchemaFieldMetadataOverrideData_t* m_metadata_override_data;
     std::int32_t m_size;
 };
 
@@ -305,7 +400,7 @@ public:
     SchemaClassFieldData_t* m_fields; // 0x0028
     SchemaStaticFieldData_t* m_static_fields; // 0x0030
     SchemaBaseClassInfoData_t* m_schema_parent; // 0x0038
-    SchemaFieldMetadataOverrideSetData_t* m_field_metadata_overrides; // 0x0040 // @note: @og: based on praydog sdk gen
+    SchemaFieldMetadataOverrideSetData_t* m_field_metadata_overrides; // 0x0040
     SchemaMetadataEntryData_t* m_metadata; // 0x0048
     CSchemaSystemTypeScope* m_type_scope; // 0x0050
     CSchemaType* m_shema_type; // 0x0058

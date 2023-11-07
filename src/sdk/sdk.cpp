@@ -122,7 +122,7 @@ namespace sdk {
                 auto metadata = class_info->m_metadata[i];
 
                 if (const auto value = get_metadata_type(metadata); !value.empty())
-                    builder.comment(std::format("{} {}", metadata.m_name, value));
+                    builder.comment(std::format("{} \"{}\"", metadata.m_name, value));
                 else
                     builder.comment(metadata.m_name);
             }
