@@ -235,7 +235,6 @@ struct SchemaEnumeratorInfoData_t {
 
     std::int32_t m_metadata_size;
     SchemaMetadataEntryData_t* m_metadata;
-    //char pad_0x0010[0x10]; // 0x0010
 };
 
 class CSchemaEnumInfo {
