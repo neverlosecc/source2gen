@@ -251,13 +251,13 @@ struct SchemaClassFieldData_t {
     SchemaMetadataEntryData_t* m_metadata; // 0x0018
 };
 
-struct CSchemaClassInfoField_t {
+struct SchemaFieldMetadataOverrideData_t {
     char pad_0000[8]; // 0x0000
     SchemaString_t m_name; // 0x0008
     std::uint32_t m_single_inheritance_offset; // 0x0010
     char pad_0014[84]; // 0x0014
 }; // Size: 0x0068
-static_assert(sizeof(CSchemaClassInfoField_t) == 0x68);
+static_assert(sizeof(SchemaFieldMetadataOverrideData_t) == 0x68);
 
 struct SchemaStaticFieldData_t {
     const char* name; // 0x0000
@@ -271,8 +271,8 @@ struct SchemaBaseClassInfoData_t {
     CSchemaClassInfo* m_class;
 };
 
-struct CSchemaClassInfoFieldsData_t {
-    CSchemaClassInfoField_t* m_field;
+struct SchemaFieldMetadataOverrideSetData_t {
+    SchemaFieldMetadataOverrideData_t* m_field;
     std::int32_t m_size;
 };
 
@@ -305,7 +305,7 @@ public:
     SchemaClassFieldData_t* m_fields; // 0x0028
     SchemaStaticFieldData_t* m_static_fields; // 0x0030
     SchemaBaseClassInfoData_t* m_schema_parent; // 0x0038
-    CSchemaClassInfoFieldsData_t* m_fields_backup; // 0x0040 // @note: @og: sometimes it duplicates m_fields, cant find where it being used
+    SchemaFieldMetadataOverrideSetData_t* m_field_metadata_overrides; // 0x0040 // @note: @og: based on praydog sdk gen
     SchemaMetadataEntryData_t* m_metadata; // 0x0048
     CSchemaSystemTypeScope* m_type_scope; // 0x0050
     CSchemaType* m_shema_type; // 0x0058
