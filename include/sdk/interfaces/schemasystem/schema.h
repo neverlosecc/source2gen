@@ -4,7 +4,7 @@
 #include <SDK/Interfaces/common/CUtlTSHash.h>
 #include <tools/virtual.h>
 
-#define CSGO2
+#define DOTA2
 
 #ifdef SBOX
 // untested, CSchemaType::m_schema_type_ might be wrong
@@ -146,7 +146,9 @@ struct SchemaEnumeratorInfoData_t {
         unsigned long long m_value;
     };
 
-    char pad_0x0010[0x10]; // 0x0010
+    std::int32_t m_metadata_size;
+    SchemaMetadataEntryData_t* m_metadata;
+    //char pad_0x0010[0x10]; // 0x0010
 };
 
 class CSchemaEnumInfo {

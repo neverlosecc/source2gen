@@ -16,7 +16,7 @@ namespace {
         FNV32("MNetworkTypeAlias"),       FNV32("MNetworkSerializer"),    FNV32("MPropertyAttributeEditor"),
         FNV32("MPropertySuppressExpr"),   FNV32("MKV3TransferName"),      FNV32("MFieldVerificationName"),
         FNV32("MVectorIsSometimesCoordinate"), FNV32("MNetworkEncoder"), FNV32("MPropertyCustomFGDType"),
-        FNV32("MVDataUniqueMonotonicInt"),
+        FNV32("MVDataUniqueMonotonicInt"), FNV32("MScriptDescription")
     };
 
     constexpr std::initializer_list<fnv32::hash> kStringClassMetadataEntries = {
@@ -51,6 +51,25 @@ namespace {
     inline bool ends_with(const std::string& str, const std::string& suffix) {
         return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
     }
+
+    // @note: @es3n1n: some more utils
+    //
+    std::string GetMetadataValue(SchemaMetadataEntryData_t metadata_entry) {
+        std::string value;
+
+        const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_name);
+
+        // clang-format off
+        if (std::find(kStringMetadataEntries.begin(), kStringMetadataEntries.end(), value_hash_name) != kStringMetadataEntries.end())
+            value = metadata_entry.m_value->m_p_sz_value;
+        else if (std::find(kIntegerMetadataEntries.begin(), kIntegerMetadataEntries.end(), value_hash_name) != kIntegerMetadataEntries.end())
+            value = std::to_string(metadata_entry.m_value->m_n_value);
+        else if (std::find(kFloatMetadataEntries.begin(), kFloatMetadataEntries.end(), value_hash_name) != kFloatMetadataEntries.end())
+            value = std::to_string(metadata_entry.m_value->m_f_value);
+        // clang-format on
+
+        return value;
+    };
 } // namespace
 
 namespace sdk {
@@ -171,6 +190,17 @@ namespace sdk {
                 //
                 for (auto l = 0; l < schema_enum_binding->m_size; l++) {
                     auto& field = schema_enum_binding->m_enum_info[l];
+
+                    // @note: @og: dump enum metadata
+                    //
+                    for (auto j = 0; j < field.m_metadata_size; j++) {
+                        auto field_metadata = field.m_metadata[j];
+
+                        if (auto data = GetMetadataValue(field_metadata); data.empty())
+                            builder.comment(field_metadata.m_name);
+                        else
+                            builder.comment(std::format("{} \"{}\"", field_metadata.m_name, data));
+                    }
 
                     builder.enum_item(field.m_name, field.m_value == std::numeric_limits<std::size_t>::max() ? -1 : field.m_value);
                 }
@@ -421,25 +451,6 @@ namespace sdk {
                         continue;
                     }
 
-                    // @note: @es3n1n: some more utils
-                    //
-                    auto get_metadata_type = [&](SchemaMetadataEntryData_t metadata_entry) -> std::string {
-                        std::string value;
-
-                        const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_name);
-
-                        // clang-format off
-                        if (std::find(kStringMetadataEntries.begin(), kStringMetadataEntries.end(), value_hash_name) != kStringMetadataEntries.end())
-                            value = metadata_entry.m_value->m_p_sz_value;
-                        else if (std::find(kIntegerMetadataEntries.begin(), kIntegerMetadataEntries.end(), value_hash_name) != kIntegerMetadataEntries.end())
-                            value = std::to_string(metadata_entry.m_value->m_n_value);
-                        else if (std::find(kFloatMetadataEntries.begin(), kFloatMetadataEntries.end(), value_hash_name) != kFloatMetadataEntries.end())
-                            value = std::to_string(metadata_entry.m_value->m_f_value);
-                        // clang-format on
-
-                        return value;
-                    };
-
                     // @note: @es3n1n: obtaining size
                     //
                     int field_size = 0;
@@ -504,7 +515,7 @@ namespace sdk {
                     for (auto j = 0; j < field->m_metadata_size; j++) {
                         auto field_metadata = field->m_metadata[j];
 
-                        if (auto data = get_metadata_type(field_metadata); data.empty())
+                        if (auto data = GetMetadataValue(field_metadata); data.empty())
                             builder.comment(field_metadata.m_name);
                         else
                             builder.comment(std::format("{} \"{}\"", field_metadata.m_name, data));
