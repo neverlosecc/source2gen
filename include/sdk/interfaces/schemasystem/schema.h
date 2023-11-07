@@ -525,8 +525,7 @@ public:
         return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, 25)(this, class_info);
     }
 
-    bool SchemaSystemIsReady()
-    {
+    bool SchemaSystemIsReady() {
         return Virtual::Get<bool(__thiscall*)(void*)>(this, 26)(this);
     }
 
