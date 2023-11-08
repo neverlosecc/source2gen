@@ -74,13 +74,13 @@ namespace {
 
 namespace sdk {
     namespace {
-        __forceinline void PrintClassInfo(codegen::generator_t::self_ref builder, SchemaClassInfoData_t* class_info) {
+        __forceinline void PrintClassInfo(codegen::generator_t::self_ref builder, CSchemaClassBinding* class_info) {
             builder
-                .comment(std::format("Registered binary: {} (project '{}')", sdk::g_schema->GetClassInfoBinaryName(class_info),
-                                     sdk::g_schema->GetClassProjectName(class_info)))
+                .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetClassInfoBinaryName(class_info),
+                                     g_schema->GetClassProjectName(class_info)))
                 .comment(std::format("Alignment: {}", class_info->GetAligment()))
                 .comment(std::format("Size: {:#x}", class_info->m_size));
-            
+
             if ((class_info->m_class_flags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
                 builder.comment("Has VTable");
             if ((class_info->m_class_flags & SCHEMA_CF1_IS_ABSTRACT) != 0)
@@ -90,10 +90,10 @@ namespace sdk {
             if ((class_info->m_class_flags & SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR) != 0)
                 builder.comment("Has Trivial Destructor");
 
-            if (class_info->m_metadata_size > 0)
+            if (class_info->m_static_metadata_size > 0)
                 builder.comment("");
 
-            auto get_metadata_type = [&](SchemaMetadataEntryData_t metadata_entry) -> std::string {
+            auto get_metadata_type = [&](const SchemaMetadataEntryData_t metadata_entry) -> std::string {
                 std::string value;
 
                 const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_name);
@@ -118,9 +118,7 @@ namespace sdk {
                 return value;
             };
 
-            for (auto i = 0; i < class_info->m_metadata_size; ++i) {
-                auto metadata = class_info->m_metadata[i];
-
+            for (const auto& metadata : class_info->GetStaticMetadata()) {
                 if (const auto value = get_metadata_type(metadata); !value.empty())
                     builder.comment(std::format("{} \"{}\"", metadata.m_name, value));
                 else
@@ -130,19 +128,15 @@ namespace sdk {
 
         __forceinline void PrintEnumInfo(codegen::generator_t::self_ref builder, CSchemaEnumBinding* enum_binding) {
             builder
-                .comment(std::format("Registered binary: {} (project '{}')", sdk::g_schema->GetEnumBinaryName(enum_binding),
-                                     sdk::g_schema->GetEnumProjectName(enum_binding)))
+                .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetEnumBinaryName(enum_binding),
+                                     g_schema->GetEnumProjectName(enum_binding)))
                 .comment(std::format("Alignment: {}", enum_binding->m_align)) // @note: @og: I think this is wrong
                 .comment(std::format("Size: {:#x}", enum_binding->m_size));
 
             if (enum_binding->m_static_metadata_size > 0)
                 builder.comment("");
 
-            for (auto i = 0; i < enum_binding->m_static_metadata_size; ++i) {
-                auto metadata = enum_binding->m_static_metadata[i];
-                if (!metadata.m_name)
-                    continue;
-
+            for (const auto& metadata : enum_binding->GetStaticMetadata()) {
                 builder.comment(metadata.m_name);
             }
         }
@@ -184,13 +178,11 @@ namespace sdk {
 
                 // @note: @es3n1n: begin enum class
                 //
-                builder.begin_enum_class(schema_enum_binding->m_binding_name, get_type_name());
+                builder.begin_enum_class(schema_enum_binding->m_name, get_type_name());
 
                 // @note: @es3n1n: assemble enum items
                 //
-                for (auto l = 0; l < schema_enum_binding->m_size; l++) {
-                    auto& field = schema_enum_binding->m_enum_info[l];
-
+                for (const auto& field : schema_enum_binding->GetEnumeratorValues()) {
                     // @note: @og: dump enum metadata
                     //
                     for (auto j = 0; j < field.m_metadata_size; j++) {
@@ -216,14 +208,14 @@ namespace sdk {
                 CSchemaClassInfo* target_;
                 std::set<CSchemaClassInfo*> refs_;
 
-                CSchemaClassInfo* GetParent() {
-                    if (!target_->m_schema_parent)
+                [[nodiscard]] CSchemaClassInfo* GetParent() const {
+                    if (!target_->m_base_classes)
                         return nullptr;
 
-                    return target_->m_schema_parent->m_class;
+                    return target_->m_base_classes->m_prev_by_class;
                 }
 
-                void AddRefToClass(CSchemaType* type) {
+                void AddRefToClass(const CSchemaType* type) {
                     if (type->type_category == Schema_DeclaredClass) {
                         refs_.insert(type->m_class_info);
                         return;
@@ -237,9 +229,9 @@ namespace sdk {
                     // }
                 }
 
-                bool IsDependsOn(const class_t& other) {
+                [[nodiscard]] bool IsDependsOn(const class_t& other) const {
                     // if current class inherit other.
-                    auto parent = this->GetParent();
+                    const auto parent = this->GetParent();
                     if (parent == other.target_)
                         return true;
 
@@ -251,7 +243,7 @@ namespace sdk {
                     return false;
                 }
 
-                SchemaClassFieldData_t* GetFirstField() {
+                [[nodiscard]] SchemaClassFieldData_t* GetFirstField() const {
                     if (target_->m_fields_size)
                         return &target_->m_fields[0];
                     return nullptr;
@@ -259,8 +251,8 @@ namespace sdk {
 
                 // @note: @es3n1n: Returns the struct size without its parent's size
                 //
-                std::ptrdiff_t ClassSizeWithoutParent() {
-                    if (CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
+                [[nodiscard]] std::ptrdiff_t ClassSizeWithoutParent() const {
+                    if (const CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
                         return this->target_->m_size - class_parent->m_size;
                     return this->target_->m_size;
                 }
@@ -273,7 +265,7 @@ namespace sdk {
             bool did_forward_decls = false;
 
             for (const auto schema_class_binding : classes.GetElements()) {
-                const auto class_info = current->FindDeclaredClass(schema_class_binding->m_binary_name);
+                const auto class_info = current->FindDeclaredClass(schema_class_binding->m_name);
 
                 auto& class_dump = classes_to_dump.emplace_back();
                 class_dump.target_ = class_info;
@@ -384,7 +376,7 @@ namespace sdk {
                 // @note: @es3n1n: get parent name
                 //
                 std::string parent_cls_name;
-                if (auto parent = class_info->m_schema_parent ? class_info->m_schema_parent->m_class : nullptr; parent)
+                if (auto parent = class_info->m_base_classes ? class_info->m_base_classes->m_prev_by_class : nullptr; parent)
                     parent_cls_name = parent->m_name;
 
                 // @note: @es3n1n: start class
@@ -439,37 +431,33 @@ namespace sdk {
                 //
                 builder.access_modifier("public");
 
-                for (auto k = 0; k < class_info->m_fields_size; k++) {
-                    const auto field = &class_info->m_fields[k];
-                    if (!field)
-                        continue;
-
+                for (const auto& field : class_info->GetFields()) {
                     // @fixme: @es3n1n: todo proper collision fix and remove this block
-                    if (state.collision_end_offset && field->m_single_inheritance_offset < state.collision_end_offset) {
-                        builder.comment(std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field->m_name,
-                                                    field->m_single_inheritance_offset));
+                    if (state.collision_end_offset && field.m_single_inheritance_offset < state.collision_end_offset) {
+                        builder.comment(std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field.m_name,
+                                                    field.m_single_inheritance_offset));
                         continue;
                     }
 
                     // @note: @es3n1n: obtaining size
                     //
                     int field_size = 0;
-                    if (!field->m_type->GetSize(&field_size)) // @note: @es3n1n: should happen if we are attempting to get a size of the bitfield
+                    if (!field.m_type->GetSize(&field_size)) // @note: @es3n1n: should happen if we are attempting to get a size of the bitfield
                         field_size = 0;
 
                     // @note: @es3n1n: parsing type
                     //
-                    const auto [type, mod] = get_type(field->m_type);
-                    const auto var_info = field_parser::parse(type, field->m_name, mod);
+                    const auto [type, mod] = get_type(field.m_type);
+                    const auto var_info = field_parser::parse(type, field.m_name, mod);
 
                     // @note: @es3n1n: insert padding if needed
                     //
                     const auto expected_offset = state.last_field_offset + state.last_field_size;
-                    if (state.last_field_offset && state.last_field_size && expected_offset < field->m_single_inheritance_offset &&
+                    if (state.last_field_offset && state.last_field_size && expected_offset < field.m_single_inheritance_offset &&
                         !state.assembling_bitfield) {
 
                         builder.access_modifier("private")
-                            .struct_padding(expected_offset, field->m_single_inheritance_offset - expected_offset, false, true)
+                            .struct_padding(expected_offset, field.m_single_inheritance_offset - expected_offset, false, true)
                             .reset_tabs_count()
                             .comment(std::format("{:#x}", expected_offset))
                             .restore_tabs_count()
@@ -486,7 +474,7 @@ namespace sdk {
                     // @note: @es3n1n: if we are done with bitfields we should insert a pad and finish union
                     //
                     if (state.assembling_bitfield && !var_info.is_bitfield()) {
-                        const auto expected_union_size_bytes = field->m_single_inheritance_offset - state.last_field_offset;
+                        const auto expected_union_size_bytes = field.m_single_inheritance_offset - state.last_field_offset;
                         const auto expected_union_size_bits = expected_union_size_bytes * 8;
 
                         const auto actual_union_size_bits = state.total_bits_count_in_union;
@@ -512,8 +500,8 @@ namespace sdk {
 
                     // @note: @es3n1n: dump metadata
                     //
-                    for (auto j = 0; j < field->m_metadata_size; j++) {
-                        auto field_metadata = field->m_metadata[j];
+                    for (auto j = 0; j < field.m_metadata_size; j++) {
+                        auto field_metadata = field.m_metadata[j];
 
                         if (auto data = GetMetadataValue(field_metadata); data.empty())
                             builder.comment(field_metadata.m_name);
@@ -523,8 +511,8 @@ namespace sdk {
 
                     // @note: @es3n1n: update state
                     //
-                    if (field->m_single_inheritance_offset && field_size) {
-                        state.last_field_offset = field->m_single_inheritance_offset;
+                    if (field.m_single_inheritance_offset && field_size) {
+                        state.last_field_offset = field.m_single_inheritance_offset;
                         state.last_field_size = static_cast<std::size_t>(field_size);
                     }
                     if (var_info.is_bitfield())
@@ -534,7 +522,7 @@ namespace sdk {
                     //
                     builder.prop(var_info.m_type, var_info.formatted_name(), false);
                     if (!var_info.is_bitfield())
-                        builder.reset_tabs_count().comment(std::format("{:#x}", field->m_single_inheritance_offset), false).restore_tabs_count();
+                        builder.reset_tabs_count().comment(std::format("{:#x}", field.m_single_inheritance_offset), false).restore_tabs_count();
                     builder.next_line();
                 }
 
@@ -558,12 +546,12 @@ namespace sdk {
 
                 // @note: @es3n1n: dump static fields
                 //
-                if (class_info->m_static_size) {
+                if (class_info->m_static_fields_size) {
                     if (class_info->m_fields_size)
                         builder.next_line();
                     builder.comment("Static fields:");
                 }
-                for (auto s = 0; s < class_info->m_static_size; s++) {
+                for (auto s = 0; s < class_info->m_static_fields_size; s++) {
                     auto static_field = &class_info->m_static_fields[s];
 
                     auto [type, mod] = get_type(static_field->m_type);
@@ -571,8 +559,8 @@ namespace sdk {
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
                 }
 
-                if (!class_info->m_fields_size && !class_info->m_static_size)
-                    builder.comment("No members available");
+                if (!class_info->m_fields_size && !class_info->m_static_metadata_size)
+                    builder.comment("No schema binary for binding");
 
                 builder.end_block();
             }
