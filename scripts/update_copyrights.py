@@ -66,7 +66,7 @@ def append_copyright_to(p: Path) -> None:
     if is_copyrighted:
         file_lines = remove_copyright(p.name, file_lines)
 
-    file_lines = header + file_lines + ['\n'] + full
+    file_lines = header + file_lines + ['\n'] + full + ['\n']
     with open(p, 'w') as f:
         f.write('\n'.join(file_lines))
 
