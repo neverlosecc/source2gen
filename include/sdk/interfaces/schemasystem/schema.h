@@ -61,8 +61,6 @@ class CSchemaType;
 struct SchemaMetadataEntryData_t;
 struct SchemaClassInfoData_t;
 
-using SchemaString_t = const char*;
-
 enum SchemaClassFlags_t {
     SCHEMA_CF1_HAS_VIRTUAL_MEMBERS = 1,
     SCHEMA_CF1_IS_ABSTRACT = 2,
@@ -188,21 +186,6 @@ enum class fieldtype_t : uint8_t {
     FIELD_TYPECOUNT = 0x4f,
 };
 
-template <typename T>
-struct SchemaArray {
-public:
-    T* begin() const {
-        return m_data;
-    }
-
-    T* end() const {
-        return m_data + m_size;
-    }
-
-    T* m_data;
-    unsigned int m_size;
-};
-
 struct CSchemaVarName {
     const char* m_name;
     const char* m_type;
@@ -220,12 +203,12 @@ struct CSchemaNetworkValue {
 };
 
 struct SchemaMetadataEntryData_t {
-    SchemaString_t m_name;
+    const char* m_name;
     CSchemaNetworkValue* m_value;
 };
 
 struct SchemaEnumeratorInfoData_t {
-    SchemaString_t m_name;
+    const char* m_name;
 
     union {
         unsigned char m_value_char;
@@ -340,7 +323,7 @@ public:
 static_assert(offsetof(CSchemaType, m_schema_type_) == 0x20);
 
 struct SchemaClassFieldData_t {
-    SchemaString_t m_name; // 0x0000
+    const char* m_name; // 0x0000
     CSchemaType* m_type; // 0x0008
     std::int32_t m_single_inheritance_offset; // 0x0010
     std::int32_t m_metadata_size; // 0x0014
@@ -348,9 +331,9 @@ struct SchemaClassFieldData_t {
 };
 
 struct SchemaFieldMetadataOverrideData_t {
-    fieldtype_t m_field_type; //0x0000
+    fieldtype_t m_field_type; // 0x0000
     char pad_0001[7]; // 0x0001
-    SchemaString_t m_field_name; // 0x0008
+    const char* m_field_name; // 0x0008
     std::uint32_t m_single_inheritance_offset; // 0x0010
     std::int32_t m_field_count; // 0x0014 // @note: @og: if its array or smth like this it will point to count of array
     std::int32_t m_i_unk_1; // 0x0018
@@ -359,7 +342,6 @@ struct SchemaFieldMetadataOverrideData_t {
     char pad_0030[16]; // 0x0030
     std::uint32_t m_align; // 0x0040
     char pad_0044[36]; // 0x0044
-
 }; // Size: 0x0068
 static_assert(sizeof(SchemaFieldMetadataOverrideData_t) == 0x68);
 
@@ -371,13 +353,13 @@ struct SchemaStaticFieldData_t {
 };
 
 struct SchemaBaseClassInfoData_t {
-    unsigned int m_offset;
+    unsigned int m_offset; // 0x0000
     CSchemaClassInfo* m_prev_by_class; // 0x0008
 };
 
 struct SchemaFieldMetadataOverrideSetData_t {
-    SchemaFieldMetadataOverrideData_t* m_metadata_override_data;
-    std::int32_t m_size;
+    SchemaFieldMetadataOverrideData_t* m_metadata_override_data; // 0x0008
+    std::int32_t m_size; // 0x0008
 };
 
 struct SchemaClassInfoData_t {
@@ -386,9 +368,9 @@ public:
         kInitialize = 0,
         kNone,
         kMetadataInitialize,
-        kCreateSomeStruct,
+        kCreateEntity,
         kReInitialize,
-        kInitializeSomeStruct,
+        kReCreateEntity,
         kDestroy,
         kGetSomePtr
     };
@@ -450,7 +432,7 @@ public:
         return {m_static_metadata, m_static_metadata + m_static_metadata_size};
     }
 
-    std::vector<SchemaFieldMetadataOverrideData_t> GetStaticFieldMetadataOverrides() {
+    std::vector<SchemaFieldMetadataOverrideData_t> GetStaticFieldMetadataOverrides() const {
         if (!m_field_metadata_overrides)
             return {};
 
