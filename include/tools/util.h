@@ -1,34 +1,21 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
-#include <Include.h>
+#pragma once
 
-namespace {
-    void OnProcessAttach(const HMODULE h_module) {
-        std::thread main_thread([h_module] { source2_gen::main(h_module); });
+namespace util { 
+	inline std::string_view PrettifyNum(int num) {
+        static const auto fn = reinterpret_cast<const char* (*)(int)>(GetProcAddress(GetModuleHandleA("tier0.dll"), "V_PrettifyNum"));
 
-        if (main_thread.joinable())
-            main_thread.detach();
+        if (fn) {
+            std::string_view res = fn(num);
+            if (!res.empty()) {
+                return res;
+            }
+        }
+
+        return std::to_string(num);
     }
-
-    void OnProcessDetach() {
-        // Add any necessary clean-up code here
-    }
-} // namespace
-
-BOOL APIENTRY DllMain(const HMODULE module, const DWORD reason, LPVOID reserved [[maybe_unused]]) {
-    switch (reason) {
-    case DLL_PROCESS_ATTACH:
-        OnProcessAttach(module);
-        break;
-    case DLL_PROCESS_DETACH:
-        OnProcessDetach();
-        break;
-    default:
-        break;
-    }
-
-    return TRUE;
-}
+};
 
 
 // source2gen - Source2 games SDK generator

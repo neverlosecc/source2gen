@@ -1,0 +1,2 @@
+Copyright (C) %year% neverlosecc
+See end of file for extended copyright information.
