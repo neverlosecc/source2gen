@@ -54,12 +54,19 @@
 #endif
 
 class ISaveRestoreOps;
+class CSchemaEnumInfo;
 class CSchemaClassInfo;
 class CSchemaSystemTypeScope;
 class CSchemaType;
 
 struct SchemaMetadataEntryData_t;
 struct SchemaClassInfoData_t;
+
+// @note: @og: now CSchemaClassBinding is the same class\structure as CSchemaClassBinding\SchemaClassInfoData_t
+using CSchemaClassBinding = CSchemaClassInfo;
+
+// @note: @og: now CSchemaEnumBinding is the same class\structure as CSchemaEnumInfoData\SchemaEnumInfoData_t
+using CSchemaEnumBinding = CSchemaEnumInfo;
 
 enum SchemaClassFlags_t {
     SCHEMA_CF1_HAS_VIRTUAL_MEMBERS = 1,
@@ -220,11 +227,6 @@ struct SchemaEnumeratorInfoData_t {
     SchemaMetadataEntryData_t* m_metadata;
 };
 
-class CSchemaEnumInfo {
-public:
-    SchemaEnumeratorInfoData_t m_field_;
-};
-
 class SchemaEnumInfoData_t {
 public:
     SchemaEnumInfoData_t* m_self; // 0x0000
@@ -241,7 +243,7 @@ public:
     std::int32_t m_i_unk1; // 0x0040
 };
 
-class CSchemaEnumInfoData: public SchemaEnumInfoData_t {
+class CSchemaEnumInfo : public SchemaEnumInfoData_t {
 public:
     std::vector<SchemaEnumeratorInfoData_t> GetEnumeratorValues() {
         return {m_enum_info, m_enum_info + m_size};
@@ -251,9 +253,6 @@ public:
         return {m_static_metadata, m_static_metadata + m_static_metadata_size};
     }
 };
-
-// @note: @og: now CSchemaEnumBinding is the same class\structure as CSchemaEnumInfoData\SchemaEnumInfoData_t
-using CSchemaEnumBinding = CSchemaEnumInfoData;
 
 class CSchemaType {
 public:
@@ -363,17 +362,16 @@ struct SchemaFieldMetadataOverrideSetData_t {
 
 struct SchemaClassInfoData_t {
 public:
-    enum class SchemaClassInitialization_t : std::int32_t {
-        kInitialize = 0,
-        kNone,
-        kMetadataInitialize,
-        kCreateEntity,
-        kReInitialize,
-        kReCreateEntity,
-        kDestroy,
-        kGetSomePtr
+    enum class SchemaClassInfoFunctionIndex : std::int32_t {
+        kRegisterClassSchema = 0,
+        kUnknown = 1, // @note: @og: Can't find fn with such index
+        kCopyInstance = 2,
+        kCreateInstance = 3, 
+        kDestroyInstance = 4,
+        kCreateInstanceWithMemory = 5,
+        kDestroyInstanceWithMemory = 6,
+        kSchemaDynamicBinding = 7
     };
-    using InitializationFn = void*(*)(SchemaClassInitialization_t, SchemaClassInfoData_t*, SchemaClassInfoData_t*);
 
 public:
     SchemaClassInfoData_t* m_self; // 0x0000
@@ -396,7 +394,7 @@ public:
     CSchemaType* m_shema_type; // 0x0058
     SchemaClassFlags_t m_class_flags : 8; // 0x0060
     std::uint32_t m_sequence; // 0x0064 // @note: @og: idk
-    InitializationFn initialization_fn; // 0x0068
+    void* m_fn; // 0x0068
 };
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
@@ -473,10 +471,42 @@ public:
     [[nodiscard]] std::uint8_t GetAligment() const {
         return m_align_of == std::numeric_limits<std::uint8_t>::max() ? 8 : m_align_of;
     }
-};
 
-// @note: @og: now CSchemaClassBinding is the same class\structure as CSchemaClassBinding\SchemaClassInfoData_t
-using CSchemaClassBinding = CSchemaClassInfo;
+    // @note: @og: Copy instance from original to new created with all data from original, returns new_instance
+    void* CopyInstance(void* instance, void* new_instance) const {
+        using Fn = void* (*)(SchemaClassInfoFunctionIndex, void*, void*);
+        return reinterpret_cast<Fn>(m_fn)(SchemaClassInfoFunctionIndex::kCreateInstance, instance, new_instance);
+    }
+
+    // @note: @og: Creates default instance with engine allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be C_BaseEntity)
+    void* CreateInstance() const {
+        using Fn = void*(*)(SchemaClassInfoFunctionIndex);
+        return reinterpret_cast<Fn>(m_fn)(SchemaClassInfoFunctionIndex::kCreateInstance);
+    }
+
+    // @note: @og: Creates default instance with your own allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be C_BaseEntity)
+    void* CreateInstance(void* memory) const {
+        using Fn = void* (*)(SchemaClassInfoFunctionIndex, void*);
+        return reinterpret_cast<Fn>(m_fn)(SchemaClassInfoFunctionIndex::kCreateInstanceWithMemory, memory);
+    }
+
+    // @note: @og: Destroy instance (e.g.: C_BaseInstance 1st VT fn with 0 flag)
+    void* DestroyInstance(void* instance) const {
+        using Fn = void* (*)(SchemaClassInfoFunctionIndex, void*);
+        return reinterpret_cast<Fn>(m_fn)(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
+    }
+
+    // @note: @og: Destroy instance with de-allocating memory (e.g.: C_BaseInstance 1st VT fn with 1 flag)
+    void* DestroyInstanceWithMemory(void* instance) const {
+        using Fn = void* (*)(SchemaClassInfoFunctionIndex, void*);
+        return reinterpret_cast<Fn>(m_fn)(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
+    }
+
+    CSchemaClassBinding* SchemaClassBinding(void* entity) const {
+        using Fn = CSchemaClassBinding* (*)(SchemaClassInfoFunctionIndex, void*);
+        return reinterpret_cast<Fn>(m_fn)(SchemaClassInfoFunctionIndex::kSchemaDynamicBinding, entity);
+    }
+};
 
 class CSchemaSystemTypeScope {
 public:
