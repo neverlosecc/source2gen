@@ -264,7 +264,7 @@ public:
 class CSchemaType {
 public:
     bool GetSizes(int* out_size1, uint8_t* unk_probably_not_size) {
-        return reinterpret_cast<int(__thiscall*)(void*, int*, uint8_t*)>(_vtable[CSCHEMATYPE_GETSIZES_INDEX])(this, out_size1, unk_probably_not_size);
+        return reinterpret_cast<int(__thiscall*)(void*, int*, uint8_t*)>(vftable_[CSCHEMATYPE_GETSIZES_INDEX])(this, out_size1, unk_probably_not_size);
     }
 public:
     bool GetSize(int* out_size) {
@@ -272,12 +272,12 @@ public:
         return GetSizes(out_size, &smh);
     }
 public:
-    uintptr_t* _vtable; // 0x0000
+    std::uintptr_t* vftable_; // 0x0000
     const char* m_name_; // 0x0008
 
     CSchemaSystemTypeScope* m_type_scope_; // 0x0010
-    uint8_t type_category; // ETypeCategory 0x0018
-    uint8_t atomic_category; // EAtomicCategory 0x0019
+    std::uint8_t type_category; // ETypeCategory 0x0018
+    std::uint8_t atomic_category; // EAtomicCategory 0x0019
 
     // find out to what class pointer points.
     CSchemaType* GetRefClass() const {
@@ -292,24 +292,24 @@ public:
     }
 
     struct array_t {
-        uint32_t array_size;
-        uint32_t unknown;
+        std::uint32_t array_size;
+        std::uint32_t unknown;
         CSchemaType* element_type_;
     };
 
     struct atomic_t { // same goes for CollectionOfT
-        uint64_t gap[2];
+        std::uint64_t gap[2];
         CSchemaType* template_typename;
     };
 
     struct atomic_tt {
-        uint64_t gap[2];
+        std::uint64_t gap[2];
         CSchemaType* templates[2];
     };
 
     struct atomic_i {
-        uint64_t gap[2];
-        uint64_t integer;
+        std::uint64_t gap[2];
+        std::uint64_t integer;
     };
 
     // this union depends on CSchema implementation, all members above

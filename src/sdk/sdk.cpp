@@ -7,9 +7,9 @@ namespace {
     using namespace std::string_view_literals;
 
     constexpr std::string_view kOutDirName = "sdk"sv;
-    constexpr std::initializer_list<std::string_view> kIncludePaths = {"<cstdint>"sv, "\"!GlobalTypes.hpp\""sv};
+    constinit std::array include_paths = {"<cstdint>"sv, "\"!GlobalTypes.hpp\""sv};
 
-    constexpr std::initializer_list<fnv32::hash> kStringMetadataEntries = {
+    constinit std::array string_metadata_entries = {
         FNV32("MNetworkChangeCallback"),  FNV32("MPropertyFriendlyName"), FNV32("MPropertyDescription"),
         FNV32("MPropertyAttributeRange"), FNV32("MPropertyStartGroup"),   FNV32("MPropertyAttributeChoiceName"),
         FNV32("MPropertyGroupName"),      FNV32("MNetworkUserGroup"),     FNV32("MNetworkAlias"),
@@ -19,21 +19,21 @@ namespace {
         FNV32("MVDataUniqueMonotonicInt"), FNV32("MScriptDescription")
     };
 
-    constexpr std::initializer_list<fnv32::hash> kStringClassMetadataEntries = {
+    constinit std::array string_class_metadata_entries = {
         FNV32("MResourceTypeForInfoType"),
     };
 
-    constexpr std::initializer_list<fnv32::hash> kVarNameStringClassMetadataEntries = {
+    constinit std::array var_name_string_class_metadata_entries = {
         FNV32("MNetworkVarNames"), FNV32("MNetworkOverride"), FNV32("MNetworkVarTypeOverride"),
     };
 
-    constexpr std::initializer_list<fnv32::hash> kVarStringClassMetadataEntries = {
+    constinit std::array var_string_class_metadata_entries = {
         FNV32("MPropertyArrayElementNameKey"), FNV32("MPropertyFriendlyName"),      FNV32("MPropertyDescription"),
         FNV32("MNetworkExcludeByName"),        FNV32("MNetworkExcludeByUserGroup"), FNV32("MNetworkIncludeByName"),
         FNV32("MNetworkIncludeByUserGroup"),   FNV32("MNetworkUserGroupProxy"),     FNV32("MNetworkReplayCompatField"), 
     };
 
-    constexpr std::initializer_list<fnv32::hash> kIntegerMetadataEntries = {
+    constinit std::array integer_metadata_entries = {
         FNV32("MNetworkVarEmbeddedFieldOffsetDelta"),
         FNV32("MNetworkBitCount"),
         FNV32("MNetworkPriority"),
@@ -43,7 +43,7 @@ namespace {
         FNV32("MNetworkEncodeFlags"),
     };
 
-    constexpr std::initializer_list<fnv32::hash> kFloatMetadataEntries = {
+    constinit std::array float_metadata_entries = {
         FNV32("MNetworkMinValue"),
         FNV32("MNetworkMaxValue"),
     };
@@ -60,11 +60,11 @@ namespace {
         const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_name);
 
         // clang-format off
-        if (std::find(kStringMetadataEntries.begin(), kStringMetadataEntries.end(), value_hash_name) != kStringMetadataEntries.end())
+        if (std::find(string_metadata_entries.begin(), string_metadata_entries.end(), value_hash_name) != string_metadata_entries.end())
             value = metadata_entry.m_value->m_p_sz_value;
-        else if (std::find(kIntegerMetadataEntries.begin(), kIntegerMetadataEntries.end(), value_hash_name) != kIntegerMetadataEntries.end())
+        else if (std::find(integer_metadata_entries.begin(), integer_metadata_entries.end(), value_hash_name) != integer_metadata_entries.end())
             value = std::to_string(metadata_entry.m_value->m_n_value);
-        else if (std::find(kFloatMetadataEntries.begin(), kFloatMetadataEntries.end(), value_hash_name) != kFloatMetadataEntries.end())
+        else if (std::find(float_metadata_entries.begin(), float_metadata_entries.end(), value_hash_name) != float_metadata_entries.end())
             value = std::to_string(metadata_entry.m_value->m_f_value);
         // clang-format on
 
@@ -99,7 +99,7 @@ namespace sdk {
                 const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_name);
 
                 // clang-format off
-                if (std::find(kVarNameStringClassMetadataEntries.begin(), kVarNameStringClassMetadataEntries.end(), value_hash_name) != kVarNameStringClassMetadataEntries.end())
+                if (std::find(var_name_string_class_metadata_entries.begin(), var_name_string_class_metadata_entries.end(), value_hash_name) != var_name_string_class_metadata_entries.end())
                 {
                     const auto &var_value = metadata_entry.m_value->m_var_value;
                     if (var_value.m_type && var_value.m_name)
@@ -109,9 +109,9 @@ namespace sdk {
                     else if (!var_value.m_name && var_value.m_type)
                         value = var_value.m_type;
                  }
-                else if (std::find(kStringClassMetadataEntries.begin(), kStringClassMetadataEntries.end(), value_hash_name) != kStringClassMetadataEntries.end())
+                else if (std::find(string_class_metadata_entries.begin(), string_class_metadata_entries.end(), value_hash_name) != string_class_metadata_entries.end())
                     value = metadata_entry.m_value->m_sz_value.data();
-                else if (std::find(kVarStringClassMetadataEntries.begin(), kVarStringClassMetadataEntries.end(), value_hash_name) != kVarStringClassMetadataEntries.end())
+                else if (std::find(var_string_class_metadata_entries.begin(), var_string_class_metadata_entries.end(), value_hash_name) != var_string_class_metadata_entries.end())
                     value = metadata_entry.m_value->m_p_sz_value;
                 // clang-format on
 
@@ -592,7 +592,7 @@ namespace sdk {
 
         // @note: @es3n1n: include files
         //
-        for (auto&& include_path : kIncludePaths)
+        for (auto&& include_path : include_paths)
             builder.include(include_path.data());
 
         // @note: @es3n1n: get stuff from schema that we'll use later
