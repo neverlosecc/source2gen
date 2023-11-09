@@ -1,3 +1,10 @@
+/**
+ * =============================================================================
+ * Source2Gen
+ * Copyright (C) 2023 neverlose (https://github.com/neverlosecc/source2gen)
+ * =============================================================================
+ **/
+
 #pragma once
 
 #include <Include.h>
@@ -628,6 +635,7 @@ public:
     [[nodiscard]] std::int32_t GetIgnoredBytes() const {
         return m_ignored_bytes_;
     }
+
 private:
     char pad_0x0000[SCHEMASYSTEM_TYPE_SCOPES_OFFSET]; // 0x0000
     CUtlVector<CSchemaSystemTypeScope*> m_type_scopes_ = {}; // SCHEMASYSTEM_TYPE_SCOPES_OFFSET
