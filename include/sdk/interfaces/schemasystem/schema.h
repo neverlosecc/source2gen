@@ -70,7 +70,6 @@ enum SchemaClassFlags_t {
     SCHEMA_CF1_IS_PARENT_CLASSES_PARSED = 32,
     SCHEMA_CF1_IS_LOCAL_TYPE_SCOPE = 64,
     SCHEMA_CF1_IS_GLOBAL_TYPE_SCOPE = 128,
-    SCHEMA_CF1_UNKNOWN1 = 256, // @note: @og: idk
 
 #if defined(CSGO2) || defined(DOTA2)
     SCHEMA_CF1_IS_SCHEMA_VALIDATED = 2048,
@@ -395,7 +394,7 @@ public:
     SchemaMetadataEntryData_t* m_static_metadata; // 0x0048
     CSchemaSystemTypeScope* m_type_scope; // 0x0050
     CSchemaType* m_shema_type; // 0x0058
-    SchemaClassFlags_t m_class_flags; // 0x0060
+    SchemaClassFlags_t m_class_flags : 8; // 0x0060
     std::uint32_t m_sequence; // 0x0064 // @note: @og: idk
     InitializationFn initialization_fn; // 0x0068
 };
