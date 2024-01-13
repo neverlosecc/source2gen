@@ -209,6 +209,8 @@ namespace sdk {
             struct class_t {
                 CSchemaClassInfo* target_;
                 std::set<CSchemaClassInfo*> refs_;
+                uint32_t used_count_;
+                std::list<std::pair<std::string, ptrdiff_t>> cached_fields_;
 
                 [[nodiscard]] CSchemaClassInfo* GetParent() const {
                     if (!target_->m_base_classes)
@@ -271,6 +273,10 @@ namespace sdk {
 
                 auto& class_dump = classes_to_dump.emplace_back();
                 class_dump.target_ = class_info;
+            }
+
+            for (auto& class_dump : classes_to_dump) {
+                const auto class_info = class_dump.target_;
 
                 for (auto k = 0; k < class_info->m_fields_size; k++) {
                     const auto field = &class_info->m_fields[k];
@@ -283,11 +289,15 @@ namespace sdk {
                     auto actual_type = ptr ? ptr : field->m_type;
 
                     if (actual_type->type_category == Schema_DeclaredClass) {
-                        builder.forward_declartion(actual_type->m_name_);
+                        builder.forward_declaration(actual_type->m_name_);
                         did_forward_decls = true;
                     }
 
                     class_dump.AddRefToClass(field->m_type);
+
+                    auto field_class = std::ranges::find_if(classes_to_dump, [field](const class_t& cls) { return cls.target_ == field->m_type->m_class_info; });
+                    if ( field_class != classes_to_dump.end() )
+                        field_class->used_count_++;
                 }
             }
 
@@ -511,6 +521,26 @@ namespace sdk {
                             builder.comment(std::format("{} \"{}\"", field_metadata.m_name, data));
                     }
 
+                    // if this prop is a non-pointer class, check if its worth directly embedding the accumulated offset of it into the metadata
+                    auto prop_class = std::ranges::find_if(classes_to_dump, [type](const class_t& cls) { return cls.target_->GetName().compare(type) == 0; });
+                    if ( prop_class != classes_to_dump.end() )
+                    {
+                        if (prop_class->cached_fields_.empty())
+                            continue;
+
+                        if (prop_class->cached_fields_.size() < 2 || prop_class->cached_fields_.size() > 12)
+                            continue;
+
+                        // if a class is used in too many classes its likely not very useful + will bloat the dump, so ignore it
+                        if (prop_class->used_count_ > 2) 
+                            continue;
+
+                        for (const auto& [cached_field_name, cached_field_offset] : prop_class->cached_fields_) {
+                            const auto accumulated_offset = cached_field_offset + field.m_single_inheritance_offset;
+                            builder.comment(std::format("-> {} - {:#x}", cached_field_name,accumulated_offset));
+                        }
+                    }
+
                     // @note: @es3n1n: update state
                     //
                     if (field.m_single_inheritance_offset && field_size) {
@@ -523,8 +553,10 @@ namespace sdk {
                     // @note: @es3n1n: push prop
                     //
                     builder.prop(var_info.m_type, var_info.formatted_name(), false);
-                    if (!var_info.is_bitfield())
+                    if (!var_info.is_bitfield()) {
                         builder.reset_tabs_count().comment(std::format("{:#x}", field.m_single_inheritance_offset), false).restore_tabs_count();
+                        class_dump.cached_fields_.push_back(std::make_pair(var_info.formatted_name(), field.m_single_inheritance_offset));
+                    }
                     builder.next_line();
                 }
 
