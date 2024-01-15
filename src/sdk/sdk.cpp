@@ -523,7 +523,7 @@ namespace sdk {
 
                     // if this prop is a non-pointer class, check if its worth directly embedding the accumulated offset of it into the metadata
                     auto prop_class = std::ranges::find_if(classes_to_dump, [type](const class_t& cls) { return cls.target_->GetName().compare(type) == 0; });
-                    if ( prop_class != classes_to_dump.end() )
+                    if (prop_class != classes_to_dump.end())
                     {
                         if (prop_class->cached_fields_.empty())
                             continue;
