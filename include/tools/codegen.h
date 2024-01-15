@@ -322,6 +322,7 @@ namespace codegen {
     }
 } // namespace codegen
 
+
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //
