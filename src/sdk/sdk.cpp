@@ -11,6 +11,10 @@ namespace {
     constexpr std::string_view kOutDirName = "sdk"sv;
     constinit std::array include_paths = {"<cstdint>"sv, "\"!GlobalTypes.hpp\""sv};
 
+    constexpr uint32_t kMaxReferencesForClassEmbed = 2;
+    constexpr size_t kMinFieldCountForClassEmbed = 2;
+    constexpr size_t kMaxFieldCountForClassEmbed = 12;
+
     constinit std::array string_metadata_entries = {
         FNV32("MNetworkChangeCallback"),  FNV32("MPropertyFriendlyName"), FNV32("MPropertyDescription"),
         FNV32("MPropertyAttributeRange"), FNV32("MPropertyStartGroup"),   FNV32("MPropertyAttributeChoiceName"),
@@ -528,16 +532,17 @@ namespace sdk {
                         if (prop_class->cached_fields_.empty())
                             continue;
 
-                        if (prop_class->cached_fields_.size() < 2 || prop_class->cached_fields_.size() > 12)
+                        if (prop_class->cached_fields_.size() < kMinFieldCountForClassEmbed || 
+                            prop_class->cached_fields_.size() > kMaxFieldCountForClassEmbed)
                             continue;
 
                         // if a class is used in too many classes its likely not very useful + will bloat the dump, so ignore it
-                        if (prop_class->used_count_ > 2) 
+                        if (prop_class->used_count_ > kMaxReferencesForClassEmbed) 
                             continue;
 
                         for (const auto& [cached_field_name, cached_field_offset] : prop_class->cached_fields_) {
                             const auto accumulated_offset = cached_field_offset + field.m_single_inheritance_offset;
-                            builder.comment(std::format("-> {} - {:#x}", cached_field_name,accumulated_offset));
+                            builder.comment(std::format("-> {} - {:#x}", cached_field_name, accumulated_offset));
                         }
                     }
 
