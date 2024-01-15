@@ -296,7 +296,7 @@ namespace sdk {
                     class_dump.AddRefToClass(field->m_type);
 
                     auto field_class = std::ranges::find_if(classes_to_dump, [field](const class_t& cls) { return cls.target_ == field->m_type->m_class_info; });
-                    if ( field_class != classes_to_dump.end() )
+                    if (field_class != classes_to_dump.end())
                         field_class->used_count_++;
                 }
             }
@@ -523,7 +523,7 @@ namespace sdk {
 
                     // if this prop is a non-pointer class, check if its worth directly embedding the accumulated offset of it into the metadata
                     auto prop_class = std::ranges::find_if(classes_to_dump, [type](const class_t& cls) { return cls.target_->GetName().compare(type) == 0; });
-                    if ( prop_class != classes_to_dump.end() )
+                    if (prop_class != classes_to_dump.end())
                     {
                         if (prop_class->cached_fields_.empty())
                             continue;
