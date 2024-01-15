@@ -296,7 +296,7 @@ namespace sdk {
                     class_dump.AddRefToClass(field->m_type);
 
                     auto field_class = std::ranges::find_if(classes_to_dump, [field](const class_t& cls) { return cls.target_ == field->m_type->m_class_info; });
-                    if ( field_class != classes_to_dump.end() )
+                    if (field_class != classes_to_dump.end())
                         field_class->used_count_++;
                 }
             }
