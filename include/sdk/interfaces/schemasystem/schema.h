@@ -400,7 +400,7 @@ public:
     SchemaFieldMetadataOverrideSetData_t* m_field_metadata_overrides; // 0x0040
     SchemaMetadataEntryData_t* m_static_metadata; // 0x0048
     CSchemaSystemTypeScope* m_type_scope; // 0x0050
-    CSchemaType* m_shema_type; // 0x0058
+    CSchemaType* m_schema_type; // 0x0058
     SchemaClassFlags_t m_class_flags : 8; // 0x0060
     std::uint32_t m_sequence; // 0x0064 // @note: @og: idk
     void* m_fn; // 0x0068
