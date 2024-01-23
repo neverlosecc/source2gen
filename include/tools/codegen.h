@@ -59,11 +59,15 @@ namespace codegen {
         }
 
         self_ref disable_warnings(const std::string& codes) {
-            return push_line("#pragma warning(push)").push_line(std::format("#pragma warning(disable: {})", codes));
+            return push_warning().pragma(std::format("warning(disable: {})", codes));
+        }
+
+        self_ref push_warning() {
+            return pragma("warning(push)");
         }
 
         self_ref pop_warning() {
-            return push_line("#pragma warning(pop)");
+            return pragma("warning(pop)");
         }
 
         self_ref next_line() {
@@ -211,7 +215,7 @@ namespace codegen {
             return push_line(line, move_cursor_to_next_line);
         }
 
-        self_ref forward_declartion(const std::string& text) {
+        self_ref forward_declaration(const std::string& text) {
             // @note: @es3n1n: forward decl only once
             const auto fwd_decl_hash = fnv32::hash_runtime(text.data());
             if (_forward_decls.contains(fwd_decl_hash))
@@ -334,4 +338,3 @@ namespace codegen {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
