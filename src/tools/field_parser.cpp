@@ -10,7 +10,7 @@ namespace field_parser {
             constexpr std::string_view kBitfieldTypePrefix = "bitfield:"sv;
 
             // clang-format off
-            constexpr std::array<std::pair<std::string_view, std::string_view>, 10> kTypeNameToCpp = {{
+            constexpr auto kTypeNameToCpp = std::to_array<std::pair<std::string_view, std::string_view>>({
                 {"float32"sv, "float"sv}, 
                 {"float64"sv, "double"sv},
     
@@ -23,48 +23,48 @@ namespace field_parser {
                 {"uint16"sv, "uint16_t"sv}, 
                 {"uint32"sv, "uint32_t"sv}, 
                 {"uint64"sv, "uint64_t"sv}
-            }};
+            });
 
-            constexpr std::array<std::pair<fieldtype_t, std::string_view>, 38> kDatamapToCpp = {{
-                        {fieldtype_t::FIELD_FLOAT32, "float"sv},
-                        {fieldtype_t::FIELD_TIME, "GameTime_t"sv},
-                        {fieldtype_t::FIELD_ENGINE_TIME, "float"sv},
-                        {fieldtype_t::FIELD_FLOAT64, "double"sv},
-                        {fieldtype_t::FIELD_INT16, "int16_t"sv},
-                        {fieldtype_t::FIELD_INT32, "int32_t"sv},
-                        {fieldtype_t::FIELD_INT64, "int64_t"sv},
-                        {fieldtype_t::FIELD_UINT8, "uint8_t"sv},
-                        {fieldtype_t::FIELD_UINT16, "uint16_t"sv},
-                        {fieldtype_t::FIELD_UINT32, "uint32_t"sv},
-                        {fieldtype_t::FIELD_UINT64, "uint64_t"sv},
-                        {fieldtype_t::FIELD_BOOLEAN, "bool"sv},
-                        {fieldtype_t::FIELD_CHARACTER, "char"sv},
-                        {fieldtype_t::FIELD_VOID, "void"sv},
-                        {fieldtype_t::FIELD_STRING, "CUtlSymbolLarge"sv},
-                        {fieldtype_t::FIELD_VECTOR, "Vector"sv},
-                        {fieldtype_t::FIELD_POSITION_VECTOR, "Vector"sv},
-                        {fieldtype_t::FIELD_NETWORK_ORIGIN_CELL_QUANTIZED_VECTOR, "Vector"sv},
-                        {fieldtype_t::FIELD_DIRECTION_VECTOR_WORLDSPACE, "Vector"sv},
-                        {fieldtype_t::FIELD_NETWORK_QUANTIZED_VECTOR, "Vector"sv},
-                        {fieldtype_t::FIELD_VECTOR2D, "Vector2D"sv},
-                        {fieldtype_t::FIELD_VECTOR4D, "Vector4D"sv},
-                        {fieldtype_t::FIELD_QANGLE, "QAngle"sv},
-                        {fieldtype_t::FIELD_QANGLE_WORLDSPACE, "QAngle"sv},
-                        {fieldtype_t::FIELD_QUATERNION, "Quaternion"sv},
-                        {fieldtype_t::FIELD_CSTRING, "const char *"sv},
-                        {fieldtype_t::FIELD_UTLSTRING, "CUtlString"sv},
-                        {fieldtype_t::FIELD_UTLSTRINGTOKEN, "CUtlStringToken"sv},
-                        {fieldtype_t::FIELD_COLOR32, "Color"sv},
-                        {fieldtype_t::FIELD_WORLD_GROUP_ID, "WorldGroupId_t"sv},
-                        {fieldtype_t::FIELD_ROTATION_VECTOR, "RotationVector"sv},
-                        {fieldtype_t::FIELD_CTRANSFORM_WORLDSPACE, "CTransform"sv},
-                        {fieldtype_t::FIELD_EHANDLE, "CHandle< CBaseEntity >"sv},
-                        {fieldtype_t::FIELD_CUSTOM, "void"sv},
-                        {fieldtype_t::FIELD_HMODEL, "CStrongHandle< InfoForResourceTypeCModel >"sv},
-                        {fieldtype_t::FIELD_HMATERIAL, "CStrongHandle< InfoForResourceTypeIMaterial2 >"sv},
-                        {fieldtype_t::FIELD_SHIM, "SHIM"sv},
-                        {fieldtype_t::FIELD_FUNCTION, "void*"sv},
-                    }};
+            constexpr auto kDatamapToCpp = std::to_array<std::pair<fieldtype_t, std::string_view>>({
+                {fieldtype_t::FIELD_FLOAT32, "float"sv},
+                {fieldtype_t::FIELD_TIME, "GameTime_t"sv},
+                {fieldtype_t::FIELD_ENGINE_TIME, "float"sv},
+                {fieldtype_t::FIELD_FLOAT64, "double"sv},
+                {fieldtype_t::FIELD_INT16, "int16_t"sv},
+                {fieldtype_t::FIELD_INT32, "int32_t"sv},
+                {fieldtype_t::FIELD_INT64, "int64_t"sv},
+                {fieldtype_t::FIELD_UINT8, "uint8_t"sv},
+                {fieldtype_t::FIELD_UINT16, "uint16_t"sv},
+                {fieldtype_t::FIELD_UINT32, "uint32_t"sv},
+                {fieldtype_t::FIELD_UINT64, "uint64_t"sv},
+                {fieldtype_t::FIELD_BOOLEAN, "bool"sv},
+                {fieldtype_t::FIELD_CHARACTER, "char"sv},
+                {fieldtype_t::FIELD_VOID, "void"sv},
+                {fieldtype_t::FIELD_STRING, "CUtlSymbolLarge"sv},
+                {fieldtype_t::FIELD_VECTOR, "Vector"sv},
+                {fieldtype_t::FIELD_POSITION_VECTOR, "Vector"sv},
+                {fieldtype_t::FIELD_NETWORK_ORIGIN_CELL_QUANTIZED_VECTOR, "Vector"sv},
+                {fieldtype_t::FIELD_DIRECTION_VECTOR_WORLDSPACE, "Vector"sv},
+                {fieldtype_t::FIELD_NETWORK_QUANTIZED_VECTOR, "Vector"sv},
+                {fieldtype_t::FIELD_VECTOR2D, "Vector2D"sv},
+                {fieldtype_t::FIELD_VECTOR4D, "Vector4D"sv},
+                {fieldtype_t::FIELD_QANGLE, "QAngle"sv},
+                {fieldtype_t::FIELD_QANGLE_WORLDSPACE, "QAngle"sv},
+                {fieldtype_t::FIELD_QUATERNION, "Quaternion"sv},
+                {fieldtype_t::FIELD_CSTRING, "const char *"sv},
+                {fieldtype_t::FIELD_UTLSTRING, "CUtlString"sv},
+                {fieldtype_t::FIELD_UTLSTRINGTOKEN, "CUtlStringToken"sv},
+                {fieldtype_t::FIELD_COLOR32, "Color"sv},
+                {fieldtype_t::FIELD_WORLD_GROUP_ID, "WorldGroupId_t"sv},
+                {fieldtype_t::FIELD_ROTATION_VECTOR, "RotationVector"sv},
+                {fieldtype_t::FIELD_CTRANSFORM_WORLDSPACE, "CTransform"sv},
+                {fieldtype_t::FIELD_EHANDLE, "CHandle< CBaseEntity >"sv},
+                {fieldtype_t::FIELD_CUSTOM, "void"sv},
+                {fieldtype_t::FIELD_HMODEL, "CStrongHandle< InfoForResourceTypeCModel >"sv},
+                {fieldtype_t::FIELD_HMATERIAL, "CStrongHandle< InfoForResourceTypeIMaterial2 >"sv},
+                {fieldtype_t::FIELD_SHIM, "SHIM"sv},
+                {fieldtype_t::FIELD_FUNCTION, "void*"sv},
+            });
             // clang-format on
         } // namespace
 
