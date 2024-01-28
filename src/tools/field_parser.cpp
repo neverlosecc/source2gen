@@ -9,11 +9,8 @@ namespace field_parser {
 
             constexpr std::string_view kBitfieldTypePrefix = "bitfield:"sv;
 
-            constexpr std::string_view kArraySizePrefix = "["sv;
-            constexpr std::string_view kArraySizePostfix = "]"sv;
-
             // clang-format off
-            constexpr std::initializer_list<std::pair<std::string_view, std::string_view>> kTypeNameToCpp = {
+            constexpr std::array<std::pair<std::string_view, std::string_view>, 10> kTypeNameToCpp = {{
                 {"float32"sv, "float"sv}, 
                 {"float64"sv, "double"sv},
     
@@ -26,9 +23,9 @@ namespace field_parser {
                 {"uint16"sv, "uint16_t"sv}, 
                 {"uint32"sv, "uint32_t"sv}, 
                 {"uint64"sv, "uint64_t"sv}
-            };
+            }};
 
-            constexpr std::initializer_list<std::pair<fieldtype_t, std::string_view>> kDatamapToCpp = {
+            constexpr std::array<std::pair<fieldtype_t, std::string_view>, 38> kDatamapToCpp = {{
                         {fieldtype_t::FIELD_FLOAT32, "float"sv},
                         {fieldtype_t::FIELD_TIME, "GameTime_t"sv},
                         {fieldtype_t::FIELD_ENGINE_TIME, "float"sv},
@@ -67,7 +64,7 @@ namespace field_parser {
                         {fieldtype_t::FIELD_HMATERIAL, "CStrongHandle< InfoForResourceTypeIMaterial2 >"sv},
                         {fieldtype_t::FIELD_SHIM, "SHIM"sv},
                         {fieldtype_t::FIELD_FUNCTION, "void*"sv},
-                    };
+                    }};
             // clang-format on
         } // namespace
 

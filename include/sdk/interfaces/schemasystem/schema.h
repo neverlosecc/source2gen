@@ -333,14 +333,6 @@ public:
         return {m_static_metadata, m_static_metadata + m_static_metadata_size};
     }
 
-    /*std::vector<SchemaFieldMetadataOverrideData_t*> GetStaticFieldMetadataOverrides() const {
-        if (!m_field_metadata_overrides)
-            return {};
-
-        return {m_field_metadata_overrides->m_iTypeDescriptionCount,
-                m_field_metadata_overrides->m_pTypeDescription + m_field_metadata_overrides->m_iTypeDescriptionCount};
-    }*/
-
     [[nodiscard]] std::string_view GetPrevClassName() const {
         if (!m_base_classes || !m_base_classes->m_prev_by_class)
             return {};
