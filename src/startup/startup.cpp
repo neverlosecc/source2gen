@@ -18,7 +18,7 @@ namespace {
         
         // @note: @soufiw: latest modules that gets loaded in the main menu
         "navsystem.dll"sv,
-        #if defined(CSGO2)
+        #if defined(CS2)
         "matchmaking.dll"sv,
         #endif
     };

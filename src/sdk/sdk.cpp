@@ -216,6 +216,13 @@ namespace sdk {
                 uint32_t used_count_;
                 std::list<std::pair<std::string, ptrdiff_t>> cached_fields_;
 
+                struct cached_datamap_t {
+                    std::string type_;
+                    std::string name_;
+                    ptrdiff_t offset_;
+                };
+                std::list<cached_datamap_t> cached_datamap_fields_;
+
                 [[nodiscard]] CSchemaClassInfo* GetParent() const {
                     if (!target_->m_base_classes)
                         return nullptr;
@@ -529,20 +536,17 @@ namespace sdk {
                     auto prop_class = std::ranges::find_if(classes_to_dump, [type](const class_t& cls) { return cls.target_->GetName().compare(type) == 0; });
                     if (prop_class != classes_to_dump.end())
                     {
-                        if (prop_class->cached_fields_.empty())
-                            continue;
-
-                        if (prop_class->cached_fields_.size() < kMinFieldCountForClassEmbed || 
-                            prop_class->cached_fields_.size() > kMaxFieldCountForClassEmbed)
-                            continue;
-
-                        // if a class is used in too many classes its likely not very useful + will bloat the dump, so ignore it
-                        if (prop_class->used_count_ > kMaxReferencesForClassEmbed) 
-                            continue;
-
-                        for (const auto& [cached_field_name, cached_field_offset] : prop_class->cached_fields_) {
-                            const auto accumulated_offset = cached_field_offset + field.m_single_inheritance_offset;
-                            builder.comment(std::format("-> {} - {:#x}", cached_field_name, accumulated_offset));
+                        if (prop_class->cached_fields_.empty()) {
+                            if (prop_class->cached_fields_.size() > kMinFieldCountForClassEmbed ||
+                                prop_class->cached_fields_.size() < kMaxFieldCountForClassEmbed) {
+                                // if a class is used in too many classes its likely not very useful + will bloat the dump, so ignore it
+                                if (prop_class->used_count_ < kMaxReferencesForClassEmbed) {
+                                    for (const auto& [cached_field_name, cached_field_offset] : prop_class->cached_fields_) {
+                                        const auto accumulated_offset = cached_field_offset + field.m_single_inheritance_offset;
+                                        builder.comment(std::format("-> {} - {:#x}", cached_field_name, accumulated_offset));
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -590,12 +594,55 @@ namespace sdk {
                         builder.next_line();
                     builder.comment("Static fields:");
                 }
+
                 for (auto s = 0; s < class_info->m_static_fields_size; s++) {
                     auto static_field = &class_info->m_static_fields[s];
 
                     auto [type, mod] = get_type(static_field->m_type);
-                    const auto var_info = field_parser::parse(type, static_field->name, mod);
+                    const auto var_info = field_parser::parse(type, static_field->m_name, mod);
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->GetScopeName().data(), class_info->m_name, s);
+                }
+
+                if (class_info->m_field_metadata_overrides && class_info->m_field_metadata_overrides->m_iTypeDescriptionCount > 1) {
+                    const auto& dm = class_info->m_field_metadata_overrides;
+
+                    for (std::uint64_t s = 0; s < dm->m_iTypeDescriptionCount; s++) {
+                        auto t = &dm->m_pTypeDescription[s];
+                        if (!t)
+                            continue;
+
+                        if (t->GetFieldName().empty())
+                            continue;
+
+                        const auto var_info = field_parser::parse(t->m_iFieldType, t->GetFieldName().data(), t->m_nFieldSize);
+
+                        std::string field_type = var_info.m_type;
+                        if (t->m_iFieldType == fieldtype_t::FIELD_EMBEDDED) {
+                            field_type = t->m_pDataMap->m_pszClassName;
+                        }
+
+                        std::string field_name = var_info.formatted_name();
+        
+                        // @note: @og: if schema dump already has this field, then just skip it
+                        if (const auto it = std::ranges::find_if(class_dump.cached_fields_, 
+                            [t, field_name](const auto& f) {
+                                return f.first == field_name && f.second == t->m_iOffset;
+                        });
+                            it != class_dump.cached_fields_.end())
+                            continue;
+
+                        class_dump.cached_datamap_fields_.emplace_back(field_type, field_name, t->m_iOffset);
+                    }
+
+                    if (!class_dump.cached_datamap_fields_.empty()) {
+                        if (class_info->m_fields_size)
+                            builder.next_line();
+
+                        builder.comment("Datamap fields:");
+                        for (auto &[field_type, field_name, field_offset] : class_dump.cached_datamap_fields_) {
+                            builder.comment(std::format("{} {}; // {:#x}", field_type, field_name, field_offset));
+                        }
+                    }
                 }
 
                 if (!class_info->m_fields_size && !class_info->m_static_metadata_size)

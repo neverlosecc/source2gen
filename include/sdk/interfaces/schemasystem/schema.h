@@ -13,7 +13,7 @@
 #include <SDK/Interfaces/common/CUtlTSHash.h>
 #include <tools/virtual.h>
 
-#define CSGO2
+#define CS2
 
 #ifdef SBOX
 // untested, CSchemaType::m_schema_type_ might be wrong
@@ -53,7 +53,7 @@
     #error "unimplemented"
 #elif defined THE_LAB_ROBOT_REPAIR
     #error "unimplemented"
-#elif defined(CSGO2) || defined(DOTA2)
+#elif defined(CS2) || defined(DOTA2)
     #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define CSCHEMASYSTEM_VALIDATECLASSES 35
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
@@ -87,12 +87,11 @@ enum SchemaClassFlags_t {
     SCHEMA_CF1_IS_LOCAL_TYPE_SCOPE = 64,
     SCHEMA_CF1_IS_GLOBAL_TYPE_SCOPE = 128,
 
-#if defined(CSGO2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2)
     SCHEMA_CF1_IS_SCHEMA_VALIDATED = 2048,
 #else
     SCHEMA_CF1_IS_SCHEMA_VALIDATED = 1024,
 #endif
-
 };
 
 enum ETypeCategory {
@@ -113,92 +112,6 @@ enum EAtomicCategory {
     Atomic_TT,
     Atomic_I,
     Atomic_None
-};
-
-// Registered binary: schemasystem.dll (project 'schemasystem')
-// Alignment: 1
-// Size: 0x50
-enum class fieldtype_t : uint8_t {
-    FIELD_VOID = 0x0,
-    FIELD_FLOAT32 = 0x1,
-    FIELD_STRING = 0x2,
-    FIELD_VECTOR = 0x3,
-    FIELD_QUATERNION = 0x4,
-    FIELD_INT32 = 0x5,
-    FIELD_BOOLEAN = 0x6,
-    FIELD_INT16 = 0x7,
-    FIELD_CHARACTER = 0x8,
-    FIELD_COLOR32 = 0x9,
-    FIELD_EMBEDDED = 0xa,
-    FIELD_CUSTOM = 0xb,
-    FIELD_CLASSPTR = 0xc,
-    FIELD_EHANDLE = 0xd,
-    FIELD_POSITION_VECTOR = 0xe,
-    FIELD_TIME = 0xf,
-    FIELD_TICK = 0x10,
-    FIELD_SOUNDNAME = 0x11,
-    FIELD_INPUT = 0x12,
-    FIELD_FUNCTION = 0x13,
-    FIELD_VMATRIX = 0x14,
-    FIELD_VMATRIX_WORLDSPACE = 0x15,
-    FIELD_MATRIX3X4_WORLDSPACE = 0x16,
-    FIELD_INTERVAL = 0x17,
-    FIELD_UNUSED = 0x18,
-    FIELD_VECTOR2D = 0x19,
-    FIELD_INT64 = 0x1a,
-    FIELD_VECTOR4D = 0x1b,
-    FIELD_RESOURCE = 0x1c,
-    FIELD_TYPEUNKNOWN = 0x1d,
-    FIELD_CSTRING = 0x1e,
-    FIELD_HSCRIPT = 0x1f,
-    FIELD_VARIANT = 0x20,
-    FIELD_UINT64 = 0x21,
-    FIELD_FLOAT64 = 0x22,
-    FIELD_POSITIVEINTEGER_OR_NULL = 0x23,
-    FIELD_HSCRIPT_NEW_INSTANCE = 0x24,
-    FIELD_UINT32 = 0x25,
-    FIELD_UTLSTRINGTOKEN = 0x26,
-    FIELD_QANGLE = 0x27,
-    FIELD_NETWORK_ORIGIN_CELL_QUANTIZED_VECTOR = 0x28,
-    FIELD_HMATERIAL = 0x29,
-    FIELD_HMODEL = 0x2a,
-    FIELD_NETWORK_QUANTIZED_VECTOR = 0x2b,
-    FIELD_NETWORK_QUANTIZED_FLOAT = 0x2c,
-    FIELD_DIRECTION_VECTOR_WORLDSPACE = 0x2d,
-    FIELD_QANGLE_WORLDSPACE = 0x2e,
-    FIELD_QUATERNION_WORLDSPACE = 0x2f,
-    FIELD_HSCRIPT_LIGHTBINDING = 0x30,
-    FIELD_V8_VALUE = 0x31,
-    FIELD_V8_OBJECT = 0x32,
-    FIELD_V8_ARRAY = 0x33,
-    FIELD_V8_CALLBACK_INFO = 0x34,
-    FIELD_UTLSTRING = 0x35,
-    FIELD_NETWORK_ORIGIN_CELL_QUANTIZED_POSITION_VECTOR = 0x36,
-    FIELD_HRENDERTEXTURE = 0x37,
-    FIELD_HPARTICLESYSTEMDEFINITION = 0x38,
-    FIELD_UINT8 = 0x39,
-    FIELD_UINT16 = 0x3a,
-    FIELD_CTRANSFORM = 0x3b,
-    FIELD_CTRANSFORM_WORLDSPACE = 0x3c,
-    FIELD_HPOSTPROCESSING = 0x3d,
-    FIELD_MATRIX3X4 = 0x3e,
-    FIELD_SHIM = 0x3f,
-    FIELD_CMOTIONTRANSFORM = 0x40,
-    FIELD_CMOTIONTRANSFORM_WORLDSPACE = 0x41,
-    FIELD_ATTACHMENT_HANDLE = 0x42,
-    FIELD_AMMO_INDEX = 0x43,
-    FIELD_CONDITION_ID = 0x44,
-    FIELD_AI_SCHEDULE_BITS = 0x45,
-    FIELD_MODIFIER_HANDLE = 0x46,
-    FIELD_ROTATION_VECTOR = 0x47,
-    FIELD_ROTATION_VECTOR_WORLDSPACE = 0x48,
-    FIELD_HVDATA = 0x49,
-    FIELD_SCALE32 = 0x4a,
-    FIELD_STRING_AND_TOKEN = 0x4b,
-    FIELD_ENGINE_TIME = 0x4c,
-    FIELD_ENGINE_TICK = 0x4d,
-    FIELD_WORLD_GROUP_ID = 0x4e,
-    FIELD_TYPECOUNT = 0x4f,
 };
 
 struct CSchemaVarName {
@@ -337,23 +250,8 @@ struct SchemaClassFieldData_t {
     SchemaMetadataEntryData_t* m_metadata; // 0x0018
 };
 
-struct SchemaFieldMetadataOverrideData_t {
-    fieldtype_t m_field_type; // 0x0000
-    char pad_0001[7]; // 0x0001
-    const char* m_field_name; // 0x0008
-    std::uint32_t m_single_inheritance_offset; // 0x0010
-    std::int32_t m_field_count; // 0x0014 // @note: @og: if its array or smth like this it will point to count of array
-    std::int32_t m_i_unk_1; // 0x0018
-    char pad_001C[12]; // 0x001C
-    ISaveRestoreOps* m_def_save_restore_ops; // 0x0028
-    char pad_0030[16]; // 0x0030
-    std::uint32_t m_align; // 0x0040
-    char pad_0044[36]; // 0x0044
-}; // Size: 0x0068
-static_assert(sizeof(SchemaFieldMetadataOverrideData_t) == 0x68);
-
 struct SchemaStaticFieldData_t {
-    const char* name; // 0x0000
+    const char* m_name; // 0x0000
     CSchemaType* m_type; // 0x0008
     void* m_instance; // 0x0010
     char pad_0x0018[0x10]; // 0x0018
@@ -364,10 +262,8 @@ struct SchemaBaseClassInfoData_t {
     CSchemaClassInfo* m_prev_by_class; // 0x0008
 };
 
-struct SchemaFieldMetadataOverrideSetData_t {
-    SchemaFieldMetadataOverrideData_t* m_metadata_override_data; // 0x0008
-    std::int32_t m_size; // 0x0008
-};
+using SchemaFieldMetadataOverrideSetData_t = datamap_t;
+using SchemaFieldMetadataOverrideData_t = typedescription_t;
 
 struct SchemaClassInfoData_t {
 public:
@@ -375,13 +271,12 @@ public:
         kRegisterClassSchema = 0,
         kUnknown = 1, // @note: @og: Can't find fn with such index
         kCopyInstance = 2,
-        kCreateInstance = 3, 
+        kCreateInstance = 3,
         kDestroyInstance = 4,
         kCreateInstanceWithMemory = 5,
         kDestroyInstanceWithMemory = 6,
         kSchemaDynamicBinding = 7
     };
-
 public:
     SchemaClassInfoData_t* m_self; // 0x0000
     const char* m_name; // 0x0008
@@ -401,7 +296,7 @@ public:
     SchemaMetadataEntryData_t* m_static_metadata; // 0x0048
     CSchemaSystemTypeScope* m_type_scope; // 0x0050
     CSchemaType* m_schema_type; // 0x0058
-    SchemaClassFlags_t m_class_flags : 8; // 0x0060
+    SchemaClassFlags_t m_class_flags:8; // 0x0060
     std::uint32_t m_sequence; // 0x0064 // @note: @og: idk
     void* m_fn; // 0x0068
 };
@@ -436,14 +331,6 @@ public:
 
     std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() {
         return {m_static_metadata, m_static_metadata + m_static_metadata_size};
-    }
-
-    std::vector<SchemaFieldMetadataOverrideData_t> GetStaticFieldMetadataOverrides() const {
-        if (!m_field_metadata_overrides)
-            return {};
-
-        return {m_field_metadata_overrides->m_metadata_override_data,
-                m_field_metadata_overrides->m_metadata_override_data + m_field_metadata_overrides->m_size};
     }
 
     [[nodiscard]] std::string_view GetPrevClassName() const {
@@ -487,13 +374,15 @@ public:
         return reinterpret_cast<Fn>(m_fn)(SchemaClassInfoFunctionIndex::kCreateInstance, instance, new_instance);
     }
 
-    // @note: @og: Creates default instance with engine allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be C_BaseEntity)
+    // @note: @og: Creates default instance with engine allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be
+    // C_BaseEntity)
     void* CreateInstance() const {
-        using Fn = void*(*)(SchemaClassInfoFunctionIndex);
+        using Fn = void* (*)(SchemaClassInfoFunctionIndex);
         return reinterpret_cast<Fn>(m_fn)(SchemaClassInfoFunctionIndex::kCreateInstance);
     }
 
-    // @note: @og: Creates default instance with your own allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be C_BaseEntity)
+    // @note: @og: Creates default instance with your own allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be
+    // C_BaseEntity)
     void* CreateInstance(void* memory) const {
         using Fn = void* (*)(SchemaClassInfoFunctionIndex, void*);
         return reinterpret_cast<Fn>(m_fn)(SchemaClassInfoFunctionIndex::kCreateInstanceWithMemory, memory);
@@ -580,7 +469,6 @@ private:
      * \brief (class_info->m_class_flags & 64) != 0;
      */
     using SchemaTypeScope_t = std::int32_t;
-
 public:
     CSchemaSystemTypeScope* GlobalTypeScope(void) {
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*)>(this, 11)(this);
@@ -625,19 +513,18 @@ public:
     [[nodiscard]] std::int32_t GetRegistration() const {
         return m_registrations_;
     }
-    
+
     [[nodiscard]] std::int32_t GetIgnored() const {
         return m_ignored_;
     }
-    
+
     [[nodiscard]] std::int32_t GetRedundant() const {
         return m_redundant_;
     }
-    
+
     [[nodiscard]] std::int32_t GetIgnoredBytes() const {
         return m_ignored_bytes_;
     }
-
 private:
     char pad_0x0000[SCHEMASYSTEM_TYPE_SCOPES_OFFSET]; // 0x0000
     CUtlVector<CSchemaSystemTypeScope*> m_type_scopes_ = {}; // SCHEMASYSTEM_TYPE_SCOPES_OFFSET
@@ -647,13 +534,11 @@ private:
     std::int32_t m_redundant_ = 0; // 0x02C8
     char pad_02CC[4] = {}; // 0x02CC
     std::int32_t m_ignored_bytes_ = 0; // 0x02D0
-
 public:
     static CSchemaSystem* GetInstance(void) {
         return sdk::GetInterface<CSchemaSystem>("schemasystem.dll", "SchemaSystem_0");
     }
 };
-
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
@@ -670,4 +555,3 @@ public:
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
