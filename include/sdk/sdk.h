@@ -13,6 +13,7 @@
 #include <sdk/interfaces/common/CUtlTSHash.h>
 
 #include <sdk/interfaceregs.h>
+#include <sdk/interfaces/client/game/datamap_t.h>
 #include <sdk/interfaces/schemasystem/Schema.h>
 
 namespace sdk {
