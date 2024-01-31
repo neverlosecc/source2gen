@@ -1,3 +1,21 @@
+newoption {
+  trigger = "game",
+  value = "CS2",
+  description = "Choose a particular game for dumping source 2 sdk",
+  allowed = {
+     { "CS2", "Counter-Strike 2" },
+     { "DOTA2","Dota 2" },
+     { "SBOX","S&BOX" },
+     { "ARTIFACT2", "Artifact Foundry" },
+     { "ARTIFACT1", "Artifact Classic" },
+     { "UNDERLORDS", "Dota Underlords" },
+     { "DESKJOB", "Aperture Desk Job" },
+     { "HL_ALYX", "Half-Life: Alyx" },
+     { "THE_LAB_ROBOT_REPAIR", "Portal: Aperture Robot Repair" }
+  },
+  default = "CS2"
+}
+
 workspace "source2gen"
   architecture "x64"
   startproject "source2gen"
@@ -101,3 +119,30 @@ workspace "source2gen"
       flags { "LinkTimeOptimization", "FatalCompileWarnings" }
       defines { "source2ge_DIST" }
       optimize "speed"
+
+    filter { "options:game=CS2" }
+      defines { "CS2" }
+
+    filter { "options:game=DOTA2" }
+      defines { "DOTA2" }
+
+    filter { "options:game=SBOX" }
+      defines { "SBOX" }
+
+    filter { "options:game=ARTIFACT2" }
+      defines { "ARTIFACT2" }
+
+    filter { "options:game=ARTIFACT1" }
+      defines { "ARTIFACT1" }
+
+    filter { "options:game=UNDERLORDS" }
+      defines { "UNDERLORDS" }
+
+    filter { "options:game=DESKJOB" }
+      defines { "DESKJOB" }
+
+    filter { "options:game=HL_ALYX" }
+      defines { "HL_ALYX" }
+
+    filter { "options:game=THE_LAB_ROBOT_REPAIR" }
+      defines { "THE_LAB_ROBOT_REPAIR" }

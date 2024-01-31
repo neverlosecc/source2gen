@@ -9,8 +9,6 @@
 
 #pragma once
 
-#define CS2
-
 #ifdef SBOX
 // untested, CSchemaType::m_pSchemaType might be wrong
     #define CSCHEMATYPE_GETSIZES_INDEX 5
@@ -56,6 +54,13 @@
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x47E
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2808
     #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 2
+#else
+    #define CSCHEMATYPE_GETSIZES_INDEX 0
+    #define CSCHEMASYSTEM_VALIDATECLASSES 0
+    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0
+    #define SCHEMASYSTEMTYPESCOPE_OFF1 0
+    #define SCHEMASYSTEMTYPESCOPE_OFF2 0
+    #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 0
 #endif
 #include "SDK/SDK.h"
 
@@ -485,7 +490,7 @@ public:
         Virtual::Get<void(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, szName.data());
         return class_info;
 #else
-        return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, class_name);
+        return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());
 #endif
     }
 
@@ -496,7 +501,7 @@ public:
         Virtual::Get<void(__thiscall*)(void*, CSchemaEnumInfo**, const char*)>(this, 3)(this, &enum_info, szName.data());
         return enum_info;
 #else
-        return Virtual::Get<CSchemaEnumInfo*(__thiscall*)(void*, const char*)>(this, 3)(this, enum_info);
+        return Virtual::Get<CSchemaEnumInfo*(__thiscall*)(void*, const char*)>(this, 3)(this, szName.data());
 #endif
     }
 
@@ -507,7 +512,7 @@ public:
         Virtual::Get<void(__thiscall*)(void*, CSchemaType**, const char*)>(this, 4)(this, &schema_type, szName.data());
         return schema_type;
 #else
-        return Virtual::Get<CSchemaType*(__thiscall*)(void*, const char*)>(this, 4)(this, szName);
+        return Virtual::Get<CSchemaType*(__thiscall*)(void*, const char*)>(this, 4)(this, szName.data());
 #endif
     }
 
@@ -529,7 +534,7 @@ public:
         Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredClass**, const char*)>(this, 13)(this, &declared_class, szName.data());
         return declared_class;
 #else
-        return Virtual::Get<CSchemaType_DeclaredClass*(__thiscall*)(void*, const char*)>(this, 13)(this, class_name);
+        return Virtual::Get<CSchemaType_DeclaredClass*(__thiscall*)(void*, const char*)>(this, 13)(this, szName.data());
 #endif
     }
 
@@ -540,7 +545,7 @@ public:
         Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredEnum**, const char*)>(this, 14)(this, &declared_class, szName.data());
         return declared_class;
 #else
-        return Virtual::Get<CSchemaType_DeclaredEnum*(__thiscall*)(void*, const char*)>(this, 14)(this, class_name);
+        return Virtual::Get<CSchemaType_DeclaredEnum*(__thiscall*)(void*, const char*)>(this, 14)(this, szName.data());
 #endif
     }
 
