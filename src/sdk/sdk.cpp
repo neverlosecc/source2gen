@@ -164,7 +164,7 @@ namespace sdk {
             builder
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetEnumBinaryName(enum_binding),
                                      g_schema->GetEnumProjectName(enum_binding)))
-                .comment(std::format("Alignment: {}", enum_binding->m_nAlingOf)) // @note: @og: I think this is wrong
+                .comment(std::format("Alignment: {}", enum_binding->m_nAlingOf))
                 .comment(std::format("Size: {:#x}", enum_binding->m_nSize));
 
             if (enum_binding->m_nStaticMetadataSize > 0)
@@ -258,7 +258,7 @@ namespace sdk {
                     return target_->m_pBaseClassses->m_pPrevByClass;
                 }
 
-                void AddRefToClass(CSchemaType* type) {
+                void AddRefToClass(const CSchemaType* type) {
                     if (type->m_unTypeCategory == Schema_DeclaredClass) {
                         refs_.insert(type->m_pClassInfo);
                         return;
@@ -325,9 +325,8 @@ namespace sdk {
                     // forward declare all classes.
                     // @todo: maybe we need to forward declare only pointers to classes?
                     auto ptr = field->m_pSchemaType->GetRefClass();
-                    auto actual_type = ptr ? ptr : field->m_pSchemaType;
 
-                    if (actual_type->m_unTypeCategory == Schema_DeclaredClass) {
+                    if (auto actual_type = ptr ? ptr : field->m_pSchemaType; actual_type->m_unTypeCategory == Schema_DeclaredClass) {
                         builder.forward_declaration(actual_type->m_pszName);
                         did_forward_decls = true;
                     }
@@ -370,8 +369,7 @@ namespace sdk {
                             continue;
                         }
 
-                        bool swap = second_below_first ? first_depend : second_depend;
-                        if (swap) {
+                        if (second_below_first ? first_depend : second_depend) {
                             std::iter_swap(first, second);
                             did_change = true;
                         }
@@ -382,8 +380,8 @@ namespace sdk {
 
             // returns {type_name, array_sizes}
             auto parse_array = [&](CSchemaType* type) -> std::pair<std::string, std::vector<std::size_t>> {
-                auto ptr = type->GetRefClass();
-                auto actual_type = ptr ? ptr : type;
+                const auto ptr = type->GetRefClass();
+                const auto actual_type = ptr ? ptr : type;
 
                 std::string base_type;
                 std::vector<std::size_t> sizes;
