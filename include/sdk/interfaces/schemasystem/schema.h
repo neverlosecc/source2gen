@@ -44,9 +44,9 @@
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
 #elif defined HL_ALYX
-    #error "unimplemented"
+    #error unimplemented
 #elif defined THE_LAB_ROBOT_REPAIR
-    #error "unimplemented"
+    #error unimplemented
 #elif defined(CS2) || defined(DOTA2)
     #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define CSCHEMASYSTEM_VALIDATECLASSES 35
@@ -55,12 +55,7 @@
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2808
     #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 2
 #else
-    #define CSCHEMATYPE_GETSIZES_INDEX 0
-    #define CSCHEMASYSTEM_VALIDATECLASSES 0
-    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0
-    #define SCHEMASYSTEMTYPESCOPE_OFF1 0
-    #define SCHEMASYSTEMTYPESCOPE_OFF2 0
-    #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 0
+    #error No implementation defined, check the README
 #endif
 #include "SDK/SDK.h"
 
