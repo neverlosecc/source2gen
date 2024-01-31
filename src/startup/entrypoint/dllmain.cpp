@@ -4,10 +4,9 @@
 
 namespace {
     void OnProcessAttach(const HMODULE h_module) {
-        std::thread main_thread([h_module] { source2_gen::main(h_module); });
-
-        if (main_thread.joinable())
-            main_thread.detach();
+        if (auto handle = CreateThread(nullptr, NULL, source2_gen::main, h_module, NULL, nullptr)) {
+            CloseHandle(handle);
+        }
     }
 
     void OnProcessDetach() {

@@ -31,7 +31,7 @@ namespace source2_gen {
     void Setup() try {
         // @note: @es3n1n: Waiting for game init
         //
-        const auto required_modules_present = []() [[msvc::forceinline]] -> bool {
+        const auto required_modules_present = []() [[msvc::forceinline]]->bool {
             bool result = true;
 
             for (auto& name : kRequiredGameModules)
@@ -51,7 +51,7 @@ namespace source2_gen {
         if (!sdk::g_schema)
             throw std::runtime_error(std::format("Unable to obtain Schema interface"));
 
-        while(!sdk::g_schema->SchemaSystemIsReady())
+        while (!sdk::g_schema->SchemaSystemIsReady())
             sleep_for(std::chrono::seconds(5));
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk
@@ -77,7 +77,7 @@ namespace source2_gen {
         is_finished = true;
     }
 
-    void WINAPI main(const HMODULE module) {
+    DWORD WINAPI main(LPVOID module) {
         auto console = std::make_unique<DebugConsole>();
         console->start(kConsoleTitleMessage.data());
 
@@ -94,7 +94,9 @@ namespace source2_gen {
         console->stop();
         console.reset();
 
-        FreeLibraryAndExitThread(module, EXIT_SUCCESS);
+        FreeLibraryAndExitThread((HMODULE)module, EXIT_SUCCESS);
+
+        return EXIT_SUCCESS;
     }
 } // namespace source2_gen
 
@@ -114,4 +116,3 @@ namespace source2_gen {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
