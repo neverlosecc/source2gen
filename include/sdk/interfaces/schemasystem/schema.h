@@ -1,12 +1,5 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
-/**
- * =============================================================================
- * Source2Gen
- * Copyright (C) 2023 neverlose (https://github.com/neverlosecc/source2gen)
- * =============================================================================
- **/
-
 #pragma once
 
 #ifdef SBOX
