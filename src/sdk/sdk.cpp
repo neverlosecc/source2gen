@@ -565,15 +565,14 @@ namespace sdk {
                     auto prop_class =
                         std::ranges::find_if(classes_to_dump, [type](const class_t& cls) { return cls.target_->GetName().compare(type) == 0; });
                     if (prop_class != classes_to_dump.end()) {
-                        if (!prop_class->cached_fields_.empty()) {
-                            if (prop_class->cached_fields_.size() > kMinFieldCountForClassEmbed &&
-                                prop_class->cached_fields_.size() < kMaxFieldCountForClassEmbed) {
-                                // if a class is used in too many classes its likely not very useful + will bloat the dump, so ignore it
-                                if (prop_class->used_count_ <= kMaxReferencesForClassEmbed) {
-                                    for (const auto& [cached_field_name, cached_field_offset] : prop_class->cached_fields_) {
-                                        const auto accumulated_offset = cached_field_offset + field.m_nSingleInheritanceOffset;
-                                        builder.comment(std::format("-> {} - {:#x}", cached_field_name, accumulated_offset));
-                                    }
+                        // verify for min/max fields count, we don't want to bloat the dump by embeding too much stuff
+                        if (prop_class->cached_fields_.size() > kMinFieldCountForClassEmbed &&
+                            prop_class->cached_fields_.size() < kMaxFieldCountForClassEmbed) {
+                            // if a class is used in too many classes its likely not very useful, so ignore it
+                            if (prop_class->used_count_ <= kMaxReferencesForClassEmbed) {
+                                for (const auto& [cached_field_name, cached_field_offset] : prop_class->cached_fields_) {
+                                    const auto accumulated_offset = cached_field_offset + field.m_nSingleInheritanceOffset;
+                                    builder.comment(std::format("-> {} - {:#x}", cached_field_name, accumulated_offset));
                                 }
                             }
                         }
