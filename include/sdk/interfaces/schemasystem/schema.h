@@ -48,7 +48,7 @@
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2808
     #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 2
 #else
-    #error No implementation defined, check the README
+    #error No implementation defined, please re-generate project with premake5
 #endif
 #include "SDK/SDK.h"
 
