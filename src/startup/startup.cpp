@@ -5,6 +5,8 @@
 
 #include "tools/console/console.h"
 
+#include <thread>
+
 namespace {
     using namespace std::string_view_literals;
 
@@ -31,7 +33,7 @@ namespace source2_gen {
     void Setup() try {
         // @note: @es3n1n: Waiting for game init
         //
-        const auto required_modules_present = []() [[msvc::forceinline]]->bool {
+        const auto required_modules_present = []() [[msvc::forceinline]] -> bool {
             bool result = true;
 
             for (auto& name : kRequiredGameModules)
@@ -77,7 +79,7 @@ namespace source2_gen {
         is_finished = true;
     }
 
-    DWORD WINAPI main(LPVOID module) {
+    void main(HMODULE module) {
         auto console = std::make_unique<DebugConsole>();
         console->start(kConsoleTitleMessage.data());
 
@@ -94,9 +96,7 @@ namespace source2_gen {
         console->stop();
         console.reset();
 
-        FreeLibraryAndExitThread((HMODULE)module, EXIT_SUCCESS);
-
-        return EXIT_SUCCESS;
+        FreeLibrary(module);
     }
 } // namespace source2_gen
 

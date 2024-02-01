@@ -31,7 +31,7 @@ using namespace std::this_thread;
 #pragma endregion Tools
 
 namespace source2_gen {
-    DWORD WINAPI main(LPVOID h_module);
+    void main(HMODULE h_module);
 }
 
 constexpr std::string_view kConsoleTitleMessage = {"source2gen :: github.com/neverlosecc/source2gen"};
