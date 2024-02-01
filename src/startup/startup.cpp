@@ -100,7 +100,6 @@ namespace source2_gen {
     }
 } // namespace source2_gen
 
-
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //

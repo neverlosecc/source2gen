@@ -33,7 +33,6 @@ namespace sdk {
     }
 } // namespace sdk
 
-
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //
@@ -49,4 +48,3 @@ namespace sdk {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

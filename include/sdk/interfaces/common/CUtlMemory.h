@@ -508,7 +508,6 @@ void CUtlMemory<T, I>::Purge(int numElements) {
     m_pMemory = (T*)GetMemAlloc()->ReAlloc(m_pMemory, m_nAllocationCount * sizeof(T));
 }
 
-
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //
@@ -524,4 +523,3 @@ void CUtlMemory<T, I>::Purge(int numElements) {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
