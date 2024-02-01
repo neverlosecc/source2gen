@@ -2,43 +2,43 @@
 // See end of file for extended copyright information.
 #pragma once
 
-#ifdef SBOX
+#if defined(SBOX)
 // untested, CSchemaType::m_pSchemaType might be wrong
     #define CSCHEMATYPE_GETSIZES_INDEX 5
     #define CSCHEMASYSTEM_VALIDATECLASSES 34
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
-#elif defined ARTIFACT2
+#elif defined(ARTIFACT2)
 // untested, CSchemaType::m_pSchemaType might be wrong
     #define CSCHEMATYPE_GETSIZES_INDEX 5
     #define CSCHEMASYSTEM_VALIDATECLASSES 34
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5430
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
-#elif defined ARTIFACT1
+#elif defined(ARTIFACT1)
 // untested, CSchemaType::m_pSchemaType might be wrong
     #define CSCHEMATYPE_GETSIZES_INDEX 5
     #define CSCHEMASYSTEM_VALIDATECLASSES 34
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x4428
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x4B8
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2001
-#elif defined UNDERLORDS
+#elif defined(UNDERLORDS)
 // untested, CSchemaType::m_pSchemaType might be wrong
     #define CSCHEMATYPE_GETSIZES_INDEX 5
     #define CSCHEMASYSTEM_VALIDATECLASSES 34
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
-#elif defined DESKJOB
+#elif defined(DESKJOB)
     #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define CSCHEMASYSTEM_VALIDATECLASSES 34
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x3A0
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
-#elif defined HL_ALYX
+#elif defined(HL_ALYX)
     #error unimplemented
-#elif defined THE_LAB_ROBOT_REPAIR
+#elif defined(THE_LAB_ROBOT_REPAIR)
     #error unimplemented
 #elif defined(CS2) || defined(DOTA2)
     #define CSCHEMATYPE_GETSIZES_INDEX 3
