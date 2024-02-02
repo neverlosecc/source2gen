@@ -30,7 +30,6 @@ void __CRTDECL operator delete[](void* p) throw() {
     GetMemAlloc()->Free(p);
 }
 
-
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //
@@ -46,4 +45,3 @@ void __CRTDECL operator delete[](void* p) throw() {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

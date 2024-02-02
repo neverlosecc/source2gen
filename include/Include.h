@@ -31,13 +31,12 @@ using namespace std::this_thread;
 #pragma endregion Tools
 
 namespace source2_gen {
-    void WINAPI main(HMODULE h_module);
+    void main(HMODULE h_module);
 }
 
 constexpr std::string_view kConsoleTitleMessage = {"source2gen :: github.com/neverlosecc/source2gen"};
 constexpr std::string_view kPoweredByMessage = {"Powered by github.com/neverlosecc/source2gen"};
 constexpr std::string_view kCreatedBySource2genMessage = {"Created using source2gen - github.com/neverlosecc/source2gen"};
-
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
@@ -54,4 +53,3 @@ constexpr std::string_view kCreatedBySource2genMessage = {"Created using source2
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

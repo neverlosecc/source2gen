@@ -57,7 +57,6 @@ const T& CUtlMap<S, T>::Element(int i) const {
     return base_[i];
 };
 
-
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //
@@ -73,4 +72,3 @@ const T& CUtlMap<S, T>::Element(int i) const {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

@@ -109,7 +109,6 @@ using fnv = ::detail::FnvHash<sizeof(void*) * 8>;
 #define FNV32(str) (std::integral_constant<fnv32::hash, fnv32::hash_constexpr(str)>::value)
 #define FNV64(str) (std::integral_constant<fnv64::hash, fnv64::hash_constexpr(str)>::value)
 
-
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //
@@ -125,4 +124,3 @@ using fnv = ::detail::FnvHash<sizeof(void*) * 8>;
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

@@ -16,26 +16,28 @@ namespace {
     constexpr size_t kMinFieldCountForClassEmbed = 2;
     constexpr size_t kMaxFieldCountForClassEmbed = 12;
 
-    constinit std::array string_metadata_entries = {FNV32("MNetworkChangeCallback"),
-                                                    FNV32("MPropertyFriendlyName"),
-                                                    FNV32("MPropertyDescription"),
-                                                    FNV32("MPropertyAttributeRange"),
-                                                    FNV32("MPropertyStartGroup"),
-                                                    FNV32("MPropertyAttributeChoiceName"),
-                                                    FNV32("MPropertyGroupName"),
-                                                    FNV32("MNetworkUserGroup"),
-                                                    FNV32("MNetworkAlias"),
-                                                    FNV32("MNetworkTypeAlias"),
-                                                    FNV32("MNetworkSerializer"),
-                                                    FNV32("MPropertyAttributeEditor"),
-                                                    FNV32("MPropertySuppressExpr"),
-                                                    FNV32("MKV3TransferName"),
-                                                    FNV32("MFieldVerificationName"),
-                                                    FNV32("MVectorIsSometimesCoordinate"),
-                                                    FNV32("MNetworkEncoder"),
-                                                    FNV32("MPropertyCustomFGDType"),
-                                                    FNV32("MVDataUniqueMonotonicInt"),
-                                                    FNV32("MScriptDescription")};
+    constinit std::array string_metadata_entries = {
+        FNV32("MNetworkChangeCallback"),
+        FNV32("MPropertyFriendlyName"),
+        FNV32("MPropertyDescription"),
+        FNV32("MPropertyAttributeRange"),
+        FNV32("MPropertyStartGroup"),
+        FNV32("MPropertyAttributeChoiceName"),
+        FNV32("MPropertyGroupName"),
+        FNV32("MNetworkUserGroup"),
+        FNV32("MNetworkAlias"),
+        FNV32("MNetworkTypeAlias"),
+        FNV32("MNetworkSerializer"),
+        FNV32("MPropertyAttributeEditor"),
+        FNV32("MPropertySuppressExpr"),
+        FNV32("MKV3TransferName"),
+        FNV32("MFieldVerificationName"),
+        FNV32("MVectorIsSometimesCoordinate"),
+        FNV32("MNetworkEncoder"),
+        FNV32("MPropertyCustomFGDType"),
+        FNV32("MVDataUniqueMonotonicInt"),
+        FNV32("MScriptDescription"),
+    };
 
     constinit std::array string_class_metadata_entries = {
         FNV32("MResourceTypeForInfoType"),
@@ -484,8 +486,8 @@ namespace sdk {
                 for (const auto& field : class_info->GetFields()) {
                     // @fixme: @es3n1n: todo proper collision fix and remove this block
                     if (state.collision_end_offset && field.m_nSingleInheritanceOffset < state.collision_end_offset) {
-                        builder.comment(
-                            std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field.m_pszName, field.m_nSingleInheritanceOffset));
+                        builder.comment(std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field.m_pszName,
+                                                    field.m_nSingleInheritanceOffset));
                         continue;
                     }
 
@@ -503,8 +505,8 @@ namespace sdk {
                     // @note: @es3n1n: insert padding if needed
                     //
                     const auto expected_offset = state.last_field_offset + state.last_field_size;
-                    if (state.last_field_offset && state.last_field_size && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) &&
-                        !state.assembling_bitfield) {
+                    if (state.last_field_offset && state.last_field_size &&
+                        expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) && !state.assembling_bitfield) {
 
                         builder.access_modifier("private")
                             .struct_padding(expected_offset, field.m_nSingleInheritanceOffset - expected_offset, false, true)
@@ -563,15 +565,14 @@ namespace sdk {
                     auto prop_class =
                         std::ranges::find_if(classes_to_dump, [type](const class_t& cls) { return cls.target_->GetName().compare(type) == 0; });
                     if (prop_class != classes_to_dump.end()) {
-                        if (prop_class->cached_fields_.empty()) {
-                            if (prop_class->cached_fields_.size() > kMinFieldCountForClassEmbed ||
-                                prop_class->cached_fields_.size() < kMaxFieldCountForClassEmbed) {
-                                // if a class is used in too many classes its likely not very useful + will bloat the dump, so ignore it
-                                if (prop_class->used_count_ < kMaxReferencesForClassEmbed) {
-                                    for (const auto& [cached_field_name, cached_field_offset] : prop_class->cached_fields_) {
-                                        const auto accumulated_offset = cached_field_offset + field.m_nSingleInheritanceOffset;
-                                        builder.comment(std::format("-> {} - {:#x}", cached_field_name, accumulated_offset));
-                                    }
+                        // verify for min/max fields count, we don't want to bloat the dump by embeding too much stuff
+                        if (prop_class->cached_fields_.size() >= kMinFieldCountForClassEmbed &&
+                            prop_class->cached_fields_.size() <= kMaxFieldCountForClassEmbed) {
+                            // if a class is used in too many classes its likely not very useful, so ignore it
+                            if (prop_class->used_count_ <= kMaxReferencesForClassEmbed) {
+                                for (const auto& [cached_field_name, cached_field_offset] : prop_class->cached_fields_) {
+                                    const auto accumulated_offset = cached_field_offset + field.m_nSingleInheritanceOffset;
+                                    builder.comment(std::format("-> {} - {:#x}", cached_field_name, accumulated_offset));
                                 }
                             }
                         }

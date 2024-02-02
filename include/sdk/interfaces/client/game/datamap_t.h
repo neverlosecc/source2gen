@@ -10,8 +10,7 @@ enum {
     FTYPEDESC_NONE = 0
 };
 
-enum DatamapFlags : int
-{
+enum DatamapFlags : int {
     // This field is masked for global entity save/restore
     FTYPEDESC_GLOBAL = (1 << 0),
     // This field is saved to disk
@@ -236,7 +235,6 @@ public:
 
         return {};
     }
-
 public:
     fieldtype_t m_iFieldType;
     const char* m_pszFieldName;

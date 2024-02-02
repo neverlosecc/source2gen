@@ -60,13 +60,15 @@ def append_copyright_to(p: Path) -> None:
         file_lines = f.read().splitlines()
 
     def _is_copyrighted() -> bool:
-        return file_lines[0].split(current_year)[0] == header[0].split(current_year)[0]
+        index = header[0].find(current_year)
+        assert index != -1
+        return file_lines[0][:index] == header[0][:index]
     
     is_copyrighted = _is_copyrighted()
     if is_copyrighted:
         file_lines = remove_copyright(p.name, file_lines)
 
-    file_lines = header + file_lines + ['\n'] + full + ['\n']
+    file_lines = header + file_lines + [''] + full + ['']
     with open(p, 'w') as f:
         f.write('\n'.join(file_lines))
 

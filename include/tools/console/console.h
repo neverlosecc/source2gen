@@ -157,7 +157,6 @@ private:
     HANDLE old_in_ = nullptr;
 };
 
-
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //
@@ -173,4 +172,3 @@ private:
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

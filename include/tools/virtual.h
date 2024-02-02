@@ -21,7 +21,6 @@ namespace Virtual {
     }
 } // namespace Virtual
 
-
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //
@@ -37,4 +36,3 @@ namespace Virtual {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

@@ -5,6 +5,8 @@
 
 #include "tools/console/console.h"
 
+#include <thread>
+
 namespace {
     using namespace std::string_view_literals;
 
@@ -51,7 +53,7 @@ namespace source2_gen {
         if (!sdk::g_schema)
             throw std::runtime_error(std::format("Unable to obtain Schema interface"));
 
-        while(!sdk::g_schema->SchemaSystemIsReady())
+        while (!sdk::g_schema->SchemaSystemIsReady())
             sleep_for(std::chrono::seconds(5));
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk
@@ -77,7 +79,7 @@ namespace source2_gen {
         is_finished = true;
     }
 
-    void WINAPI main(const HMODULE module) {
+    void main(HMODULE module) {
         auto console = std::make_unique<DebugConsole>();
         console->start(kConsoleTitleMessage.data());
 
@@ -94,10 +96,9 @@ namespace source2_gen {
         console->stop();
         console.reset();
 
-        FreeLibraryAndExitThread(module, EXIT_SUCCESS);
+        FreeLibrary(module);
     }
 } // namespace source2_gen
-
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
@@ -114,4 +115,3 @@ namespace source2_gen {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

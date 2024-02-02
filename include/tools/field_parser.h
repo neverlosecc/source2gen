@@ -66,7 +66,6 @@ namespace field_parser {
     field_info_t parse(const fieldtype_t& type_name, const std::string& name, const std::size_t& array_sizes = 1);
 } // namespace field_parser
 
-
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //
@@ -82,4 +81,3 @@ namespace field_parser {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

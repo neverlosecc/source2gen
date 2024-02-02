@@ -12,7 +12,6 @@ public:
     int m_nActualLength;
 };
 
-
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
 //
@@ -28,4 +27,3 @@ public:
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
