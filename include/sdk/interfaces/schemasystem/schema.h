@@ -47,7 +47,7 @@
 #elif defined CSGO2
     #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
-    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
+    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x480
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
 #endif
 
@@ -320,7 +320,14 @@ private:
 class CSchemaSystemTypeScope {
 public:
     CSchemaClassInfo* FindDeclaredClass(const char* class_name) {
+#ifdef CSGO2
+        CSchemaClassInfo* class_info = nullptr;
+        Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, class_name);
+
+        return class_info;
+#else
         return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, class_name);
+#endif
     }
 
     CSchemaEnumBinding* FindDeclaredEnum(const char* name) {
@@ -362,9 +369,9 @@ private:
     char pad_0x0000[0x8]; // 0x0000
     std::array<char, 256> m_name_ = {};
     char pad_0x0108[SCHEMASYSTEMTYPESCOPE_OFF1]; // 0x0108
-    CUtlTSHash<CSchemaClassBinding*> m_classes_; // 0x0558
+    CUtlTSHash<CSchemaClassBinding*> m_classes_; // 0x588
     char pad_0x0594[SCHEMASYSTEMTYPESCOPE_OFF2]; // 0x0594
-    CUtlTSHash<CSchemaEnumBinding*> m_enumes_; // 0x2DA0
+    CUtlTSHash<CSchemaEnumBinding*> m_enumes_; //  0x2DD0
 private:
     static constexpr unsigned int s_class_list = 0x580;
 };
