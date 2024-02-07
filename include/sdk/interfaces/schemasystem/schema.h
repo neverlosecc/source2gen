@@ -9,6 +9,10 @@
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
+    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
+    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
 #elif defined(ARTIFACT2)
 // untested, CSchemaType::m_pSchemaType might be wrong
     #define CSCHEMATYPE_GETSIZES_INDEX 5
@@ -16,6 +20,10 @@
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5430
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
+    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
+    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
 #elif defined(ARTIFACT1)
 // untested, CSchemaType::m_pSchemaType might be wrong
     #define CSCHEMATYPE_GETSIZES_INDEX 5
@@ -23,6 +31,10 @@
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x4428
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x4B8
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2001
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
+    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
+    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
 #elif defined(UNDERLORDS)
 // untested, CSchemaType::m_pSchemaType might be wrong
     #define CSCHEMATYPE_GETSIZES_INDEX 5
@@ -30,22 +42,45 @@
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
+    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
+    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
 #elif defined(DESKJOB)
     #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define CSCHEMASYSTEM_VALIDATECLASSES 34
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x3A0
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
+    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
+    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
 #elif defined(HL_ALYX)
     #error unimplemented
 #elif defined(THE_LAB_ROBOT_REPAIR)
     #error unimplemented
-#elif defined(CS2) || defined(DOTA2)
+#elif defined(DOTA2)
     #define CSCHEMATYPE_GETSIZES_INDEX 3
     #define CSCHEMASYSTEM_VALIDATECLASSES 35
     #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
     #define SCHEMASYSTEMTYPESCOPE_OFF1 0x47E
     #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2808
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
+    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
+    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
+    #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 2
+#elif defined(CS2)
+    #define CSCHEMATYPE_GETSIZES_INDEX 3
+    #define CSCHEMASYSTEM_VALIDATECLASSES 35
+    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
+    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x4B0
+    #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2808
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 14
+    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 15
+    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 32
+    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 33
     #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 2
 #else
     #error No implementation defined, please re-generate project with premake5
@@ -519,10 +554,13 @@ public:
 #if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
         CSchemaType_DeclaredClass* declared_class;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredClass**, const char*)>(this, 13)(this, &declared_class, szName.data());
+        Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredClass**, const char*)>(this, SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX)(
+            this, &declared_class, szName.data());
+
         return declared_class;
 #else
-        return Virtual::Get<CSchemaType_DeclaredClass*(__thiscall*)(void*, const char*)>(this, 13)(this, szName.data());
+        return Virtual::Get<CSchemaType_DeclaredClass*(__thiscall*)(void*, const char*)>(this, SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX)(
+            this, szName.data());
 #endif
     }
 
@@ -530,19 +568,22 @@ public:
 #if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
         CSchemaType_DeclaredEnum* declared_class;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredEnum**, const char*)>(this, 14)(this, &declared_class, szName.data());
+        Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredEnum**, const char*)>(this, SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX)(
+            this, &declared_class, szName.data());
+
         return declared_class;
 #else
-        return Virtual::Get<CSchemaType_DeclaredEnum*(__thiscall*)(void*, const char*)>(this, 14)(this, szName.data());
+        return Virtual::Get<CSchemaType_DeclaredEnum*(__thiscall*)(void*, const char*)>(this, SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX)(
+            this, szName.data());
 #endif
     }
 
     const char* GetScopeName() {
-        return Virtual::Get<const char*(__thiscall*)(void*)>(this, 30)(this);
+        return Virtual::Get<const char*(__thiscall*)(void*)>(this, SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX)(this);
     }
 
     bool IsGlobalScope() {
-        return Virtual::Get<bool(__thiscall*)(void*)>(this, 31)(this);
+        return Virtual::Get<bool(__thiscall*)(void*)>(this, SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX)(this);
     }
 
     std::string_view BGetScopeName() {
@@ -560,9 +601,9 @@ private:
     void* vftable = nullptr;
     std::array<char, 256> m_szName = {};
     char pad_0x0108[SCHEMASYSTEMTYPESCOPE_OFF1] = {}; // 0x0108
-    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings; // 0x0588
-    char pad_0x0594[SCHEMASYSTEMTYPESCOPE_OFF2] = {}; // 0x05C8
-    CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings; // 0x2DD0
+    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings; // 0x05B8
+    char pad_0x0594[SCHEMASYSTEMTYPESCOPE_OFF2] = {}; // 0x05F8
+    CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings; // 0x2E00
 };
 
 class CSchemaSystem {
