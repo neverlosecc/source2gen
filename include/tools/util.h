@@ -2,15 +2,21 @@
 // See end of file for extended copyright information.
 #pragma once
 
-class CUtlString {
-public:
-    const char* Get() {
-        return reinterpret_cast<const char*>(m_Memory.m_pMemory);
-    }
+namespace util { 
+	inline std::string_view PrettifyNum(int num) {
+        static const auto fn = reinterpret_cast<const char* (*)(int)>(GetProcAddress(GetModuleHandleA("tier0.dll"), "V_PrettifyNum"));
 
-    CUtlMemory<std::uint8_t> m_Memory;
-    int m_nActualLength;
+        if (fn) {
+            std::string_view res = fn(num);
+            if (!res.empty()) {
+                return res;
+            }
+        }
+
+        return std::to_string(num);
+    }
 };
+
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc

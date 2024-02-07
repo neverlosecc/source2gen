@@ -1,7 +1,11 @@
+// Copyright (C) 2023 neverlosecc
+// See end of file for extended copyright information.
 #include <Include.h>
 #include <sdk/sdk.h>
 
 #include "tools/console/console.h"
+
+#include <thread>
 
 namespace {
     using namespace std::string_view_literals;
@@ -12,10 +16,11 @@ namespace {
         "client.dll"sv,
         "engine2.dll"sv,
         "schemasystem.dll"sv,
+        "tier0.dll"sv,
         
         // @note: @soufiw: latest modules that gets loaded in the main menu
         "navsystem.dll"sv,
-        #if defined(CSGO2)
+        #if defined(CS2)
         "matchmaking.dll"sv,
         #endif
     };
@@ -48,6 +53,9 @@ namespace source2_gen {
         if (!sdk::g_schema)
             throw std::runtime_error(std::format("Unable to obtain Schema interface"));
 
+        while (!sdk::g_schema->SchemaSystemIsReady())
+            sleep_for(std::chrono::seconds(5));
+
         // @note: @es3n1n: Obtaining type scopes and generating sdk
         //
         const auto type_scopes = sdk::g_schema->GetTypeScopes();
@@ -58,6 +66,11 @@ namespace source2_gen {
         //
         sdk::GenerateTypeScopeSdk(sdk::g_schema->GlobalTypeScope());
 
+        std::cout << std::format("Schema stats: {} registrations; {} were redundant; {} were ignored ({} bytes of ignored data)",
+                                 util::PrettifyNum(sdk::g_schema->GetRegistration()), util::PrettifyNum(sdk::g_schema->GetRedundant()),
+                                 util::PrettifyNum(sdk::g_schema->GetIgnored()), util::PrettifyNum(sdk::g_schema->GetIgnoredBytes()))
+                  << std::endl;
+
         // @note: @es3n1n: We are done here
         //
         is_finished = true;
@@ -66,7 +79,7 @@ namespace source2_gen {
         is_finished = true;
     }
 
-    void WINAPI main(const HMODULE module) {
+    void main(HMODULE module) {
         auto console = std::make_unique<DebugConsole>();
         console->start(kConsoleTitleMessage.data());
 
@@ -83,6 +96,22 @@ namespace source2_gen {
         console->stop();
         console.reset();
 
-        FreeLibraryAndExitThread(module, EXIT_SUCCESS);
+        FreeLibrary(module);
     }
 } // namespace source2_gen
+
+// source2gen - Source2 games SDK generator
+// Copyright 2023 neverlosecc
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
