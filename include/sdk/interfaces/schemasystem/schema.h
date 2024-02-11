@@ -88,7 +88,7 @@ enum {
     #error unimplemented
 #elif defined(DOTA2)
 
-    #define SCHEMASYSTEM_TYPE 2
+#define SCHEMASYSTEM_TYPE 2
 
 constexpr auto kSchemaSystem_PAD0 = 0x190;
 constexpr auto kSchemaSystemTypeScope_PAD1 = 0x4B0;
@@ -105,7 +105,7 @@ enum {
 
 #elif defined(CS2)
 
-    #define SCHEMASYSTEM_TYPE 2
+#define SCHEMASYSTEM_TYPE 2
 
 constexpr auto kSchemaSystem_PAD0 = 0x190;
 constexpr auto kSchemaSystemTypeScope_PAD1 = 0x4B0;
