@@ -305,38 +305,31 @@ public:
         CSchemaType* m_pElementType;
     };
 
-    struct atomic_t { // same goes for CollectionOfT
+    // @note: @og: basically, 1st is unknown and second is CUtlStringToken of m_pszName
+    struct atomic_base {
     private:
         std::uint64_t pad0x0000[2] = {};
-    public:
+    };
+
+    struct atomic_t : atomic_base { // same goes for CollectionOfT
         CSchemaType* m_pTemplateTypeName;
     };
 
-    struct atomic_tt {
-    private:
-        std::uint64_t pad0x0000[2] = {};
-    public:
+    struct atomic_tt : atomic_base {
         CSchemaType* m_pTemplates[2];
     };
 
-    struct atomic_tf { // same goes for CollectionOfT
-    private:
-        std::uint64_t pad0x0000[2] = {};
-    public:
+    struct atomic_tf : atomic_base { // same goes for CollectionOfT
         CSchemaType* m_pTemplateTypeName;
+        std::int32_t m_nSize;
     };
 
-    struct atomic_ttf { // same goes for atomic_tt
-    private:
-        std::uint64_t pad0x0000[2] = {};
-    public:
+    struct atomic_ttf : atomic_base { // same goes for atomic_tt
         CSchemaType* m_pTemplates[2];
+        std::int32_t m_nSize;
     };
 
-    struct atomic_i {
-    private:
-        std::uint64_t pad0x0000[2] = {};
-    public:
+    struct atomic_i : atomic_base {
         std::uint64_t m_nInteger;
     };
 
