@@ -71,7 +71,7 @@ enum PredictionCopyType_t {
 
 // Registered binary: schemasystem.dll (project 'schemasystem')
 // Alignment: 1
-// Size: 0x50
+// Size: 0x51
 enum class fieldtype_t : uint8_t {
     FIELD_VOID = 0x0,
     FIELD_FLOAT32 = 0x1,
@@ -152,7 +152,8 @@ enum class fieldtype_t : uint8_t {
     FIELD_ENGINE_TIME = 0x4c,
     FIELD_ENGINE_TICK = 0x4d,
     FIELD_WORLD_GROUP_ID = 0x4e,
-    FIELD_TYPECOUNT = 0x4f,
+    FIELD_GLOBALSYMBOL = 0x4f,
+    FIELD_TYPECOUNT = 0x50,
 };
 
 // Each datamap_t is broken down into two flattened arrays of fields,
