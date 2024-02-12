@@ -254,7 +254,7 @@ public:
     // future
     std::string_view ToString() {
         static CBufferStringGrowable<1024> szBuf;
-        [[maybe_unused]] auto res = Virtual::Get<const char*(__thiscall*)(void*, CBufferString*, bool)>(this, 1)(this, &szBuf, false);
+        (void)Virtual::Get<const char*(__thiscall*)(void*, CBufferString*, bool)>(this, 1)(this, &szBuf, false);
         return szBuf.Get();
     }
 
