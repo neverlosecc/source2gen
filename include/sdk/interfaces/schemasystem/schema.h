@@ -224,13 +224,13 @@ public:
 
 enum class ETypeCategory : std::uint8_t {
     Schema_Builtin = 0,
-    Schema_Ptr = 1,
-    Schema_Bitfield = 2,
-    Schema_FixedArray = 3,
-    Schema_Atomic = 4,
-    Schema_DeclaredClass = 5,
-    Schema_DeclaredEnum = 6,
-    Schema_None = 7
+    Schema_Ptr,
+    Schema_Bitfield,
+    Schema_FixedArray,
+    Schema_Atomic,
+    Schema_DeclaredClass,
+    Schema_DeclaredEnum,
+    Schema_None
 };
 
 enum class EAtomicCategory : std::uint8_t {
@@ -241,7 +241,7 @@ enum class EAtomicCategory : std::uint8_t {
     Atomic_TT,
     Atomic_TTF,
     Atomic_I,
-    Atomic_None,
+    Atomic_None
 };
 
 class CSchemaType {
@@ -311,20 +311,26 @@ public:
         std::uint64_t pad0x0000[2] = {};
     };
 
-    struct atomic_t : atomic_base { // same goes for CollectionOfT
+    struct atomic_t { // same goes for CollectionOfT
+        CSchemaType* m_pElementType;
+    private:
+        std::uint64_t pad0x0029 = {};
+    public:
         CSchemaType* m_pTemplateTypeName;
     };
+
+    using collection_of_t = atomic_t;
 
     struct atomic_tt : atomic_base {
         CSchemaType* m_pTemplates[2];
     };
 
-    struct atomic_tf : atomic_base { // same goes for CollectionOfT
+    struct atomic_tf : atomic_base {
         CSchemaType* m_pTemplateTypeName;
         std::int32_t m_nSize;
     };
 
-    struct atomic_ttf : atomic_base { // same goes for atomic_tt
+    struct atomic_ttf : atomic_base {
         CSchemaType* m_pTemplates[2];
         std::int32_t m_nSize;
     };
