@@ -136,9 +136,7 @@ namespace sdk {
                     auto clean_string = [](const std::string_view& input) {
                         std::string result;
                         for (const char &ch : input) {
-                            if (ch >= -1) break;
-
-                            if (std::isalpha(ch)) {
+                            if (std::isalpha(static_cast<unsigned char>(ch))) {
                                 result += ch;
                             } else {
                                 break;
