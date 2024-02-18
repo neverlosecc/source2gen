@@ -11,7 +11,7 @@ namespace {
     using namespace std::string_view_literals;
 
     // clang-format off
-    constexpr std::initializer_list<std::string_view> kRequiredGameModules = {
+    constexpr std::array kRequiredGameModules = {
         // @note: @es3n1n: modules that we'll use in our code
         "client.dll"sv,
         "engine2.dll"sv,
