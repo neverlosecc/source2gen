@@ -2,21 +2,20 @@
 // See end of file for extended copyright information.
 #pragma once
 
-namespace util { 
-	inline std::string_view PrettifyNum(int num) {
+namespace util {
+    inline std::string PrettifyNum(int num) {
         static const auto fn = reinterpret_cast<const char* (*)(int)>(GetProcAddress(GetModuleHandleA("tier0.dll"), "V_PrettifyNum"));
 
         if (fn) {
             std::string_view res = fn(num);
             if (!res.empty()) {
-                return res;
+                return res.data();
             }
         }
 
         return std::to_string(num);
     }
-};
-
+} // namespace util
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
