@@ -48,6 +48,8 @@ You can use premake5 options and specify which game you want to dump:
 
 ### Building the project
 
+#### With premake5
+
 * Open a command prompt or terminal in the project's root directory.
 * Run the following command to generate the Visual Studio solution:
 
@@ -57,6 +59,15 @@ premake5 vs2019 --game=CS2
 * Open the generated source2gen.sln file in Visual Studio.
 * Build the solution in the desired configuration (Debug, Release, or Dist).
 
+#### With CMake
+
+* Open a command prompt or terminal in the project's root directory.
+* Run the following sequence of commands to build the project:
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
+cmake --build build
+```
 ---
 
 ## Credits
@@ -70,5 +81,6 @@ This project is made possible by the contributions of various individuals and pr
 
 This project also utilizes the following open-source libraries:
 - **[Premake](https://github.com/premake/premake-core)** - Build configuration tool
+- **[CMake](https://github.com/Kitware/CMake)** - Build tool
 
 If you've contributed to the project and would like to be listed here, please submit a [pull request](https://github.com/neverlosecc/source2gen/pulls) with your information added to the credits.

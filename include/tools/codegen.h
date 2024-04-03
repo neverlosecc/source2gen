@@ -13,12 +13,12 @@
 namespace codegen {
     constexpr char kTabSym = '\t';
     constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many \t characters shall we place per each block
-    constexpr std::initializer_list<char> kBlacklistedCharacters = {':', ';', '\\', '/'};
+    constexpr std::array kBlacklistedCharacters = {':', ';', '\\', '/'};
 
     // @note: @es3n1n: a list of possible integral types for bitfields (would be used in `guess_bitfield_type`)
     //
     // clang-format off
-    constexpr std::initializer_list<std::pair<std::size_t, std::string_view>> kBitfieldIntegralTypes = {
+    constexpr auto kBitfieldIntegralTypes = std::to_array<std::pair<std::size_t, std::string_view>>({
         {8, "uint8_t"},
         {16, "uint16_t"},
         {32, "uint32_t"},
@@ -28,7 +28,7 @@ namespace codegen {
         {128, "uint128_t"},
         {256, "uint256_t"},
         {512, "uint512_t"},
-    };
+    });
     // clang-format on
 
     // clang-format off

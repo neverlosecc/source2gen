@@ -135,8 +135,8 @@ namespace sdk {
                 {
                     auto clean_string = [](const std::string_view& input) {
                         std::string result;
-                        for (const char ch : input) {
-                            if (std::isalpha(ch)) {
+                        for (const char &ch : input) {
+                            if (std::isalpha(static_cast<unsigned char>(ch))) {
                                 result += ch;
                             } else {
                                 break;
@@ -261,9 +261,8 @@ namespace sdk {
                 }
 
                 void AddRefToClass(const CSchemaType* type) {
-                    if (type->m_unTypeCategory == Schema_DeclaredClass) {
+                    if (type->m_unTypeCategory == ETypeCategory::Schema_DeclaredClass) {
                         refs_.insert(type->m_pClassInfo);
-                        return;
                     }
 
                     // auto ptr = type->GetRefClass();
@@ -328,7 +327,7 @@ namespace sdk {
                     // @todo: maybe we need to forward declare only pointers to classes?
                     auto ptr = field->m_pSchemaType->GetRefClass();
 
-                    if (auto actual_type = ptr ? ptr : field->m_pSchemaType; actual_type->m_unTypeCategory == Schema_DeclaredClass) {
+                    if (auto actual_type = ptr ? ptr : field->m_pSchemaType; actual_type->m_unTypeCategory == ETypeCategory::Schema_DeclaredClass) {
                         builder.forward_declaration(actual_type->m_pszName);
                         did_forward_decls = true;
                     }
@@ -388,14 +387,14 @@ namespace sdk {
                 std::string base_type;
                 std::vector<std::size_t> sizes;
 
-                if (actual_type->m_unTypeCategory == Schema_FixedArray) {
+                if (actual_type->m_unTypeCategory == ETypeCategory::Schema_FixedArray) {
                     // dump all sizes.
                     auto schema = actual_type;
                     while (true) {
                         sizes.emplace_back(schema->m_Array.m_nArraySize);
                         schema = schema->m_Array.m_pElementType;
 
-                        if (schema->m_unTypeCategory != Schema_FixedArray) {
+                        if (schema->m_unTypeCategory != ETypeCategory::Schema_FixedArray) {
                             base_type = schema->m_pszName;
                             break;
                         }

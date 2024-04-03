@@ -4,88 +4,125 @@
 
 #if defined(SBOX)
 // untested, CSchemaType::m_pSchemaType might be wrong
-    #define CSCHEMATYPE_GETSIZES_INDEX 5
-    #define CSCHEMASYSTEM_VALIDATECLASSES 34
-    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
-    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
-    #define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
-    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
-    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
+
+constexpr auto kSchemaSystem_PAD0 = 0x5420;
+constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
+constexpr auto kSchemaSystemTypeScope_PAD2 = 0x27FC;
+
+enum {
+    kSchemaType_GetSizeWithAlignOf = 5,
+    kSchemaSystem_ValidateClasses = 34,
+    kSchemaSystemTypeScope_DeclaredClass = 13,
+    kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
+    kSchemaSystemTypeScope_GetScopeName = 30,
+    kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
+};
+
 #elif defined(ARTIFACT2)
 // untested, CSchemaType::m_pSchemaType might be wrong
-    #define CSCHEMATYPE_GETSIZES_INDEX 5
-    #define CSCHEMASYSTEM_VALIDATECLASSES 34
-    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5430
-    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
-    #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
-    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
-    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
+
+constexpr auto kSchemaSystem_PAD0 = 0x5430;
+constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
+constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2804;
+
+enum {
+    kSchemaType_GetSizeWithAlignOf = 5,
+    kSchemaSystem_ValidateClasses = 34,
+    kSchemaSystemTypeScope_DeclaredClass = 13,
+    kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
+    kSchemaSystemTypeScope_GetScopeName = 30,
+    kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
+};
+
 #elif defined(ARTIFACT1)
 // untested, CSchemaType::m_pSchemaType might be wrong
-    #define CSCHEMATYPE_GETSIZES_INDEX 5
-    #define CSCHEMASYSTEM_VALIDATECLASSES 34
-    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x4428
-    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x4B8
-    #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2001
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
-    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
-    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
+
+constexpr auto kSchemaSystem_PAD0 = 0x4428;
+constexpr auto kSchemaSystemTypeScope_PAD1 = 0x4B8;
+constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2001;
+
+enum {
+    kSchemaType_GetSizeWithAlignOf = 5,
+    kSchemaSystem_ValidateClasses = 34,
+    kSchemaSystemTypeScope_DeclaredClass = 13,
+    kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
+    kSchemaSystemTypeScope_GetScopeName = 30,
+    kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
+};
+
 #elif defined(UNDERLORDS)
+
 // untested, CSchemaType::m_pSchemaType might be wrong
-    #define CSCHEMATYPE_GETSIZES_INDEX 5
-    #define CSCHEMASYSTEM_VALIDATECLASSES 34
-    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x5420
-    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
-    #define SCHEMASYSTEMTYPESCOPE_OFF2 0x27FC
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
-    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
-    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
+
+constexpr auto kSchemaSystem_PAD0 = 0x5420;
+constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
+constexpr auto kSchemaSystemTypeScope_PAD2 = 0x27FC;
+
+enum {
+    kSchemaType_GetSizeWithAlignOf = 5,
+    kSchemaSystem_ValidateClasses = 34,
+    kSchemaSystemTypeScope_DeclaredClass = 13,
+    kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
+    kSchemaSystemTypeScope_GetScopeName = 30,
+    kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
+};
+
 #elif defined(DESKJOB)
-    #define CSCHEMATYPE_GETSIZES_INDEX 3
-    #define CSCHEMASYSTEM_VALIDATECLASSES 34
-    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x3A0
-    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x450
-    #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2804
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
-    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
-    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
+
+constexpr auto kSchemaSystem_PAD0 = 0x3A0;
+constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
+constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2804;
+
+enum {
+    kSchemaType_GetSizeWithAlignOf = 3,
+    kSchemaSystem_ValidateClasses = 34,
+    kSchemaSystemTypeScope_DeclaredClass = 13,
+    kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
+    kSchemaSystemTypeScope_GetScopeName = 30,
+    kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
+};
+
 #elif defined(HL_ALYX)
     #error unimplemented
 #elif defined(THE_LAB_ROBOT_REPAIR)
     #error unimplemented
 #elif defined(DOTA2)
-    #define CSCHEMATYPE_GETSIZES_INDEX 3
-    #define CSCHEMASYSTEM_VALIDATECLASSES 35
-    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
-    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x47E
-    #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2808
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 13
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 14
-    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 30
-    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 31
-    #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 2
+
+    #define SCHEMASYSTEM_TYPE 2
+
+constexpr auto kSchemaSystem_PAD0 = 0x190;
+constexpr auto kSchemaSystemTypeScope_PAD1 = 0x4B0;
+constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2808;
+
+enum {
+    kSchemaType_GetSizeWithAlignOf = 3,
+    kSchemaSystem_ValidateClasses = 35,
+    kSchemaSystemTypeScope_DeclaredClass = 14,
+    kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
+    kSchemaSystemTypeScope_GetScopeName = 32,
+    kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
+};
+
 #elif defined(CS2)
-    #define CSCHEMATYPE_GETSIZES_INDEX 3
-    #define CSCHEMASYSTEM_VALIDATECLASSES 35
-    #define SCHEMASYSTEM_TYPE_SCOPES_OFFSET 0x190
-    #define SCHEMASYSTEMTYPESCOPE_OFF1 0x4B0
-    #define SCHEMASYSTEMTYPESCOPE_OFF2 0x2808
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX 14
-    #define SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX 15
-    #define SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX 32
-    #define SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX 33
-    #define SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE 2
+
+    #define SCHEMASYSTEM_TYPE 2
+
+constexpr auto kSchemaSystem_PAD0 = 0x190;
+constexpr auto kSchemaSystemTypeScope_PAD1 = 0x4B0;
+constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2808;
+
+enum {
+    kSchemaType_GetSizeWithAlignOf = 3,
+    kSchemaSystem_ValidateClasses = 35,
+    kSchemaSystemTypeScope_DeclaredClass = 14,
+    kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
+    kSchemaSystemTypeScope_GetScopeName = 32,
+    kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
+};
+
 #else
     #error No implementation defined, please re-generate project with premake5
 #endif
-#include "SDK/SDK.h"
 
 class ISaveRestoreOps;
 class CSchemaEnumInfo;
@@ -118,26 +155,6 @@ enum SchemaClassFlags_t {
 #else
     SCHEMA_CF1_IS_SCHEMA_VALIDATED = 1024,
 #endif
-};
-
-enum ETypeCategory {
-    Schema_Builtin = 0,
-    Schema_Ptr = 1,
-    Schema_Bitfield = 2,
-    Schema_FixedArray = 3,
-    Schema_Atomic = 4,
-    Schema_DeclaredClass = 5,
-    Schema_DeclaredEnum = 6,
-    Schema_None = 7
-};
-
-enum EAtomicCategory {
-    Atomic_Basic,
-    Atomic_T,
-    Atomic_CollectionOfT,
-    Atomic_TT,
-    Atomic_I,
-    Atomic_None
 };
 
 struct CSchemaVarName {
@@ -205,6 +222,28 @@ public:
     }
 };
 
+enum class ETypeCategory : std::uint8_t {
+    Schema_Builtin = 0,
+    Schema_Ptr,
+    Schema_Bitfield,
+    Schema_FixedArray,
+    Schema_Atomic,
+    Schema_DeclaredClass,
+    Schema_DeclaredEnum,
+    Schema_None
+};
+
+enum class EAtomicCategory : std::uint8_t {
+    Atomic_Basic = 0,
+    Atomic_T,
+    Atomic_CollectionOfT,
+    Atomic_TF,
+    Atomic_TT,
+    Atomic_TTF,
+    Atomic_I,
+    Atomic_None
+};
+
 class CSchemaType {
 public:
     bool IsValid(void) {
@@ -215,7 +254,7 @@ public:
     // future
     std::string_view ToString() {
         static CBufferStringGrowable<1024> szBuf;
-        auto res = Virtual::Get<const char*(__thiscall*)(void*, CBufferString*, bool)>(this, 1)(this, &szBuf, false);
+        (void)Virtual::Get<const char*(__thiscall*)(void*, CBufferString*, bool)>(this, 1)(this, &szBuf, false);
         return szBuf.Get();
     }
 
@@ -225,7 +264,7 @@ public:
 
     // @note: @og: gets size with align
     bool GetSizeWithAlignOf(int* nOutSize, std::uint8_t* unOutAlign) {
-        return reinterpret_cast<int (*)(void*, int*, std::uint8_t*)>(vftable[CSCHEMATYPE_GETSIZES_INDEX])(this, nOutSize, unOutAlign);
+        return reinterpret_cast<int (*)(void*, int*, std::uint8_t*)>(vftable[kSchemaType_GetSizeWithAlignOf])(this, nOutSize, unOutAlign);
     }
 
     // @note: @og: Can be used on CSchemaClassInfo. (Uses multiple inheritance depth verify that current CSchemaType->m_pClassInfo is inherits from pType)
@@ -243,12 +282,12 @@ public:
     const char* m_pszName; // 0x0008
 
     CSchemaSystemTypeScope* m_pTypeScope; // 0x0010
-    std::uint8_t m_unTypeCategory; // ETypeCategory 0x0018
-    std::uint8_t m_unAtomicCategory; // EAtomicCategory 0x0019
+    ETypeCategory m_unTypeCategory; // 0x0018
+    EAtomicCategory m_unAtomicCategory; // 0x0019
 
     // find out to what class pointer points.
     CSchemaType* GetRefClass() const {
-        if (m_unTypeCategory != Schema_Ptr)
+        if (m_unTypeCategory != ETypeCategory::Schema_Ptr)
             return nullptr;
 
         auto ptr = m_pSchemaType;
@@ -266,24 +305,37 @@ public:
         CSchemaType* m_pElementType;
     };
 
-    struct atomic_t { // same goes for CollectionOfT
+    // @note: @og: basically, 1st is unknown and second is CUtlStringToken of m_pszName
+    struct atomic_base {
     private:
         std::uint64_t pad0x0000[2] = {};
+    };
+
+    struct atomic_t { // same goes for CollectionOfT
+        CSchemaType* m_pElementType;
+    private:
+        std::uint64_t pad0x0029 = {};
     public:
         CSchemaType* m_pTemplateTypeName;
     };
 
-    struct atomic_tt {
-    private:
-        std::uint64_t pad0x0000[2] = {};
-    public:
+    using collection_of_t = atomic_t;
+
+    struct atomic_tt : atomic_base {
         CSchemaType* m_pTemplates[2];
     };
 
-    struct atomic_i {
-    private:
-        std::uint64_t pad0x0000[2] = {};
-    public:
+    struct atomic_tf : atomic_base {
+        CSchemaType* m_pTemplateTypeName;
+        std::int32_t m_nSize;
+    };
+
+    struct atomic_ttf : atomic_base {
+        CSchemaType* m_pTemplates[2];
+        std::int32_t m_nSize;
+    };
+
+    struct atomic_i : atomic_base {
         std::uint64_t m_nInteger;
     };
 
@@ -297,6 +349,8 @@ public:
         array_t m_Array;
         atomic_t m_Atomic_t;
         atomic_tt m_Atomic_tt;
+        atomic_tf m_Atomic_tf;
+        atomic_ttf m_Atomic_ttf;
         atomic_i m_Atomic_i;
     };
 };
@@ -507,7 +561,7 @@ public:
     }
 
     CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) {
-#if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
+#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
         CSchemaClassInfo* class_info;
 
         Virtual::Get<void(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, szName.data());
@@ -518,7 +572,7 @@ public:
     }
 
     CSchemaEnumInfo* FindDeclaredEnum(const std::string_view szName) {
-#if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
+#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
         CSchemaEnumInfo* enum_info;
 
         Virtual::Get<void(__thiscall*)(void*, CSchemaEnumInfo**, const char*)>(this, 3)(this, &enum_info, szName.data());
@@ -529,7 +583,7 @@ public:
     }
 
     CSchemaType* FindSchemaTypeByName(const std::string_view szName) {
-#if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
+#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
         CSchemaType* schema_type;
 
         Virtual::Get<void(__thiscall*)(void*, CSchemaType**, const char*)>(this, 4)(this, &schema_type, szName.data());
@@ -540,7 +594,7 @@ public:
     }
 
     CSchemaType_Builtin* Type_Builtin(const SchemaBuiltinType_t type) {
-#if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
+#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
         CSchemaType_Builtin* type_builtin;
 
         Virtual::Get<void(__thiscall*)(void*, CSchemaType_Builtin**, SchemaBuiltinType_t)>(this, 5)(this, &type_builtin, type);
@@ -551,39 +605,37 @@ public:
     }
 
     CSchemaType_DeclaredClass* Type_DeclaredClass(const std::string_view szName) {
-#if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
+#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
         CSchemaType_DeclaredClass* declared_class;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredClass**, const char*)>(this, SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX)(
-            this, &declared_class, szName.data());
+        Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredClass**, const char*)>(this, kSchemaSystemTypeScope_DeclaredClass)(this, &declared_class,
+                                                                                                                                     szName.data());
 
         return declared_class;
 #else
-        return Virtual::Get<CSchemaType_DeclaredClass*(__thiscall*)(void*, const char*)>(this, SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDCLASS_INDEX)(
-            this, szName.data());
+        return Virtual::Get<CSchemaType_DeclaredClass*(__thiscall*)(void*, const char*)>(this, kSchemaSystemTypeScope_DeclaredClass)(this, szName.data());
 #endif
     }
 
     CSchemaType_DeclaredEnum* Type_DeclaredEnum(const std::string_view szName) {
-#if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
+#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
         CSchemaType_DeclaredEnum* declared_class;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredEnum**, const char*)>(this, SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX)(
-            this, &declared_class, szName.data());
+        Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredEnum**, const char*)>(this, kSchemaSystemTypeScope_DeclaredEnum)(this, &declared_class,
+                                                                                                                                   szName.data());
 
         return declared_class;
 #else
-        return Virtual::Get<CSchemaType_DeclaredEnum*(__thiscall*)(void*, const char*)>(this, SCHEMASYSTEMTYPESCOPE_TYPE_DECLAREDENUM_INDEX)(
-            this, szName.data());
+        return Virtual::Get<CSchemaType_DeclaredEnum*(__thiscall*)(void*, const char*)>(this, kSchemaSystemTypeScope_DeclaredEnum)(this, szName.data());
 #endif
     }
 
     const char* GetScopeName() {
-        return Virtual::Get<const char*(__thiscall*)(void*)>(this, SCHEMASYSTEMTYPESCOPE_GETSCOPENAME_INDEX)(this);
+        return Virtual::Get<const char*(__thiscall*)(void*)>(this, kSchemaSystemTypeScope_GetScopeName)(this);
     }
 
     bool IsGlobalScope() {
-        return Virtual::Get<bool(__thiscall*)(void*)>(this, SCHEMASYSTEMTYPESCOPE_ISGLOBALSCOPE_INDEX)(this);
+        return Virtual::Get<bool(__thiscall*)(void*)>(this, kSchemaSystemTypeScope_IsGlobalScope)(this);
     }
 
     std::string_view BGetScopeName() {
@@ -600,9 +652,9 @@ public:
 private:
     void* vftable = nullptr;
     std::array<char, 256> m_szName = {};
-    char pad_0x0108[SCHEMASYSTEMTYPESCOPE_OFF1] = {}; // 0x0108
+    char pad_0x0108[kSchemaSystemTypeScope_PAD1] = {}; // 0x0108
     CUtlTSHash<CSchemaClassBinding*> m_ClassBindings; // 0x05B8
-    char pad_0x0594[SCHEMASYSTEMTYPESCOPE_OFF2] = {}; // 0x05F8
+    char pad_0x0594[kSchemaSystemTypeScope_PAD2] = {}; // 0x05F8
     CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings; // 0x2E00
 };
 
@@ -627,7 +679,7 @@ public:
 
     // @note: @og: E.g: engine2.dll!CEntityComponent
     CSchemaClassBinding* FindClassByScopedName(const std::string_view pszScopedName) {
-#if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
+#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
         CSchemaClassBinding* binding;
 
         Virtual::Get<void(__thiscall*)(void*, CSchemaClassBinding**, const char*)>(this, 16)(this, &binding, pszScopedName.data());
@@ -639,13 +691,13 @@ public:
 
     std::string_view ScopedNameForClass(CSchemaClassBinding* pBinding) {
         static CBufferStringGrowable<1024> szBuf;
-        auto res = Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*, CBufferString*)>(this, 17)(this, pBinding, &szBuf);
+        [[maybe_unused]] auto res = Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*, CBufferString*)>(this, 17)(this, pBinding, &szBuf);
         return szBuf.Get();
     }
 
     // @note: @og: E.g: engine2.dll!SpawnDebugRestrictionOverrideState_t
     CSchemaEnumBinding* FindEnumByScopedName(const std::string_view pszScopedName) {
-#if defined(SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE) && SCHEMASYSTEM_FIND_DECLARED_CLASS_TYPE == 2
+#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
         CSchemaEnumBinding* binding;
 
         Virtual::Get<void(__thiscall*)(void*, CSchemaEnumBinding**, const char*)>(this, 18)(this, &binding, pszScopedName.data());
@@ -657,7 +709,7 @@ public:
 
     std::string_view ScopedNameForEnum(CSchemaEnumBinding* pBinding) {
         static CBufferStringGrowable<1024> szBuf;
-        auto res = Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*, CBufferString*)>(this, 19)(this, pBinding, &szBuf);
+        [[maybe_unused]] auto res = Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*, CBufferString*)>(this, 19)(this, pBinding, &szBuf);
         return szBuf.Get();
     }
 
@@ -678,7 +730,7 @@ public:
     }
 
     CSchemaClassBinding* ValidateClasses(CSchemaClassBinding** ppBinding) {
-        return Virtual::Get<CSchemaClassBinding*(__thiscall*)(void*, CSchemaClassBinding**)>(this, CSCHEMASYSTEM_VALIDATECLASSES)(this, ppBinding);
+        return Virtual::Get<CSchemaClassBinding*(__thiscall*)(void*, CSchemaClassBinding**)>(this, kSchemaSystem_ValidateClasses)(this, ppBinding);
     }
 
     bool SchemaSystemIsReady() {
@@ -705,7 +757,7 @@ public:
         return m_nIgnoredBytes;
     }
 private:
-    char pad_0x0000[SCHEMASYSTEM_TYPE_SCOPES_OFFSET] = {}; // 0x0000
+    char pad_0x0000[kSchemaSystem_PAD0] = {}; // 0x0000
     CUtlVector<CSchemaSystemTypeScope*> m_TypeScopes = {}; // SCHEMASYSTEM_TYPE_SCOPES_OFFSET
     char pad_01A0[288] = {}; // 0x01A0
     std::int32_t m_nRegistrations = 0; // 0x02C0
