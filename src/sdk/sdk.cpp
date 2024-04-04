@@ -96,7 +96,7 @@ namespace {
 
 namespace sdk {
     namespace {
-        __forceinline void PrintClassInfo(codegen::generator_t::self_ref builder, CSchemaClassBinding* class_info) {
+        void PrintClassInfo(codegen::generator_t::self_ref builder, CSchemaClassBinding* class_info) {
             builder
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetClassInfoBinaryName(class_info),
                                      g_schema->GetClassProjectName(class_info)))
@@ -162,7 +162,7 @@ namespace sdk {
             }
         }
 
-        __forceinline void PrintEnumInfo(codegen::generator_t::self_ref builder, CSchemaEnumBinding* enum_binding) {
+        void PrintEnumInfo(codegen::generator_t::self_ref builder, CSchemaEnumBinding* enum_binding) {
             builder
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetEnumBinaryName(enum_binding),
                                      g_schema->GetEnumProjectName(enum_binding)))
@@ -676,6 +676,16 @@ namespace sdk {
                 builder.end_block();
             }
         }
+
+        template <typename Ty = CSchemaClassBinding>
+        [[nodiscard]] std::string StringifyUtlTsHashCount(const CUtlTSHashV1<Ty>& item) {
+            return util::PrettifyNum(item.Count());
+        }
+
+        template <typename Ty = CSchemaClassBinding>
+        [[nodiscard]] std::string StringifyUtlTsHashCount(const CUtlTSHashV2<Ty>& item) {
+            return std::format("{} (Allocated) | {} (Unallocated)", util::PrettifyNum(item.BlocksAllocated()), util::PrettifyNum(item.AllocatedSize()));
+        }
     } // namespace
 
     void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current) {
@@ -707,6 +717,7 @@ namespace sdk {
             builder.include(include_path.data());
 
         // @note: @es3n1n: get stuff from schema that we'll use later
+        // @todo @es3n1n: consider moving these to heap as they're too damn large
         //
         const auto current_classes = current->GetClassBindings();
         const auto current_enums = current->GetEnumBindings();
@@ -716,8 +727,8 @@ namespace sdk {
         builder.next_line()
             .comment("/////////////////////////////////////////////////////////////")
             .comment(std::format("Binary: {}", current->GetScopeName()))
-            .comment(std::format("Classes count: {}", current_classes.Count()))
-            .comment(std::format("Enums count: {}", current_enums.Count()))
+            .comment(std::format("Classes count: {}", StringifyUtlTsHashCount(current_classes)))
+            .comment(std::format("Enums count: {}", StringifyUtlTsHashCount(current_enums)))
             .comment(kCreatedBySource2genMessage.data())
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();
