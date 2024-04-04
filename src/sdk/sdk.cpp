@@ -96,7 +96,7 @@ namespace {
 
 namespace sdk {
     namespace {
-        __forceinline void PrintClassInfo(codegen::generator_t::self_ref builder, CSchemaClassBinding* class_info) {
+        void PrintClassInfo(codegen::generator_t::self_ref builder, CSchemaClassBinding* class_info) {
             builder
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetClassInfoBinaryName(class_info),
                                      g_schema->GetClassProjectName(class_info)))
@@ -162,7 +162,7 @@ namespace sdk {
             }
         }
 
-        __forceinline void PrintEnumInfo(codegen::generator_t::self_ref builder, CSchemaEnumBinding* enum_binding) {
+        void PrintEnumInfo(codegen::generator_t::self_ref builder, CSchemaEnumBinding* enum_binding) {
             builder
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetEnumBinaryName(enum_binding),
                                      g_schema->GetEnumProjectName(enum_binding)))

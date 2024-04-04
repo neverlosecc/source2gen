@@ -121,7 +121,7 @@ public:
 };
 
 template <class T, class Keytype>
-inline std::vector<T> CUtlTSHashV1<T, Keytype>::GetElements(void) {
+std::vector<T> CUtlTSHashV1<T, Keytype>::GetElements(void) {
     std::vector<T> list;
 
     const int n_count = Count();

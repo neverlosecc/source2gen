@@ -19,11 +19,11 @@ namespace field_parser {
 
         std::size_t m_bitfield_size = 0ull; // bitfield size, set to 0 if var isn't a bitfield
     public:
-        __forceinline bool is_bitfield() const {
+        bool is_bitfield() const noexcept {
             return static_cast<bool>(m_bitfield_size);
         }
 
-        __forceinline bool is_array() const {
+        bool is_array() const noexcept {
             return !m_array_sizes.empty();
         }
     public:

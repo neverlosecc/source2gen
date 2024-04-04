@@ -6,7 +6,7 @@
 
 namespace Virtual {
     template <typename T>
-    __forceinline T Get(void* instance, const unsigned int index) {
+    inline T Get(void* instance, const unsigned int index) {
         return (*static_cast<T**>(instance))[index];
     }
 
