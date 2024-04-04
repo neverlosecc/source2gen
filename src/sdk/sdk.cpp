@@ -308,6 +308,7 @@ namespace sdk {
             std::list<class_t> classes_to_dump;
             bool did_forward_decls = false;
 
+            auto test = classes.GetElements();
             for (const auto schema_class_binding : classes.GetElements()) {
                 const auto class_info = current->FindDeclaredClass(schema_class_binding->m_pszName);
 
@@ -713,6 +714,16 @@ namespace sdk {
 
         // @note: @es3n1n: print banner
         //
+        #if defined(CS2) || defined(DOTA2)
+        builder.next_line()
+            .comment("/////////////////////////////////////////////////////////////")
+            .comment(std::format("Binary: {}", current->GetScopeName()))
+            .comment(std::format("Classes count: {} (Allocated) | {} (Unallocated)", current_classes.BlocksAllocated(), current_classes.AllocatedSize()))
+            .comment(std::format("Enums count: {} (Allocated) | {} (Unallocated)", current_enums.BlocksAllocated(), current_enums.AllocatedSize()))
+            .comment(kCreatedBySource2genMessage.data())
+            .comment("/////////////////////////////////////////////////////////////")
+            .next_line();
+        #else
         builder.next_line()
             .comment("/////////////////////////////////////////////////////////////")
             .comment(std::format("Binary: {}", current->GetScopeName()))
@@ -721,6 +732,7 @@ namespace sdk {
             .comment(kCreatedBySource2genMessage.data())
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();
+        #endif
 
         // @note: @es3n1n: assemble props
         //
