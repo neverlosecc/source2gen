@@ -29,7 +29,7 @@ public:
 private:
     int32_t m_nBlocksSize = 0; // 0x0000
     int32_t m_nBlocksPerBlob = 0; // 0x0004
-    int32_t m_nGrowSize; // 0x0008
+    int32_t m_nGrowSize = 0; // 0x0008
     int32_t m_nBlocksAllocated = 0; // 0x000C
     int32_t m_nBloockAllocatedSize = 0; // 0x0010
     int32_t m_nPeakAlloc = 0; // 0x0014
@@ -256,6 +256,7 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount>::GetElements(int nFirstElem
     n_count = AllocatedSize();
     std::vector<T> unAllocatedList;
     if (n_count > 0) {
+        int nIndex = 0;
         auto& unallocated_data = m_unBuckets->m_unAllocatedNext;
         if (unallocated_data != nullptr) {
             if (m_unBuckets->m_unAllocatedData)
@@ -266,6 +267,10 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount>::GetElements(int nFirstElem
                     continue;
 
                 unAllocatedList.emplace_back(unallocated_element->m_unAllocatedData);
+                ++nIndex;
+
+                if (nIndex >= n_count)
+                    break;
             }
         }
     }

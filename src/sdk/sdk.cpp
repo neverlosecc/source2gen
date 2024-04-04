@@ -166,8 +166,9 @@ namespace sdk {
             builder
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetEnumBinaryName(enum_binding),
                                      g_schema->GetEnumProjectName(enum_binding)))
-                .comment(std::format("Alignment: {}", enum_binding->m_nAlingOf))
-                .comment(std::format("Size: {:#x}", enum_binding->m_nSize));
+                .comment(std::format("Enumerator count: {}", enum_binding->m_nEnumeratorCount))
+                .comment(std::format("Alignment: {}", enum_binding->m_unAlignOf))
+                .comment(std::format("Size: {:#x}", enum_binding->m_unSize));
 
             if (enum_binding->m_nStaticMetadataSize > 0)
                 builder.comment("");
@@ -184,7 +185,7 @@ namespace sdk {
                 const auto get_type_name = [schema_enum_binding]() [[msvc::forceinline]] {
                     std::string type_storage;
 
-                    switch (schema_enum_binding->m_nAlingOf) {
+                    switch (schema_enum_binding->m_unAlignOf) {
                     case 1:
                         type_storage = "uint8_t";
                         break;
