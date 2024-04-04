@@ -308,7 +308,6 @@ namespace sdk {
             std::list<class_t> classes_to_dump;
             bool did_forward_decls = false;
 
-            auto test = classes.GetElements();
             for (const auto schema_class_binding : classes.GetElements()) {
                 const auto class_info = current->FindDeclaredClass(schema_class_binding->m_pszName);
 
