@@ -1,21 +1,15 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include <type_traits>
 
 #if defined(CS2) || defined(DOTA2)
+constexpr auto kUtlTsHashVersion = 2;
+#else
+constexpr auto kUtlTsHashVersion = 1;
+#endif
+
 using UtlTsHashHandleT = std::uint64_t;
-
-class CThreadSpinRWLock {
-public:
-    struct LockInfo_t {
-        std::uint32_t m_writerId;
-        std::int32_t m_nReaders;
-    };
-
-public:
-    void* m_pThreadSpin;
-    LockInfo_t m_lockInfo;
-};
 
 class CUtlMemoryPool {
 public:
@@ -42,8 +36,122 @@ private:
 };
 static_assert(sizeof(CUtlMemoryPool) == 0x18);
 
+template <class T, class Keytype = std::uint64_t>
+class CUtlTSHashV1 {
+public:
+    // Invalid handle.
+    static UtlTsHashHandleT InvalidHandle(void) {
+        return static_cast<UtlTsHashHandleT>(0);
+    }
+
+    // Returns the number of elements in the hash table
+    [[nodiscard]] int BlockSize() const {
+        return m_entry_memory_.BlockSize();
+    }
+    [[nodiscard]] int Count() const {
+        return m_entry_memory_.AllocatedSize();
+    }
+
+    // Returns elements in the table
+    std::vector<T> GetElements(void);
+public:
+    // Templatized for memory tracking purposes
+    template <typename DataT>
+    struct HashFixedDataInternalT {
+        Keytype m_ui_key;
+        HashFixedDataInternalT<DataT>* m_next;
+        DataT m_data;
+    };
+
+    using HashFixedDataT = HashFixedDataInternalT<T>;
+
+    // Templatized for memory tracking purposes
+    template <typename DataT>
+    struct HashFixedStructDataInternalT {
+        DataT m_data;
+        Keytype m_ui_key;
+        char pad_0x0020[0x8];
+    };
+
+    using HashFixedStructDataT = HashFixedStructDataInternalT<T>;
+
+    struct HashStructDataT {
+        char pad_0x0000[0x10]; // 0x0000
+        std::array<HashFixedStructDataT, 256> m_list;
+    };
+
+    struct HashAllocatedDataT {
+    public:
+        auto GetList() {
+            return m_list_;
+        }
+    private:
+        char pad_0x0000[0x18]; // 0x0000
+        std::array<HashFixedDataT, 128> m_list_;
+    };
+
+    // Templatized for memory tracking purposes
+    template <typename DataT>
+    struct HashBucketDataInternalT {
+        DataT m_data;
+        HashFixedDataInternalT<DataT>* m_next;
+        Keytype m_ui_key;
+    };
+
+    using HashBucketDataT = HashBucketDataInternalT<T>;
+
+    struct HashUnallocatedDataT {
+        HashUnallocatedDataT* m_next_ = nullptr; // 0x0000
+        Keytype m_6114; // 0x0008
+        Keytype m_ui_key; // 0x0010
+        Keytype m_i_unk_1; // 0x0018
+        std::array<HashBucketDataT, 256> m_current_block_list; // 0x0020
+    };
+
+    struct HashBucketT {
+        HashStructDataT* m_struct_data = nullptr;
+        void* m_mutex_list = nullptr;
+        HashAllocatedDataT* m_allocated_data = nullptr;
+        HashUnallocatedDataT* m_unallocated_data = nullptr;
+    };
+
+    CUtlMemoryPool m_entry_memory_;
+    HashBucketT m_buckets_;
+    bool m_needs_commit_ = false;
+};
+
+template <class T, class Keytype>
+inline std::vector<T> CUtlTSHashV1<T, Keytype>::GetElements(void) {
+    std::vector<T> list;
+
+    const int n_count = Count();
+    auto n_index = 0;
+    auto& unallocated_data = m_buckets_.m_unallocated_data;
+    for (auto element = unallocated_data; element; element = element->m_next_) {
+        for (auto i = 0; i < BlockSize() && i != n_count; i++) {
+            list.emplace_back(element->m_current_block_list.at(i).m_data);
+            n_index++;
+
+            if (n_index >= n_count)
+                break;
+        }
+    }
+    return list;
+}
+
+class CThreadSpinRWLock {
+public:
+    struct LockInfo_t {
+        std::uint32_t m_writerId;
+        std::int32_t m_nReaders;
+    };
+public:
+    void* m_pThreadSpin;
+    LockInfo_t m_lockInfo;
+};
+
 template <class T, class Keytype = std::uint64_t, int BucketCount = 256>
-class CUtlTSHash {
+class CUtlTSHashV2 {
 public:
     // Invalid handle.
     static UtlTsHashHandleT InvalidHandle(void) {
@@ -121,10 +229,10 @@ public:
     bool m_bNeedsCommit; // 0x2880
     std::int32_t m_ContentionCheck; // 0x2881
 };
-static_assert(sizeof(CUtlTSHash<void*>) == 0x2888);
+static_assert(sizeof(CUtlTSHashV2<void*>) == 0x2888);
 
 template <class T, class Keytype, int BucketCount>
-std::vector<T> CUtlTSHash<T, Keytype, BucketCount>::GetElements(int nFirstElement) {
+std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount>::GetElements(int nFirstElement) {
     int n_count = BlocksAllocated();
     std::vector<T> AllocatedList;
     if (n_count > 0) {
@@ -164,133 +272,9 @@ std::vector<T> CUtlTSHash<T, Keytype, BucketCount>::GetElements(int nFirstElemen
 
     return unAllocatedList.size() > AllocatedList.size() ? unAllocatedList : AllocatedList;
 }
-#else
-using UtlTsHashHandleT = std::uint64_t;
 
-class CUtlMemoryPool {
-public:
-    // returns number of allocated blocks
-    int BlockSize() const {
-        return m_blocks_per_blob_;
-    }
-    int Count() const {
-        return m_block_allocated_size_;
-    }
-    int PeakCount() const {
-        return m_peak_alloc_;
-    }
-private:
-    std::int32_t m_block_size_ = 0; // 0x0558
-    std::int32_t m_blocks_per_blob_ = 0; // 0x055C
-    std::int32_t m_grow_mode_ = 0; // 0x0560
-    std::int32_t m_blocks_allocated_ = 0; // 0x0564
-    std::int32_t m_block_allocated_size_ = 0; // 0x0568
-    std::int32_t m_peak_alloc_ = 0; // 0x056C
-};
-
-template <class T, class Keytype = std::uint64_t>
-class CUtlTSHash {
-public:
-    // Invalid handle.
-    static UtlTsHashHandleT InvalidHandle(void) {
-        return static_cast<UtlTsHashHandleT>(0);
-    }
-
-    // Returns the number of elements in the hash table
-    [[nodiscard]] int BlockSize() const {
-        return m_entry_memory_.BlockSize();
-    }
-    [[nodiscard]] int Count() const {
-        return m_entry_memory_.Count();
-    }
-
-    // Returns elements in the table
-    std::vector<T> GetElements(void);
-public:
-    // Templatized for memory tracking purposes
-    template <typename DataT>
-    struct HashFixedDataInternalT {
-        Keytype m_ui_key;
-        HashFixedDataInternalT<DataT>* m_next;
-        DataT m_data;
-    };
-
-    using HashFixedDataT = HashFixedDataInternalT<T>;
-
-    // Templatized for memory tracking purposes
-    template <typename DataT>
-    struct HashFixedStructDataInternalT {
-        DataT m_data;
-        Keytype m_ui_key;
-        char pad_0x0020[0x8];
-    };
-
-    using HashFixedStructDataT = HashFixedStructDataInternalT<T>;
-
-    struct HashStructDataT {
-        char pad_0x0000[0x10]; // 0x0000
-        std::array<HashFixedStructDataT, 256> m_list;
-    };
-
-    struct HashAllocatedDataT {
-    public:
-        auto GetList() {
-            return m_list_;
-        }
-    private:
-        char pad_0x0000[0x18]; // 0x0000
-        std::array<HashFixedDataT, 128> m_list_;
-    };
-
-    // Templatized for memory tracking purposes
-    template <typename DataT>
-    struct HashBucketDataInternalT {
-        DataT m_data;
-        HashFixedDataInternalT<DataT>* m_next;
-        Keytype m_ui_key;
-    };
-
-    using HashBucketDataT = HashBucketDataInternalT<T>;
-
-    struct HashUnallocatedDataT {
-        HashUnallocatedDataT* m_next_ = nullptr; // 0x0000
-        Keytype m_6114; // 0x0008
-        Keytype m_ui_key; // 0x0010
-        Keytype m_i_unk_1; // 0x0018
-        std::array<HashBucketDataT, 256> m_current_block_list; // 0x0020
-    };
-
-    struct HashBucketT {
-        HashStructDataT* m_struct_data = nullptr;
-        void* m_mutex_list = nullptr;
-        HashAllocatedDataT* m_allocated_data = nullptr;
-        HashUnallocatedDataT* m_unallocated_data = nullptr;
-    };
-
-    CUtlMemoryPool m_entry_memory_;
-    HashBucketT m_buckets_;
-    bool m_needs_commit_ = false;
-};
-
-template <class T, class Keytype>
-std::vector<T> CUtlTSHash<T, Keytype>::GetElements(void) {
-    std::vector<T> list;
-
-    const int n_count = Count();
-    auto n_index = 0;
-    auto& unallocated_data = m_buckets_.m_unallocated_data;
-    for (auto element = unallocated_data; element; element = element->m_next_) {
-        for (auto i = 0; i < BlockSize() && i != n_count; i++) {
-            list.emplace_back(element->m_current_block_list.at(i).m_data);
-            n_index++;
-
-            if (n_index >= n_count)
-                break;
-        }
-    }
-    return list;
-}
-#endif
+template <class Ty>
+using CUtlTSHash = std::conditional_t<kUtlTsHashVersion == 1, CUtlTSHashV1<Ty>, CUtlTSHashV2<Ty>>;
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
