@@ -262,21 +262,15 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount>::GetElements(int nFirstElem
     std::vector<T> unAllocatedList;
     if (n_count > 0) {
         int nIndex = 0;
-        auto& unallocated_data = m_unBuckets->m_unAllocatedNext;
-        if (unallocated_data != nullptr) {
-            if (m_unBuckets->m_unAllocatedData)
-                unAllocatedList.emplace_back(m_unBuckets->m_unAllocatedData);
+        for (auto unallocated_element = m_unBuckets; unallocated_element; unallocated_element = unallocated_element->m_unAllocatedNext) {
+            if (unallocated_element->m_unAllocatedData == nullptr)
+                continue;
 
-            for (auto unallocated_element = unallocated_data; unallocated_element; unallocated_element = unallocated_element->m_unAllocatedNext) {
-                if (unallocated_element->m_unAllocatedData == nullptr)
-                    continue;
+            unAllocatedList.emplace_back(unallocated_element->m_unAllocatedData);
+            ++nIndex;
 
-                unAllocatedList.emplace_back(unallocated_element->m_unAllocatedData);
-                ++nIndex;
-
-                if (nIndex >= n_count)
-                    break;
-            }
+            if (nIndex >= n_count)
+                break;
         }
     }
 
