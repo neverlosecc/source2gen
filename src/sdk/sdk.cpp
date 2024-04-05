@@ -261,9 +261,9 @@ namespace sdk {
                     return target_->m_pBaseClassses->m_pPrevByClass;
                 }
 
-                void AddRefToClass(const CSchemaType* type) {
+                void AddRefToClass(CSchemaType* type) {
                     if (type->m_unTypeCategory == ETypeCategory::Schema_DeclaredClass) {
-                        refs_.insert(type->m_pClassInfo);
+                        refs_.insert(reinterpret_cast<CSchemaType_DeclaredClass*>(type)->m_pClassInfo);
                     }
 
                     // auto ptr = type->GetRefClass();
@@ -336,7 +336,9 @@ namespace sdk {
                     class_dump.AddRefToClass(field->m_pSchemaType);
 
                     auto field_class =
-                        std::ranges::find_if(classes_to_dump, [field](const class_t& cls) { return cls.target_ == field->m_pSchemaType->m_pClassInfo; });
+                        std::ranges::find_if(classes_to_dump, [field](const class_t& cls) {
+                            return cls.target_ == reinterpret_cast<CSchemaType_DeclaredClass*>(field->m_pSchemaType)->m_pClassInfo;
+                        });
                     if (field_class != classes_to_dump.end())
                         field_class->used_count_++;
                 }
@@ -390,10 +392,10 @@ namespace sdk {
 
                 if (actual_type->m_unTypeCategory == ETypeCategory::Schema_FixedArray) {
                     // dump all sizes.
-                    auto schema = actual_type;
+                    auto schema = reinterpret_cast<CSchemaType_FixedArray*>(actual_type);
                     while (true) {
-                        sizes.emplace_back(schema->m_Array.m_nArraySize);
-                        schema = schema->m_Array.m_pElementType;
+                        sizes.emplace_back(schema->m_nElementCount);
+                        schema = reinterpret_cast<CSchemaType_FixedArray*>(schema->m_pElementType);
 
                         if (schema->m_unTypeCategory != ETypeCategory::Schema_FixedArray) {
                             base_type = schema->m_pszName;

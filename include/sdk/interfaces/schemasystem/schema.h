@@ -1,6 +1,7 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include "schema.h"
 
 #if defined(SBOX)
 // untested, CSchemaType::m_pSchemaType might be wrong
@@ -91,8 +92,8 @@ enum {
     #define SCHEMASYSTEM_TYPE 2
 
 constexpr auto kSchemaSystem_PAD0 = 0x190;
-constexpr auto kSchemaSystemTypeScope_PAD0 = 0x3B8;
-constexpr auto kSchemaSystemTypeScope_PAD1 = 0x98;
+constexpr auto kSchemaSystemTypeScope_PAD0 = 0x8;
+constexpr auto kSchemaSystemTypeScope_PAD1 = 0x8;
 constexpr auto kSchemaSystemTypeScope_PAD2 = 0x8;
 
 enum {
@@ -109,8 +110,8 @@ enum {
     #define SCHEMASYSTEM_TYPE 2
 
 constexpr auto kSchemaSystem_PAD0 = 0x190;
-constexpr auto kSchemaSystemTypeScope_PAD0 = 0x3B8;
-constexpr auto kSchemaSystemTypeScope_PAD1 = 0x98;
+constexpr auto kSchemaSystemTypeScope_PAD0 = 0x8;
+constexpr auto kSchemaSystemTypeScope_PAD1 = 0x8;
 constexpr auto kSchemaSystemTypeScope_PAD2 = 0x8;
 
 enum {
@@ -270,6 +271,24 @@ enum class EAtomicCategory : std::uint8_t {
     Atomic_None
 };
 
+enum class SchemaBuiltinType_t : std::uint32_t {
+    Schema_Builtin_none = 0,
+    Schema_Builtin_void,
+    Schema_Builtin_char,
+    Schema_Builtin_int8,
+    Schema_Builtin_uint8,
+    Schema_Builtin_int16,
+    Schema_Builtin_uint16,
+    Schema_Builtin_int32,
+    Schema_Builtin_uint32,
+    Schema_Builtin_int64,
+    Schema_Builtin_uint64,
+    Schema_Builtin_float32,
+    Schema_Builtin_float64,
+    Schema_Builtin_bool,
+    Schema_Builtin_count
+};
+
 class CSchemaType {
 public:
     bool IsValid(void) {
@@ -314,81 +333,147 @@ public:
     EAtomicCategory m_unAtomicCategory; // 0x0019
 
     // find out to what class pointer points.
-    CSchemaType* GetRefClass() const {
-        if (m_unTypeCategory != ETypeCategory::Schema_Ptr)
-            return nullptr;
-
-        auto ptr = m_pSchemaType;
-        while (ptr && ptr->m_unTypeCategory == ETypeCategory::Schema_Ptr)
-            ptr = ptr->m_pSchemaType;
-
-        return ptr;
-    }
-
-    struct array_t {
-        std::uint32_t m_nArraySize;
-    private:
-        std::uint32_t m_unknown = 0;
-    public:
-        CSchemaType* m_pElementType;
-    };
-
-    // @note: @og: basically, 1st is unknown and second is CUtlStringToken of m_pszName
-    struct atomic_base {
-    private:
-        std::uint64_t pad0x0000[2] = {};
-    };
-
-    struct atomic_t { // same goes for CollectionOfT
-        CSchemaType* m_pElementType;
-    private:
-        std::uint64_t pad0x0029 = {};
-    public:
-        CSchemaType* m_pTemplateTypeName;
-    };
-
-    using collection_of_t = atomic_t;
-
-    struct atomic_tt : atomic_base {
-        CSchemaType* m_pTemplates[2];
-    };
-
-    struct atomic_tf : atomic_base {
-        CSchemaType* m_pTemplateTypeName;
-        std::int32_t m_nSize;
-    };
-
-    struct atomic_ttf : atomic_base {
-        CSchemaType* m_pTemplates[2];
-        std::int32_t m_nSize;
-    };
-
-    struct atomic_i : atomic_base {
-        std::uint64_t m_nInteger;
-    };
-
-    // this union depends on CSchema implementation, all members above
-    // is from base class ( CSchemaType )
-    union // 0x020
-    {
-        CSchemaType* m_pSchemaType;
-        CSchemaClassInfo* m_pClassInfo;
-        CSchemaEnumBinding* m_pEnumBinding;
-        array_t m_Array;
-        atomic_t m_Atomic_t;
-        atomic_tt m_Atomic_tt;
-        atomic_tf m_Atomic_tf;
-        atomic_ttf m_Atomic_ttf;
-        atomic_i m_Atomic_i;
-    };
+    CSchemaType* GetRefClass();
 };
-static_assert(offsetof(CSchemaType, m_pSchemaType) == 0x20);
+static_assert(sizeof(CSchemaType) == 0x20);
 
-using CSchemaType_DeclaredClass = CSchemaType;
-using CSchemaType_DeclaredEnum = CSchemaType;
-using CSchemaType_Builtin = CSchemaType;
-using CSchemaType_Ptr = CSchemaType;
-using CSchemaType_Atomic = CSchemaType;
+class CSchemaType_Ptr : public CSchemaType {
+public:
+    CSchemaType* m_pObjectType;
+};
+
+class CSchemaType_Builtin : public CSchemaType {
+public:
+    SchemaBuiltinType_t m_eBuiltinType;
+    std::uint8_t m_unSize;
+};
+
+class CSchemaType_DeclaredClass : public CSchemaType {
+public:
+    CSchemaClassInfo* m_pClassInfo;
+    bool m_bGlobalPromotionRequired;
+};
+
+class CSchemaType_DeclaredEnum : public CSchemaType {
+public:
+    CSchemaEnumBinding* m_pClassInfo;
+    bool m_bGlobalPromotionRequired;
+};
+
+struct SchemaAtomicTypeInfo_t {
+    const char* m_pszName1;
+    const char* m_pszName2;
+
+    int m_nAtomicID;
+
+    int m_nStaticMetadataCount;
+    SchemaMetadataEntryData_t* m_pStaticMetadata;
+};
+
+class CSchemaType_Atomic : public CSchemaType {
+public:
+    SchemaAtomicTypeInfo_t* m_pAtomicInfo;
+    int m_nAtomicID;
+    std::uint16_t m_unSize;
+    std::uint8_t m_unAlignment;
+};
+
+class CSchemaType_Atomic_T : public CSchemaType_Atomic {
+public:
+    CSchemaType* m_pTemplateType;
+};
+
+enum class SchemaAtomicFunctionIndex : std::int32_t {
+    Schema_Atomic_Get_Count = 0,
+    Schema_Atomic_Get_Element_Const,
+    Schema_Atomic_Get_Element,
+    Schema_Atomic_Swap_Elements,
+    Schema_Atomic_Insert_Before,
+    Schema_Atomic_Remove_Multiple,
+    Schema_Atomic_Set_Count,
+};
+
+using SchemaAtomicFunction = void(*)(SchemaAtomicFunctionIndex, void*, void*, void*);
+
+class CSchemaType_Atomic_CollectionOfT : public CSchemaType_Atomic_T {
+public:
+    SchemaAtomicFunction m_pFn;
+    std::uint16_t m_unElementSize;
+};
+
+class CSchemaType_Atomic_TF : public CSchemaType_Atomic_T {
+public:
+    int m_nFuncPtrSize;
+};
+
+class CSchemaType_Atomic_TT : public CSchemaType_Atomic_T {
+public:
+    CSchemaType* m_pTemplateType2;
+};
+
+class CSchemaType_Atomic_TTF : public CSchemaType_Atomic_TT {
+public:
+    int m_nFuncPtrSize;
+};
+
+class CSchemaType_Atomic_I : public CSchemaType_Atomic {
+public:
+    int m_nInteger;
+};
+
+class CSchemaType_Bitfield : public CSchemaType {
+public:
+    int m_nSize;
+};
+
+class CSchemaType_FixedArray : public CSchemaType {
+public:
+    int m_nElementCount;
+    std::uint16_t m_unElementSize;
+    std::uint8_t m_unElementAlignment;
+    CSchemaType* m_pElementType;
+};
+
+struct AtomicTypeInfo_T_t {
+    int m_nAtomicID;
+    CSchemaType* m_pTemplateType;
+    SchemaAtomicFunction m_pfnManipulator;
+};
+
+struct AtomicTypeInfo_TF_t {
+    int m_nAtomicID;
+    CSchemaType* m_pTemplateType;
+    int m_nFuncPtrSize;
+};
+
+struct AtomicTypeInfo_TT_t {
+    int m_nAtomicID;
+    CSchemaType* m_pTemplateType;
+    CSchemaType* m_pTemplateType2;
+};
+
+struct AtomicTypeInfo_TTF_t {
+    int m_nAtomicID;
+    CSchemaType* m_pTemplateType;
+    CSchemaType* m_pTemplateType2;
+    int m_nFuncPtrSize;
+};
+
+struct AtomicTypeInfo_I_t {
+    int m_nAtomicID;
+    int m_nInteger;
+};
+
+inline CSchemaType* CSchemaType::GetRefClass() {
+    if (m_unTypeCategory != ETypeCategory::Schema_Ptr)
+        return nullptr;
+
+    auto ptr = reinterpret_cast<CSchemaType_Ptr*>(this)->m_pObjectType;
+    while (ptr && ptr->m_unTypeCategory == ETypeCategory::Schema_Ptr)
+        ptr = reinterpret_cast<CSchemaType_Ptr*>(ptr)->m_pObjectType;
+
+    return ptr;
+}
 
 struct SchemaClassFieldData_t {
     const char* m_pszName; // 0x0000
@@ -563,22 +648,9 @@ public:
     }
 };
 
-enum class SchemaBuiltinType_t : std::uint32_t {
-    kInvalid = 0,
-    kVoid,
-    kChar,
-    kInt8,
-    kUint8,
-    kInt16,
-    kUint16,
-    kInt32,
-    kUint32,
-    kInt64,
-    kUint64,
-    kFloat32,
-    kFloat64,
-    kBool,
-    kBuiltinTypeCount
+struct TypeAndCountInfo_t {
+    int m_nElementCount;
+    CSchemaType* m_pElementType;
 };
 
 template <class K, class V>
@@ -693,10 +765,11 @@ public:
         return m_DeclaredClasses.m_Map;
     }
 
-    [[nodiscard]] CUtlMap<std::uint16_t, CSchemaType_DeclaredClass*>& GetDeclaredEnums() {
+    [[nodiscard]] CUtlMap<std::uint16_t, CSchemaType_DeclaredEnum*>& GetDeclaredEnums() {
         return m_DeclaredEnums.m_Map;
     }
 #endif
+
 private:
     void* vftable = nullptr;
     std::array<char, 256> m_szName = {}; // //0x0008
@@ -704,8 +777,20 @@ private:
 #if defined(CS2) || defined(DOTA2)
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
     char pad_0x0110[kSchemaSystemTypeScope_PAD0] = {}; // 0x0110
+    std::array<CSchemaType_Builtin, static_cast<std::size_t>(SchemaBuiltinType_t::Schema_Builtin_count)> m_BuiltinTypes = {};
+    CSchemaPtrMap<CSchemaType*, CSchemaType_Ptr*> m_Ptrs;
+    CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics;
+    CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT;
+    CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_CollectionOfT*> m_AtomicsCollectionOfT;
+    CSchemaPtrMap<AtomicTypeInfo_TF_t, CSchemaType_Atomic_TF*> m_AtomicsTF;
+    CSchemaPtrMap<AtomicTypeInfo_TT_t, CSchemaType_Atomic_TT*> m_AtomicsTT;
+    CSchemaPtrMap<AtomicTypeInfo_TTF_t, CSchemaType_Atomic_TTF*> m_AtomicsTTF;
+    CSchemaPtrMap<AtomicTypeInfo_I_t, CSchemaType_Atomic_I*> m_AtomicsI;
     CSchemaPtrMap<std::uint16_t, CSchemaType_DeclaredClass*> m_DeclaredClasses; // 0x04C8
     CSchemaPtrMap<std::uint16_t, CSchemaType_DeclaredEnum*> m_DeclaredEnums; // 0x04F8
+    CSchemaPtrMap<int, const SchemaAtomicTypeInfo_t*> m_AtomicInfos;
+    CSchemaPtrMap<TypeAndCountInfo_t, CSchemaType_FixedArray*> m_FixedArrays;
+    CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields;
 #endif
 
     char pad_0x0108[kSchemaSystemTypeScope_PAD1] = {}; // 0x0108
