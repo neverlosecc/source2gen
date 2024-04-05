@@ -324,6 +324,10 @@ public:
         std::uint8_t align_of = 0;
         return GetSizeWithAlignOf(nOutSize, &align_of);
     }
+
+    // find out to what class pointer points.
+    CSchemaType* GetRefClass();
+
 public:
     std::uintptr_t* vftable; // 0x0000
     const char* m_pszName; // 0x0008
@@ -331,9 +335,6 @@ public:
     CSchemaSystemTypeScope* m_pTypeScope; // 0x0010
     ETypeCategory m_unTypeCategory; // 0x0018
     EAtomicCategory m_unAtomicCategory; // 0x0019
-
-    // find out to what class pointer points.
-    CSchemaType* GetRefClass();
 };
 static_assert(sizeof(CSchemaType) == 0x20);
 
