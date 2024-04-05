@@ -27,11 +27,14 @@ namespace detail {
     class FnvHash {
     private:
         using data_t = SizeSelector<Size>;
+
     public:
         using hash = typename data_t::type;
+
     private:
         constexpr static auto k_offset_basis = data_t::k_offset_basis;
         constexpr static auto k_prime = data_t::k_prime;
+
     public:
         static __forceinline constexpr auto hash_init() -> hash {
             return k_offset_basis;

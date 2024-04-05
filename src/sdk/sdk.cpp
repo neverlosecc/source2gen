@@ -261,9 +261,9 @@ namespace sdk {
                     return target_->m_pBaseClassses->m_pPrevByClass;
                 }
 
-                void AddRefToClass(const CSchemaType* type) {
+                void AddRefToClass(CSchemaType* type) {
                     if (type->m_unTypeCategory == ETypeCategory::Schema_DeclaredClass) {
-                        refs_.insert(type->m_pClassInfo);
+                        refs_.insert(reinterpret_cast<CSchemaType_DeclaredClass*>(type)->m_pClassInfo);
                     }
 
                     // auto ptr = type->GetRefClass();
@@ -335,8 +335,9 @@ namespace sdk {
 
                     class_dump.AddRefToClass(field->m_pSchemaType);
 
-                    auto field_class =
-                        std::ranges::find_if(classes_to_dump, [field](const class_t& cls) { return cls.target_ == field->m_pSchemaType->m_pClassInfo; });
+                    auto field_class = std::ranges::find_if(classes_to_dump, [field](const class_t& cls) {
+                        return cls.target_ == reinterpret_cast<CSchemaType_DeclaredClass*>(field->m_pSchemaType)->m_pClassInfo;
+                    });
                     if (field_class != classes_to_dump.end())
                         field_class->used_count_++;
                 }
@@ -390,10 +391,10 @@ namespace sdk {
 
                 if (actual_type->m_unTypeCategory == ETypeCategory::Schema_FixedArray) {
                     // dump all sizes.
-                    auto schema = actual_type;
+                    auto schema = reinterpret_cast<CSchemaType_FixedArray*>(actual_type);
                     while (true) {
-                        sizes.emplace_back(schema->m_Array.m_nArraySize);
-                        schema = schema->m_Array.m_pElementType;
+                        sizes.emplace_back(schema->m_nElementCount);
+                        schema = reinterpret_cast<CSchemaType_FixedArray*>(schema->m_pElementType);
 
                         if (schema->m_unTypeCategory != ETypeCategory::Schema_FixedArray) {
                             base_type = schema->m_pszName;
@@ -493,9 +494,7 @@ namespace sdk {
 
                     // @note: @es3n1n: obtaining size
                     //
-                    int field_size = 0;
-                    if (!field.m_pSchemaType->GetSize(&field_size)) // @note: @es3n1n: should happen if we are attempting to get a size of the bitfield
-                        field_size = 0;
+                    const int field_size = field.m_pSchemaType->GetSize().value_or(0);
 
                     // @note: @es3n1n: parsing type
                     //
@@ -592,7 +591,7 @@ namespace sdk {
                     builder.prop(var_info.m_type, var_info.formatted_name(), false);
                     if (!var_info.is_bitfield()) {
                         builder.reset_tabs_count().comment(std::format("{:#x}", field.m_nSingleInheritanceOffset), false).restore_tabs_count();
-                        class_dump.cached_fields_.push_back(std::make_pair(var_info.formatted_name(), field.m_nSingleInheritanceOffset));
+                        class_dump.cached_fields_.emplace_back(var_info.formatted_name(), field.m_nSingleInheritanceOffset);
                     }
                     builder.next_line();
                 }
@@ -628,7 +627,7 @@ namespace sdk {
 
                     auto [type, mod] = get_type(static_field->m_pSchemaType);
                     const auto var_info = field_parser::parse(type, static_field->m_pszName, mod);
-                    builder.static_field_getter(var_info.m_type, var_info.m_name, current->BGetScopeName().data(), class_info->m_pszName, s);
+                    builder.static_field_getter(var_info.m_type, var_info.m_name, current->BGetScopeName(), class_info->m_pszName, s);
                 }
 
                 if (class_info->m_pFieldMetadataOverrides && class_info->m_pFieldMetadataOverrides->m_iTypeDescriptionCount > 1) {
@@ -679,13 +678,13 @@ namespace sdk {
         }
 
         template <typename Ty = CSchemaClassBinding>
-        [[nodiscard]] std::string StringifyUtlTsHashCount(const CUtlTSHashV1<Ty>& item) {
-            return util::PrettifyNum(item.Count());
+        std::string StringifyUtlTsHashCount(const CUtlTSHashV1<Ty>& item) {
+            return util::PrettifyNum(item.PeakAlloc());
         }
 
         template <typename Ty = CSchemaClassBinding>
-        [[nodiscard]] std::string StringifyUtlTsHashCount(const CUtlTSHashV2<Ty>& item) {
-            return std::format("{} (Allocated) | {} (Unallocated)", util::PrettifyNum(item.BlocksAllocated()), util::PrettifyNum(item.AllocatedSize()));
+        std::string StringifyUtlTsHashCount(const CUtlTSHashV2<Ty>& item) {
+            return std::format("{} (Allocated) | {} (Unallocated)", util::PrettifyNum(item.BlocksAllocated()), util::PrettifyNum(item.PeakAlloc()));
         }
     } // namespace
 
@@ -694,8 +693,8 @@ namespace sdk {
         //
         constexpr std::string_view dll_extension = ".dll";
         auto scope_name = current->BGetScopeName();
-        if (ends_with(scope_name.data(), dll_extension.data()))
-            scope_name.remove_suffix(dll_extension.size());
+        if (ends_with(scope_name, dll_extension.data()))
+            scope_name = scope_name.substr(0, scope_name.size() - dll_extension.size());
 
         // @note: @es3n1n: print debug info
         //

@@ -145,6 +145,7 @@ public:
         if (this->m_active_)
             this->m_active_ = false;
     }
+
 private:
     HWND h_console_window_ = nullptr;
     bool m_active_ = false;

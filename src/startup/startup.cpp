@@ -53,7 +53,7 @@ namespace source2_gen {
         if (!sdk::g_schema)
             throw std::runtime_error(std::format("Unable to obtain Schema interface"));
 
-        while (!sdk::g_schema->SchemaSystemIsReady())
+        while (!sdk::g_schema->IsSchemaSystemReady())
             sleep_for(std::chrono::seconds(5));
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk

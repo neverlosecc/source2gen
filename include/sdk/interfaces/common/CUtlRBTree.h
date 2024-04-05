@@ -1,6 +1,7 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include "CUtlMemory.h"
 
 //-----------------------------------------------------------------------------
 // A red-black binary search tree
@@ -290,9 +291,11 @@ public:
         }
         return i;
     }
+
 private:
     // Can't copy the tree this way!
     CUtlRBTree<T, I, L, M>& operator=(const CUtlRBTree<T, I, L, M>& other);
+
 protected:
     enum NodeColor_t {
         RED = 0,
@@ -360,4 +363,3 @@ inline void CUtlRBTree<T, I, L, M>::EnsureCapacity(int num) {
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

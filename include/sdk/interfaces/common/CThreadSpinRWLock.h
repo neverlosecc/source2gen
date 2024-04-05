@@ -1,20 +1,18 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
+
 #pragma once
 
-class CThreadSpinRWLock {
+class CThreadSpinMutex {
 public:
-    struct LockInfo_t {
-        std::uint32_t m_writerId;
-        std::int32_t m_nReaders;
-    };
+    CThreadSpinMutex(const char* pDebugName = NULL): m_ownerID(0), m_depth(0) { }
 
-public:
-    void* m_pThreadSpin;
-    LockInfo_t m_lockInfo;
-    const char* m_pszDebugName;
+private:
+    volatile ThreadId_t m_ownerID;
+    int m_depth;
 };
-static_assert(sizeof(CThreadSpinRWLock) == 0x18);
+
+using CThreadFastMutex = CThreadSpinMutex;
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc

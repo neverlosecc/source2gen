@@ -128,6 +128,7 @@ public:
     bool IsExternallyAllocated() const;
     bool IsReadOnly() const;
     void SetGrowSize(int size);
+
 protected:
     void ValidateGrowSize() const { }
 
@@ -135,6 +136,7 @@ protected:
         EXTERNAL_BUFFER_MARKER = -1,
         EXTERNAL_CONST_BUFFER_MARKER = -2,
     };
+
 public:
     T* m_pMemory;
     int m_nAllocationCount;

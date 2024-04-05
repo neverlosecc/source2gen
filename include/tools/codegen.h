@@ -43,12 +43,14 @@ namespace codegen {
 
     struct generator_t {
         using self_ref = std::add_lvalue_reference_t<generator_t>;
+
     public:
         constexpr generator_t() = default;
         constexpr ~generator_t() = default;
         constexpr self_ref operator=(self_ref v) {
             return v;
         }
+
     public:
         self_ref pragma(const std::string& val) {
             return push_line(std::format("#pragma {}", val));
@@ -261,10 +263,12 @@ namespace codegen {
             dec_tabs_count(1);
             return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
         }
+
     public:
         [[nodiscard]] std::string str() {
             return _stream.str();
         }
+
     private:
         self_ref push_line(const std::string& line, bool move_cursor_to_next_line = true) {
             for (std::size_t i = 0; i < _tabs_count; i++)
@@ -285,6 +289,7 @@ namespace codegen {
 
             return result;
         }
+
     public:
         self_ref inc_tabs_count(std::size_t count = 1) {
             _tabs_count_backup = _tabs_count;
@@ -309,6 +314,7 @@ namespace codegen {
             _tabs_count = 0;
             return *this;
         }
+
     private:
         std::stringstream _stream = {};
         std::size_t _tabs_count = 0, _tabs_count_backup = 0;

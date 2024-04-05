@@ -66,6 +66,7 @@ public:
 template <size_t MAX_SIZE, bool AllowHeapAllocation = true>
 class CBufferStringGrowable : public CBufferString {
     friend class CBufferString;
+
 public:
     CBufferStringGrowable(): m_nTotalCount(0), m_nAllocated(STACK_ALLOCATION_MARKER | (MAX_SIZE & LENGTH_MASK)) {
         memset(m_Memory.m_szString, 0, sizeof(m_Memory.m_szString));
@@ -133,6 +134,7 @@ public:
         }
         m_nTotalCount &= ~LENGTH_MASK;
     }
+
 private:
     int m_nTotalCount;
     int m_nAllocated;
@@ -158,4 +160,3 @@ private:
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
