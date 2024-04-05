@@ -46,8 +46,8 @@ public:
 
     CInterlockedInt m_BlocksAllocated;
     CInterlockedInt m_PeakAlloc;
-    unsigned short m_nAlignment;
-    unsigned short m_NumBlobs;
+    std::uint16_t m_nAlignment;
+    std::uint16_t m_NumBlobs;
 
     FreeList_t** m_ppTailOfFreeList;
     FreeList_t* m_pHeadOfFreeList;
