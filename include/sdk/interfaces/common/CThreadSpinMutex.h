@@ -1,25 +1,24 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
+
 #pragma once
 
-#include <Include.h>
+#ifdef _WIN32
+typedef std::uint32_t ThreadId_t;
+#else
+typedef std::uint64_t ThreadId_t;
+#endif
 
-namespace Virtual {
-    template <typename T>
-    inline T Get(void* instance, const unsigned int index) {
-        return (*static_cast<T**>(instance))[index];
-    }
+class CThreadSpinMutex {
+public:
+    CThreadSpinMutex(const char* pDebugName = NULL): m_ownerID(0), m_depth(0) { }
 
-    template <typename T>
-    inline T Read(const std::uintptr_t location) {
-        return *reinterpret_cast<T*>(location);
-    }
+private:
+    volatile ThreadId_t m_ownerID;
+    int m_depth;
+};
 
-    template <typename T>
-    inline void Write(const std::uintptr_t location, const T& data) {
-        *reinterpret_cast<T*>(location) = data;
-    }
-} // namespace Virtual
+using CThreadFastMutex = CThreadSpinMutex;
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc

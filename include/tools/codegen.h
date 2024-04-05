@@ -329,7 +329,7 @@ namespace codegen {
         std::set<fnv32::hash> _forward_decls = {};
     };
 
-    __forceinline generator_t get() {
+    inline generator_t get() {
         return generator_t{};
     }
 } // namespace codegen
