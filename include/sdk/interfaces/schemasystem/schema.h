@@ -1,7 +1,6 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
-#include "schema.h"
 
 #if defined(SBOX)
 // untested, CSchemaType::m_pSchemaType might be wrong
