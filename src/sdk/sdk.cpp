@@ -678,12 +678,12 @@ namespace sdk {
         }
 
         template <typename Ty = CSchemaClassBinding>
-        [[nodiscard]] [[maybe_unused]] std::string StringifyUtlTsHashCount(const CUtlTSHashV1<Ty>& item) {
+        std::string StringifyUtlTsHashCount(const CUtlTSHashV1<Ty>& item) {
             return util::PrettifyNum(item.PeakAlloc());
         }
 
         template <typename Ty = CSchemaClassBinding>
-        [[nodiscard]] [[maybe_unused]] std::string StringifyUtlTsHashCount(const CUtlTSHashV2<Ty>& item) {
+        std::string StringifyUtlTsHashCount(const CUtlTSHashV2<Ty>& item) {
             return std::format("{} (Allocated) | {} (Unallocated)", util::PrettifyNum(item.BlocksAllocated()), util::PrettifyNum(item.PeakAlloc()));
         }
     } // namespace

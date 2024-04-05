@@ -32,7 +32,7 @@ namespace {
     }
 }; // namespace
 
-[[msvc::forceinline]] bool ValueIsPowerOfTwo(const std::size_t value) // don't clash with mathlib definition
+bool ValueIsPowerOfTwo(const std::size_t value) // don't clash with mathlib definition
 {
     return (value & (value - 1)) == 0;
 }
