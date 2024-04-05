@@ -540,6 +540,12 @@ public:
     SchemaClassFlags_t m_nClassFlags:8; // 0x0060
     std::uint32_t m_unSequence; // 0x0064 // @note: @og: idk
     void* m_pFn; // 0x0068
+
+public:
+    template <typename RetTy = void*, typename... Ty>
+    RetTy CallFunction(SchemaClassInfoFunctionIndex index, Ty... args) const {
+        return reinterpret_cast<RetTy (*)(SchemaClassInfoFunctionIndex, Ty...)>(m_pFn)(index, std::forward<Ty>(args)...);
+    }
 };
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
@@ -619,40 +625,34 @@ public:
     }
 
     // @note: @og: Copy instance from original to new created with all data from original, returns new_instance
-    void* CopyInstance(void* instance, void* new_instance) const {
-        using Fn = void* (*)(SchemaClassInfoFunctionIndex, void*, void*);
-        return reinterpret_cast<Fn>(m_pFn)(SchemaClassInfoFunctionIndex::kCreateInstance, instance, new_instance);
+    auto CopyInstance(void* instance, void* new_instance) const {
+        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kCreateInstance, instance, new_instance);
     }
 
     // @note: @og: Creates default instance with engine allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be
     // C_BaseEntity)
-    [[nodiscard]] void* CreateInstance() const {
-        using Fn = void* (*)(SchemaClassInfoFunctionIndex);
-        return reinterpret_cast<Fn>(m_pFn)(SchemaClassInfoFunctionIndex::kCreateInstance);
+    [[nodiscard]] auto CreateInstance() const {
+        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kCreateInstance);
     }
 
     // @note: @og: Creates default instance with your own allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be
     // C_BaseEntity)
-    void* CreateInstance(void* memory) const {
-        using Fn = void* (*)(SchemaClassInfoFunctionIndex, void*);
-        return reinterpret_cast<Fn>(m_pFn)(SchemaClassInfoFunctionIndex::kCreateInstanceWithMemory, memory);
+    auto CreateInstance(void* memory) const {
+        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kCreateInstanceWithMemory, memory);
     }
 
     // @note: @og: Destroy instance (e.g.: C_BaseEntity 1st VT fn with 0 flag)
-    void* DestroyInstance(void* instance) const {
-        using Fn = void* (*)(SchemaClassInfoFunctionIndex, void*);
-        return reinterpret_cast<Fn>(m_pFn)(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
+    auto DestroyInstance(void* instance) const {
+        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
     }
 
     // @note: @og: Destroy instance with de-allocating memory (e.g.: C_BaseEntity 1st VT fn with 1 flag)
-    void* DestroyInstanceWithMemory(void* instance) const {
-        using Fn = void* (*)(SchemaClassInfoFunctionIndex, void*);
-        return reinterpret_cast<Fn>(m_pFn)(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
+    auto DestroyInstanceWithMemory(void* instance) const {
+        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
     }
 
-    [[nodiscard]] CSchemaClassBinding* SchemaClassBinding(void* entity) const {
-        using Fn = CSchemaClassBinding* (*)(SchemaClassInfoFunctionIndex, void*);
-        return reinterpret_cast<Fn>(m_pFn)(SchemaClassInfoFunctionIndex::kSchemaDynamicBinding, entity);
+    [[nodiscard]] auto SchemaClassBinding(void* entity) const {
+        return CallFunction<CSchemaClassBinding*>(SchemaClassInfoFunctionIndex::kSchemaDynamicBinding, entity);
     }
 };
 
@@ -779,6 +779,7 @@ public:
         return m_DeclaredEnums.m_Map;
     }
 #endif
+
 private:
     void* vftable = nullptr;
     std::array<char, 256> m_szName = {}; // 0x0008
