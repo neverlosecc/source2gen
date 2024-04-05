@@ -95,9 +95,7 @@ enum {
 
 constexpr auto kSchemaSystemVersion = 2;
 constexpr auto kSchemaSystem_PAD0 = 0x190;
-constexpr auto kSchemaSystemTypeScope_PAD0 = 0x8;
-constexpr auto kSchemaSystemTypeScope_PAD1 = 0x8;
-constexpr auto kSchemaSystemTypeScope_PAD2 = 0x8;
+constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
 enum {
     kSchemaType_GetSizeWithAlignOf = 3,
@@ -494,11 +492,12 @@ struct SchemaStaticFieldData_t {
     const char* m_pszName; // 0x0000
     CSchemaType* m_pSchemaType; // 0x0008
     void* m_pInstance; // 0x0010
-    char pad_0x0018[0x10]; // 0x0018
+    int m_nStaticMetadataCount; // 0x0018
+    SchemaMetadataEntryData_t* m_pStaticMetadata; // 0x0020
 };
 
 struct SchemaBaseClassInfoData_t {
-    unsigned int m_unOffset; // 0x0000
+    std::uint32_t m_unOffset; // 0x0000
     CSchemaClassInfo* m_pPrevByClass; // 0x0008
 };
 
@@ -758,7 +757,7 @@ public:
         return Virtual::Get<bool(__thiscall*)(void*)>(this, kSchemaSystemTypeScope_IsGlobalScope)(this);
     }
 
-    [[nodiscard]] std::string BGetScopeName() {
+    [[nodiscard]] std::string BGetScopeName() const {
         return m_szName.data();
     }
 
@@ -787,7 +786,7 @@ private:
 #if defined(CS2) || defined(DOTA2)
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
     bool m_bBuiltinTypesInitialized = false; // 0x0110
-    char pad_0111[kSchemaSystemTypeScope_PAD0]; // 0x0111
+    char pad_0111[kSchemaSystemTypeScope_PAD0] = {}; // 0x0111
     std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118
     CSchemaPtrMap<CSchemaType*, CSchemaType_Ptr*> m_Ptrs; // 0x0348
     CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
@@ -804,9 +803,16 @@ private:
     CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields; // 0x0588
 #endif
 
+#if defined(CS2)
     char pad_0x0108[kSchemaSystemTypeScope_PAD1] = {}; // 0x0108
+#endif
+
     CUtlTSHash<CSchemaClassBinding*> m_ClassBindings; // 0x05C0
+
+#if defined(CS2)
     char pad_0x0594[kSchemaSystemTypeScope_PAD2] = {}; // 0x05F8
+#endif
+
     CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings; // 0x2E50
 };
 
@@ -888,6 +894,15 @@ public:
 
     [[nodiscard]] bool IsSchemaSystemReady() {
         return Virtual::Get<bool(__thiscall*)(void*)>(this, 26)(this);
+    }
+
+    [[nodiscard]] void PrintSchemaStats() {
+        Virtual::Get<void(__thiscall*)(void*)>(this, 30)(this);
+    }
+
+    // @note: @og: there 2 options, "enum" or "class"
+    [[nodiscard]] void PrintSchemaMetaStats(const char* pszOptions) {
+        Virtual::Get<void(__thiscall*)(void*, const char*)>(this, 31)(this, pszOptions);
     }
 
     [[nodiscard]] CUtlVector<CSchemaSystemTypeScope*> GetTypeScopes() const {

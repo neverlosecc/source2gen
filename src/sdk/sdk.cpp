@@ -591,7 +591,7 @@ namespace sdk {
                     builder.prop(var_info.m_type, var_info.formatted_name(), false);
                     if (!var_info.is_bitfield()) {
                         builder.reset_tabs_count().comment(std::format("{:#x}", field.m_nSingleInheritanceOffset), false).restore_tabs_count();
-                        class_dump.cached_fields_.push_back(std::make_pair(var_info.formatted_name(), field.m_nSingleInheritanceOffset));
+                        class_dump.cached_fields_.emplace_back(var_info.formatted_name(), field.m_nSingleInheritanceOffset);
                     }
                     builder.next_line();
                 }
@@ -627,7 +627,7 @@ namespace sdk {
 
                     auto [type, mod] = get_type(static_field->m_pSchemaType);
                     const auto var_info = field_parser::parse(type, static_field->m_pszName, mod);
-                    builder.static_field_getter(var_info.m_type, var_info.m_name, current->BGetScopeName().data(), class_info->m_pszName, s);
+                    builder.static_field_getter(var_info.m_type, var_info.m_name, current->BGetScopeName(), class_info->m_pszName, s);
                 }
 
                 if (class_info->m_pFieldMetadataOverrides && class_info->m_pFieldMetadataOverrides->m_iTypeDescriptionCount > 1) {
@@ -678,13 +678,13 @@ namespace sdk {
         }
 
         template <typename Ty = CSchemaClassBinding>
-        [[nodiscard]] std::string StringifyUtlTsHashCount(const CUtlTSHashV1<Ty>& item) {
+        [[nodiscard]] [[maybe_unused]] std::string StringifyUtlTsHashCount(const CUtlTSHashV1<Ty>& item) {
             return util::PrettifyNum(item.Count());
         }
 
         template <typename Ty = CSchemaClassBinding>
-        [[nodiscard]] std::string StringifyUtlTsHashCount(const CUtlTSHashV2<Ty>& item) {
-            return std::format("{} (Allocated) | {} (Unallocated)", util::PrettifyNum(item.BlocksAllocated()), util::PrettifyNum(item.AllocatedSize()));
+        [[nodiscard]] [[maybe_unused]] std::string StringifyUtlTsHashCount(const CUtlTSHashV2<Ty>& item) {
+            return std::format("{} (Allocated) | {} (Unallocated)", util::PrettifyNum(item.BlocksAllocated()), util::PrettifyNum(item.PeakAllocSize()));
         }
     } // namespace
 
@@ -693,7 +693,7 @@ namespace sdk {
         //
         constexpr std::string_view dll_extension = ".dll";
         auto scope_name = current->BGetScopeName();
-        if (ends_with(scope_name.data(), dll_extension.data()))
+        if (ends_with(scope_name, dll_extension.data()))
             scope_name = scope_name.substr(0, scope_name.size() - dll_extension.size());
 
         // @note: @es3n1n: print debug info

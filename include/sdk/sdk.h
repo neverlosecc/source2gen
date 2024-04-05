@@ -7,7 +7,11 @@
 #include <sdk/interfaces/tier0/IMemAlloc.h>
 
 #include <sdk/interfaces/common/CBufferString.h>
+#include <sdk/interfaces/common/CThreadMutex.h>
+#include <sdk/interfaces/common/CThreadSpinRWLock.h>
 #include <sdk/interfaces/common/CThreadSpinMutex.h>
+#include <sdk/interfaces/common/CInterlockedInt.h>
+#include <sdk/interfaces/common/CUtlMemoryPoolBase.h>
 #include <sdk/interfaces/common/CUtlMap.h>
 #include <sdk/interfaces/common/CUtlMemory.h>
 #include <sdk/interfaces/common/CUtlRBTree.h>
