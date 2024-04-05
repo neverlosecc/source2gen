@@ -9,9 +9,93 @@ constexpr auto kUtlTsHashVersion = 2;
 constexpr auto kUtlTsHashVersion = 1;
 #endif
 
+//=============================================================================
+//
+// Threadsafe Hash
+//
+// Number of buckets must be a power of 2.
+// Key must be intp sized (32-bits on x32, 64-bits on x64)
+// Designed for a usage pattern where the data is semi-static, and there
+// is a well-defined point where we are guaranteed no queries are occurring.
+//
+// Insertions are added into a thread-safe list, and when Commit() is called,
+// the insertions are moved into a lock-free list
+//
+// Elements are never individually removed; clears must occur at a time
+// where we and guaranteed no queries are occurring
+//
 using UtlTsHashHandleT = std::uint64_t;
 
-template <class T, class Keytype = std::uint64_t, int BucketCount = 256>
+template <class T>
+class ITSHashConstructor {
+public:
+    virtual void Construct(T * pElement) = 0;
+};
+
+template <class T>
+class CDefaultTSHashConstructor : public ITSHashConstructor<T> {
+public:
+    virtual void Construct(T* pElement) {
+        ::Construct(pElement);
+    }
+};
+
+inline unsigned HashIntConventional(const int n) // faster but less effective
+{
+    // first byte
+    unsigned hash = 0xAAAAAAAA + (n & 0xFF);
+    // second byte
+    hash = (hash << 5) + hash + ((n >> 8) & 0xFF);
+    // third byte
+    hash = (hash << 5) + hash + ((n >> 16) & 0xFF);
+    // fourth byte
+    hash = (hash << 5) + hash + ((n >> 24) & 0xFF);
+
+    return hash;
+
+    /* this is the old version, which would cause a load-hit-store on every
+       line on a PowerPC, and therefore took hundreds of clocks to execute!
+
+    byte *p = (byte *)&n;
+    unsigned hash = 0xAAAAAAAA + *p++;
+    hash = ( ( hash << 5 ) + hash ) + *p++;
+    hash = ( ( hash << 5 ) + hash ) + *p++;
+    return ( ( hash << 5 ) + hash ) + *p;
+    */
+}
+template <class KEYTYPE = std::uint64_t>
+class CUtlTSHashGenericHash {
+public:
+    static int Hash(const KEYTYPE& key, int nBucketMask) {
+        int nHash = HashIntConventional((std::uint64_t)key);
+        if (nBucketMask <= USHRT_MAX) {
+            nHash ^= (nHash >> 16);
+        }
+        if (nBucketMask <= UCHAR_MAX) {
+            nHash ^= (nHash >> 8);
+        }
+        return (nHash & nBucketMask);
+    }
+
+    static bool Compare(const KEYTYPE& lhs, const KEYTYPE& rhs) {
+        return lhs == rhs;
+    }
+};
+
+template <class KEYTYPE>
+class CUtlTSHashUseKeyHashMethod {
+public:
+    static int Hash(const KEYTYPE& key, int nBucketMask) {
+        std::uint32_t nHash = key.HashValue();
+        return (nHash & nBucketMask);
+    }
+
+    static bool Compare(const KEYTYPE& lhs, const KEYTYPE& rhs) {
+        return lhs == rhs;
+    }
+};
+
+template <class T, class Keytype = std::uint64_t, int BucketCount = 256, class HashFuncs = CUtlTSHashGenericHash<Keytype>>
 class CUtlTSHashV1 {
 public:
     // Invalid handle.
@@ -82,8 +166,8 @@ public:
 };
 
 // @note: @og: notice this is hacky-way to obtain elements from CUtlTSHash but its works, so why not
-template <class T, class Keytype, int BucketCount>
-std::vector<T> CUtlTSHashV1<T, Keytype, BucketCount>::GetElements(void) {
+template <class T, class Keytype, int BucketCount, class HashFuncs>
+std::vector<T> CUtlTSHashV1<T, Keytype, BucketCount, HashFuncs>::GetElements(void) {
     std::vector<T> list;
 
     const int n_count = Count();
@@ -105,7 +189,7 @@ std::vector<T> CUtlTSHashV1<T, Keytype, BucketCount>::GetElements(void) {
     return list;
 }
 
-template <class T, class Keytype = std::uint64_t, int BucketCount = 256>
+template <class T, class Keytype = std::uint64_t, int BucketCount = 256, class HashFuncs = CUtlTSHashGenericHash<Keytype>>
 class CUtlTSHashV2 {
 public:
     // Invalid handle.
@@ -163,8 +247,8 @@ public:
     CInterlockedInt m_ContentionCheck;
 };
 
-template <class T, class Keytype, int BucketCount>
-std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount>::GetElements(int nFirstElement) {
+template <class T, class Keytype, int BucketCount, class HashFuncs>
+std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int nFirstElement) {
     int n_count = BlocksAllocated();
     std::vector<T> AllocatedList;
     if (n_count > 0) {
@@ -208,6 +292,7 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount>::GetElements(int nFirstElem
 
 template <class Ty>
 using CUtlTSHash = std::conditional_t<kUtlTsHashVersion == 1, CUtlTSHashV1<Ty>, CUtlTSHashV2<Ty>>;
+
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
