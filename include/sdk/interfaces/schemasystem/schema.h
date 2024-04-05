@@ -110,7 +110,7 @@ enum {
     #define SCHEMASYSTEM_TYPE 2
 
 constexpr auto kSchemaSystem_PAD0 = 0x190;
-constexpr auto kSchemaSystemTypeScope_PAD0 = 0x8;
+constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 constexpr auto kSchemaSystemTypeScope_PAD1 = 0x8;
 constexpr auto kSchemaSystemTypeScope_PAD2 = 0x8;
 
@@ -289,6 +289,8 @@ enum class SchemaBuiltinType_t : std::uint32_t {
     Schema_Builtin_count
 };
 
+constexpr auto kSchemaBuiltinTypeCount = static_cast<std::size_t>(SchemaBuiltinType_t::Schema_Builtin_count);
+
 class CSchemaType {
 public:
     bool IsValid(void) {
@@ -327,7 +329,6 @@ public:
 
     // find out to what class pointer points.
     CSchemaType* GetRefClass();
-
 public:
     std::uintptr_t* vftable; // 0x0000
     const char* m_pszName; // 0x0008
@@ -394,7 +395,7 @@ enum class SchemaAtomicFunctionIndex : std::int32_t {
     Schema_Atomic_Set_Count,
 };
 
-using SchemaAtomicFunction = void(*)(SchemaAtomicFunctionIndex, void*, void*, void*);
+using SchemaAtomicFunction = void (*)(SchemaAtomicFunctionIndex, void*, void*, void*);
 
 class CSchemaType_Atomic_CollectionOfT : public CSchemaType_Atomic_T {
 public:
@@ -770,28 +771,28 @@ public:
         return m_DeclaredEnums.m_Map;
     }
 #endif
-
 private:
     void* vftable = nullptr;
-    std::array<char, 256> m_szName = {}; // //0x0008
+    std::array<char, 256> m_szName = {}; // 0x0008
 
 #if defined(CS2) || defined(DOTA2)
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
-    char pad_0x0110[kSchemaSystemTypeScope_PAD0] = {}; // 0x0110
-    std::array<CSchemaType_Builtin, static_cast<std::size_t>(SchemaBuiltinType_t::Schema_Builtin_count)> m_BuiltinTypes = {};
-    CSchemaPtrMap<CSchemaType*, CSchemaType_Ptr*> m_Ptrs;
-    CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics;
-    CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT;
-    CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_CollectionOfT*> m_AtomicsCollectionOfT;
-    CSchemaPtrMap<AtomicTypeInfo_TF_t, CSchemaType_Atomic_TF*> m_AtomicsTF;
-    CSchemaPtrMap<AtomicTypeInfo_TT_t, CSchemaType_Atomic_TT*> m_AtomicsTT;
-    CSchemaPtrMap<AtomicTypeInfo_TTF_t, CSchemaType_Atomic_TTF*> m_AtomicsTTF;
-    CSchemaPtrMap<AtomicTypeInfo_I_t, CSchemaType_Atomic_I*> m_AtomicsI;
+    bool m_bBuiltinTypesInitialized = false; // 0x0110
+    char pad_0111[kSchemaSystemTypeScope_PAD0]; // 0x0111
+    std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118
+    CSchemaPtrMap<CSchemaType*, CSchemaType_Ptr*> m_Ptrs; // 0x0348
+    CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
+    CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT; // 0x03A8
+    CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_CollectionOfT*> m_AtomicsCollectionOfT; // 0x03D8
+    CSchemaPtrMap<AtomicTypeInfo_TF_t, CSchemaType_Atomic_TF*> m_AtomicsTF; // 0x0408
+    CSchemaPtrMap<AtomicTypeInfo_TT_t, CSchemaType_Atomic_TT*> m_AtomicsTT; // 0x0438
+    CSchemaPtrMap<AtomicTypeInfo_TTF_t, CSchemaType_Atomic_TTF*> m_AtomicsTTF; // 0x0468
+    CSchemaPtrMap<AtomicTypeInfo_I_t, CSchemaType_Atomic_I*> m_AtomicsI; // 0x0498
     CSchemaPtrMap<std::uint16_t, CSchemaType_DeclaredClass*> m_DeclaredClasses; // 0x04C8
     CSchemaPtrMap<std::uint16_t, CSchemaType_DeclaredEnum*> m_DeclaredEnums; // 0x04F8
-    CSchemaPtrMap<int, const SchemaAtomicTypeInfo_t*> m_AtomicInfos;
-    CSchemaPtrMap<TypeAndCountInfo_t, CSchemaType_FixedArray*> m_FixedArrays;
-    CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields;
+    CSchemaPtrMap<int, const SchemaAtomicTypeInfo_t*> m_AtomicInfos; // 0x0528
+    CSchemaPtrMap<TypeAndCountInfo_t, CSchemaType_FixedArray*> m_FixedArrays; // 0x0558
+    CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields; // 0x0588
 #endif
 
     char pad_0x0108[kSchemaSystemTypeScope_PAD1] = {}; // 0x0108
