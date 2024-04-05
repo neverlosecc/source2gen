@@ -1,6 +1,7 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include "CUtlRBTree.h"
 
 struct base_utlmap_t {
 public:

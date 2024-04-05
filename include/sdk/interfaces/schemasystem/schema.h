@@ -5,6 +5,7 @@
 #if defined(SBOX)
 // untested, CSchemaType::m_pSchemaType might be wrong
 
+constexpr auto kSchemaSystemVersion = 1;
 constexpr auto kSchemaSystem_PAD0 = 0x5420;
 constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
 constexpr auto kSchemaSystemTypeScope_PAD2 = 0x27FC;
@@ -21,6 +22,7 @@ enum {
 #elif defined(ARTIFACT2)
 // untested, CSchemaType::m_pSchemaType might be wrong
 
+constexpr auto kSchemaSystemVersion = 1;
 constexpr auto kSchemaSystem_PAD0 = 0x5430;
 constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
 constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2804;
@@ -37,6 +39,7 @@ enum {
 #elif defined(ARTIFACT1)
 // untested, CSchemaType::m_pSchemaType might be wrong
 
+constexpr auto kSchemaSystemVersion = 1;
 constexpr auto kSchemaSystem_PAD0 = 0x4428;
 constexpr auto kSchemaSystemTypeScope_PAD1 = 0x4B8;
 constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2001;
@@ -54,6 +57,7 @@ enum {
 
 // untested, CSchemaType::m_pSchemaType might be wrong
 
+constexpr auto kSchemaSystemVersion = 1;
 constexpr auto kSchemaSystem_PAD0 = 0x5420;
 constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
 constexpr auto kSchemaSystemTypeScope_PAD2 = 0x27FC;
@@ -69,6 +73,7 @@ enum {
 
 #elif defined(DESKJOB)
 
+constexpr auto kSchemaSystemVersion = 1;
 constexpr auto kSchemaSystem_PAD0 = 0x3A0;
 constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
 constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2804;
@@ -88,8 +93,7 @@ enum {
     #error unimplemented
 #elif defined(DOTA2)
 
-    #define SCHEMASYSTEM_TYPE 2
-
+constexpr auto kSchemaSystemVersion = 2;
 constexpr auto kSchemaSystem_PAD0 = 0x190;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x8;
 constexpr auto kSchemaSystemTypeScope_PAD1 = 0x8;
@@ -106,8 +110,7 @@ enum {
 
 #elif defined(CS2)
 
-    #define SCHEMASYSTEM_TYPE 2
-
+constexpr auto kSchemaSystemVersion = 2;
 constexpr auto kSchemaSystem_PAD0 = 0x190;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 constexpr auto kSchemaSystemTypeScope_PAD1 = 0x8;
@@ -239,11 +242,11 @@ static_assert(sizeof(SchemaEnumInfoData_t) == 0x48);
 
 class CSchemaEnumInfo : public SchemaEnumInfoData_t {
 public:
-    std::vector<SchemaEnumeratorInfoData_t> GetEnumeratorValues() {
+    [[nodiscard]] std::vector<SchemaEnumeratorInfoData_t> GetEnumeratorValues() const {
         return {m_pEnumerators, m_pEnumerators + m_nEnumeratorCount};
     }
 
-    std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() {
+    [[nodiscard]] std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() const {
         return {m_pStaticMetadata, m_pStaticMetadata + m_nStaticMetadataSize};
     }
 };
@@ -292,11 +295,11 @@ constexpr auto kSchemaBuiltinTypeCount = static_cast<std::size_t>(SchemaBuiltinT
 
 class CSchemaType {
 public:
-    bool IsValid(void) {
+    [[nodiscard]] bool IsValid(void) {
         return Virtual::Get<bool (*)(void*)>(this, 0)(this);
     }
 
-    std::string_view ToString() {
+    [[nodiscard]] std::string ToString() {
         static CBufferStringGrowable<1024> szBuf;
         (void)Virtual::Get<const char*(__thiscall*)(void*, CBufferString&, bool bDontClearBuff)>(this, 1)(this, szBuf, false);
         return szBuf.Get();
@@ -307,28 +310,30 @@ public:
     }
 
     // @note: @og: gets size with align
-    bool GetSizeWithAlignOf(int* nOutSize, std::uint8_t* unOutAlign) {
+    [[nodiscard]] bool GetSizeWithAlignOf(int* nOutSize, std::uint8_t* unOutAlign) {
         return reinterpret_cast<int (*)(void*, int*, std::uint8_t*)>(vftable[kSchemaType_GetSizeWithAlignOf])(this, nOutSize, unOutAlign);
     }
 
-    bool CanReinterpretAs(CSchemaType* pType) {
+    [[nodiscard]] bool CanReinterpretAs(CSchemaType* pType) {
         return reinterpret_cast<bool (*)(void*, CSchemaType*)>(vftable[kSchemaType_GetSizeWithAlignOf + 1])(this, pType);
     }
 
     // @note: @og: Can be used on CSchemaClassInfo. (Uses multiple inheritance depth verify that current CSchemaType->m_pClassInfo is inherits from pType)
-    bool IsA(CSchemaType* pType) {
+    [[nodiscard]] bool IsA(CSchemaType* pType) {
         return Virtual::Get<bool (*)(void*, CSchemaType*)>(this, 7)(this, pType);
     }
 
 public:
     // @note: @og: wrapper around GetSizes, this one gets CSchemaClassInfo->m_nSize
-    bool GetSize(int* nOutSize) {
+    [[nodiscard]] std::optional<int> GetSize() {
         std::uint8_t align_of = 0;
-        return GetSizeWithAlignOf(nOutSize, &align_of);
+        int result = 0;
+        return GetSizeWithAlignOf(&result, &align_of) ? std::make_optional(result) : std::nullopt;
     }
 
-    // find out to what class pointer points.
-    CSchemaType* GetRefClass();
+    // @todo: @og: find out to what class pointer points.
+    [[nodiscard]] CSchemaType* GetRefClass();
+
 public:
     std::uintptr_t* vftable; // 0x0000
     const char* m_pszName; // 0x0008
@@ -343,6 +348,17 @@ class CSchemaType_Ptr : public CSchemaType {
 public:
     CSchemaType* m_pObjectType;
 };
+
+[[nodiscard]] inline CSchemaType* CSchemaType::GetRefClass() {
+    if (m_unTypeCategory != ETypeCategory::Schema_Ptr)
+        return nullptr;
+
+    auto ptr = reinterpret_cast<CSchemaType_Ptr*>(this)->m_pObjectType;
+    while (ptr && ptr->m_unTypeCategory == ETypeCategory::Schema_Ptr)
+        ptr = reinterpret_cast<CSchemaType_Ptr*>(ptr)->m_pObjectType;
+
+    return ptr;
+}
 
 class CSchemaType_Builtin : public CSchemaType {
 public:
@@ -466,17 +482,6 @@ struct AtomicTypeInfo_I_t {
     int m_nInteger;
 };
 
-inline CSchemaType* CSchemaType::GetRefClass() {
-    if (m_unTypeCategory != ETypeCategory::Schema_Ptr)
-        return nullptr;
-
-    auto ptr = reinterpret_cast<CSchemaType_Ptr*>(this)->m_pObjectType;
-    while (ptr && ptr->m_unTypeCategory == ETypeCategory::Schema_Ptr)
-        ptr = reinterpret_cast<CSchemaType_Ptr*>(ptr)->m_pObjectType;
-
-    return ptr;
-}
-
 struct SchemaClassFieldData_t {
     const char* m_pszName; // 0x0000
     CSchemaType* m_pSchemaType; // 0x0008
@@ -523,7 +528,7 @@ public:
     std::int16_t m_nStaticMetadataSize; // 0x0020
     std::uint8_t m_unAlignOf; // 0x0022
     std::uint8_t m_bHasBaseClass; // 0x0023
-    std::int16_t m_nTotalClassSize; // 0x0024 // @note: @og: if there no derived or base class then it will be 1 otherwise derived class size + 1.
+    std::int16_t m_nTotalClassSize; // 0x0024 // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
     std::int16_t m_nDerivedClassSize; // 0x0026
     SchemaClassFieldData_t* m_pFields; // 0x0028
     SchemaStaticFieldData_t* m_pStaticFields; // 0x0030
@@ -557,15 +562,15 @@ public:
         return std::nullopt;
     }
 
-    std::vector<SchemaClassFieldData_t> GetFields() {
+    [[nodiscard]] std::vector<SchemaClassFieldData_t> GetFields() {
         return {m_pFields, m_pFields + m_nFieldSize};
     }
 
-    std::vector<SchemaStaticFieldData_t> GetStaticFields() {
+    [[nodiscard]] std::vector<SchemaStaticFieldData_t> GetStaticFields() {
         return {m_pStaticFields, m_pStaticFields + m_nStaticFieldsSize};
     }
 
-    std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() {
+    [[nodiscard]] std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() {
         return {m_pStaticMetadata, m_pStaticMetadata + m_nStaticMetadataSize};
     }
 
@@ -645,7 +650,7 @@ public:
         return reinterpret_cast<Fn>(m_pFn)(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
     }
 
-    CSchemaClassBinding* SchemaClassBinding(void* entity) const {
+    [[nodiscard]] CSchemaClassBinding* SchemaClassBinding(void* entity) const {
         using Fn = CSchemaClassBinding* (*)(SchemaClassInfoFunctionIndex, void*);
         return reinterpret_cast<Fn>(m_pFn)(SchemaClassInfoFunctionIndex::kSchemaDynamicBinding, entity);
     }
@@ -673,86 +678,88 @@ public:
         return Virtual::Get<void* (*)(CSchemaSystemTypeScope*, const char*, void*)>(this, 1)(this, szName.data(), a2);
     }
 
-    CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) {
-#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
-        CSchemaClassInfo* class_info;
+    [[nodiscard]] CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) {
+        if constexpr (kSchemaSystemVersion == 2) {
+            CSchemaClassInfo* class_info;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, szName.data());
-        return class_info;
-#else
-        return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());
-#endif
+            Virtual::Get<void(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, szName.data());
+            return class_info;
+        } else {
+            return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());
+        }
     }
 
-    CSchemaEnumInfo* FindDeclaredEnum(const std::string_view szName) {
-#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
-        CSchemaEnumInfo* enum_info;
+    [[nodiscard]] CSchemaEnumInfo* FindDeclaredEnum(const std::string_view szName) {
+        if constexpr (kSchemaSystemVersion == 2) {
+            CSchemaEnumInfo* enum_info;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaEnumInfo**, const char*)>(this, 3)(this, &enum_info, szName.data());
-        return enum_info;
-#else
-        return Virtual::Get<CSchemaEnumInfo*(__thiscall*)(void*, const char*)>(this, 3)(this, szName.data());
-#endif
+            Virtual::Get<void(__thiscall*)(void*, CSchemaEnumInfo**, const char*)>(this, 3)(this, &enum_info, szName.data());
+            return enum_info;
+        } else {
+            return Virtual::Get<CSchemaEnumInfo*(__thiscall*)(void*, const char*)>(this, 3)(this, szName.data());
+        }
     }
 
-    CSchemaType* FindSchemaTypeByName(const std::string_view szName) {
-#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
-        CSchemaType* schema_type;
+    [[nodiscard]] CSchemaType* FindSchemaTypeByName(const std::string_view szName) {
+        if constexpr (kSchemaSystemVersion == 2) {
+            CSchemaType* schema_type;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaType**, const char*)>(this, 4)(this, &schema_type, szName.data());
-        return schema_type;
-#else
-        return Virtual::Get<CSchemaType*(__thiscall*)(void*, const char*)>(this, 4)(this, szName.data());
-#endif
+            Virtual::Get<void(__thiscall*)(void*, CSchemaType**, const char*)>(this, 4)(this, &schema_type, szName.data());
+            return schema_type;
+        } else {
+            return Virtual::Get<CSchemaType*(__thiscall*)(void*, const char*)>(this, 4)(this, szName.data());
+        }
     }
 
-    CSchemaType_Builtin* Type_Builtin(const SchemaBuiltinType_t type) {
-#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
-        CSchemaType_Builtin* type_builtin;
+    [[nodiscard]] CSchemaType_Builtin* Type_Builtin(const SchemaBuiltinType_t type) {
+        if constexpr (kSchemaSystemVersion == 2) {
+            CSchemaType_Builtin* type_builtin;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaType_Builtin**, SchemaBuiltinType_t)>(this, 5)(this, &type_builtin, type);
-        return type_builtin;
-#else
-        return Virtual::Get<CSchemaType_Builtin*(__thiscall*)(void*, SchemaBuiltinType_t)>(this, 5)(this, type);
-#endif
+            Virtual::Get<void(__thiscall*)(void*, CSchemaType_Builtin**, SchemaBuiltinType_t)>(this, 5)(this, &type_builtin, type);
+            return type_builtin;
+        } else {
+            return Virtual::Get<CSchemaType_Builtin*(__thiscall*)(void*, SchemaBuiltinType_t)>(this, 5)(this, type);
+        }
     }
 
-    CSchemaType_DeclaredClass* Type_DeclaredClass(const std::string_view szName) {
-#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
-        CSchemaType_DeclaredClass* declared_class;
+    [[nodiscard]] CSchemaType_DeclaredClass* Type_DeclaredClass(const std::string_view szName) {
+        if constexpr (kSchemaSystemVersion == 2) {
+            CSchemaType_DeclaredClass* declared_class;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredClass**, const char*)>(this, kSchemaSystemTypeScope_DeclaredClass)(this, &declared_class,
-                                                                                                                                     szName.data());
+            Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredClass**, const char*)>(this, kSchemaSystemTypeScope_DeclaredClass)(
+                this, &declared_class, szName.data());
 
-        return declared_class;
-#else
-        return Virtual::Get<CSchemaType_DeclaredClass*(__thiscall*)(void*, const char*)>(this, kSchemaSystemTypeScope_DeclaredClass)(this, szName.data());
-#endif
+            return declared_class;
+        } else {
+            return Virtual::Get<CSchemaType_DeclaredClass*(__thiscall*)(void*, const char*)>(this, kSchemaSystemTypeScope_DeclaredClass)(this,
+                                                                                                                                         szName.data());
+        }
     }
 
-    CSchemaType_DeclaredEnum* Type_DeclaredEnum(const std::string_view szName) {
-#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
-        CSchemaType_DeclaredEnum* declared_class;
+    [[nodiscard]] CSchemaType_DeclaredEnum* Type_DeclaredEnum(const std::string_view szName) {
+        if constexpr (kSchemaSystemVersion == 2) {
+            CSchemaType_DeclaredEnum* declared_class;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredEnum**, const char*)>(this, kSchemaSystemTypeScope_DeclaredEnum)(this, &declared_class,
-                                                                                                                                   szName.data());
+            Virtual::Get<void(__thiscall*)(void*, CSchemaType_DeclaredEnum**, const char*)>(this, kSchemaSystemTypeScope_DeclaredEnum)(
+                this, &declared_class, szName.data());
 
-        return declared_class;
-#else
-        return Virtual::Get<CSchemaType_DeclaredEnum*(__thiscall*)(void*, const char*)>(this, kSchemaSystemTypeScope_DeclaredEnum)(this, szName.data());
-#endif
+            return declared_class;
+        } else {
+            return Virtual::Get<CSchemaType_DeclaredEnum*(__thiscall*)(void*, const char*)>(this, kSchemaSystemTypeScope_DeclaredEnum)(this,
+                                                                                                                                       szName.data());
+        }
     }
 
-    const char* GetScopeName() {
+    [[nodiscard]] const char* GetScopeName() {
         return Virtual::Get<const char*(__thiscall*)(void*)>(this, kSchemaSystemTypeScope_GetScopeName)(this);
     }
 
-    bool IsGlobalScope() {
+    [[nodiscard]] bool IsGlobalScope() {
         return Virtual::Get<bool(__thiscall*)(void*)>(this, kSchemaSystemTypeScope_IsGlobalScope)(this);
     }
 
-    std::string_view BGetScopeName() {
-        return {m_szName.data()};
+    [[nodiscard]] std::string BGetScopeName() {
+        return m_szName.data();
     }
 
     [[nodiscard]] CUtlTSHash<CSchemaClassBinding*> GetClassBindings() const {
@@ -810,67 +817,67 @@ enum SchemaTypeScope_t : std::uint8_t {
 
 class CSchemaSystem {
 public:
-    CSchemaSystemTypeScope* GlobalTypeScope(void) {
+    [[nodiscard]] CSchemaSystemTypeScope* GlobalTypeScope(void) {
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*)>(this, 11)(this);
     }
 
-    CSchemaSystemTypeScope* FindTypeScopeForModule(const std::string_view pszModuleName) {
+    [[nodiscard]] CSchemaSystemTypeScope* FindTypeScopeForModule(const std::string_view pszModuleName) {
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*, const char*, void*)>(this, 13)(this, pszModuleName.data(), nullptr);
     }
 
-    CSchemaSystemTypeScope* GetTypeScopeForBinding(const SchemaTypeScope_t nType, const std::string_view pszBinding) {
+    [[nodiscard]] CSchemaSystemTypeScope* GetTypeScopeForBinding(const SchemaTypeScope_t nType, const std::string_view pszBinding) {
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*, SchemaTypeScope_t, const char*)>(this, 14)(this, nType, pszBinding.data());
     }
 
     // @note: @og: E.g: engine2.dll!CEntityComponent
-    CSchemaClassBinding* FindClassByScopedName(const std::string_view pszScopedName) {
-#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
-        CSchemaClassBinding* binding;
+    [[nodiscard]] CSchemaClassBinding* FindClassByScopedName(const std::string_view pszScopedName) {
+        if constexpr (kSchemaSystemVersion == 2) {
+            CSchemaClassBinding* binding;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaClassBinding**, const char*)>(this, 16)(this, &binding, pszScopedName.data());
-        return binding;
-#else
-        return Virtual::Get<CSchemaClassBinding*(__thiscall*)(void*, const char*)>(this, 16)(this, pszScopedName.data());
-#endif
+            Virtual::Get<void(__thiscall*)(void*, CSchemaClassBinding**, const char*)>(this, 16)(this, &binding, pszScopedName.data());
+            return binding;
+        } else {
+            return Virtual::Get<CSchemaClassBinding*(__thiscall*)(void*, const char*)>(this, 16)(this, pszScopedName.data());
+        }
     }
 
-    std::string_view ScopedNameForClass(CSchemaClassBinding* pBinding) {
+    [[nodiscard]] std::string ScopedNameForClass(CSchemaClassBinding* pBinding) {
         static CBufferStringGrowable<1024> szBuf;
-        [[maybe_unused]] auto res = Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*, CBufferString*)>(this, 17)(this, pBinding, &szBuf);
+        Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*, CBufferString*)>(this, 17)(this, pBinding, &szBuf);
         return szBuf.Get();
     }
 
     // @note: @og: E.g: engine2.dll!SpawnDebugRestrictionOverrideState_t
-    CSchemaEnumBinding* FindEnumByScopedName(const std::string_view pszScopedName) {
-#if defined(SCHEMASYSTEM_TYPE) && SCHEMASYSTEM_TYPE == 2
-        CSchemaEnumBinding* binding;
+    [[nodiscard]] CSchemaEnumBinding* FindEnumByScopedName(const std::string_view pszScopedName) {
+        if constexpr (kSchemaSystemVersion == 2) {
+            CSchemaEnumBinding* binding;
 
-        Virtual::Get<void(__thiscall*)(void*, CSchemaEnumBinding**, const char*)>(this, 18)(this, &binding, pszScopedName.data());
-        return binding;
-#else
-        return Virtual::Get<CSchemaEnumBinding*(__thiscall*)(void*, const char*)>(this, 18)(this, pszScopedName.data());
-#endif
+            Virtual::Get<void(__thiscall*)(void*, CSchemaEnumBinding**, const char*)>(this, 18)(this, &binding, pszScopedName.data());
+            return binding;
+        } else {
+            return Virtual::Get<CSchemaEnumBinding*(__thiscall*)(void*, const char*)>(this, 18)(this, pszScopedName.data());
+        }
     }
 
-    std::string_view ScopedNameForEnum(CSchemaEnumBinding* pBinding) {
+    [[nodiscard]] std::string GetScopedNameForEnum(CSchemaEnumBinding* pBinding) {
         static CBufferStringGrowable<1024> szBuf;
-        [[maybe_unused]] auto res = Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*, CBufferString*)>(this, 19)(this, pBinding, &szBuf);
+        Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*, CBufferString*)>(this, 19)(this, pBinding, &szBuf);
         return szBuf.Get();
     }
 
-    const char* GetClassInfoBinaryName(CSchemaClassBinding* pBinding) {
+    [[nodiscard]] const char* GetClassInfoBinaryName(CSchemaClassBinding* pBinding) {
         return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, 22)(this, pBinding);
     }
 
-    const char* GetClassProjectName(CSchemaClassBinding* pBinding) {
+    [[nodiscard]] const char* GetClassProjectName(CSchemaClassBinding* pBinding) {
         return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, 23)(this, pBinding);
     }
 
-    const char* GetEnumBinaryName(CSchemaEnumBinding* pBinding) {
+    [[nodiscard]] const char* GetEnumBinaryName(CSchemaEnumBinding* pBinding) {
         return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, 24)(this, pBinding);
     }
 
-    const char* GetEnumProjectName(CSchemaEnumBinding* pBinding) {
+    [[nodiscard]] const char* GetEnumProjectName(CSchemaEnumBinding* pBinding) {
         return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, 25)(this, pBinding);
     }
 
@@ -878,11 +885,11 @@ public:
         return Virtual::Get<CSchemaClassBinding*(__thiscall*)(void*, CSchemaClassBinding**)>(this, kSchemaSystem_ValidateClasses)(this, ppBinding);
     }
 
-    bool SchemaSystemIsReady() {
+    [[nodiscard]] bool IsSchemaSystemReady() {
         return Virtual::Get<bool(__thiscall*)(void*)>(this, 26)(this);
     }
 
-    [[nodiscard]] CUtlVector<CSchemaSystemTypeScope*> GetTypeScopes(void) const {
+    [[nodiscard]] CUtlVector<CSchemaSystemTypeScope*> GetTypeScopes() const {
         return m_TypeScopes;
     }
 
@@ -912,7 +919,7 @@ private:
     std::size_t m_nIgnoredBytes = 0; // 0x02CC
 
 public:
-    static CSchemaSystem* GetInstance(void) {
+    [[nodiscard]] static CSchemaSystem* GetInstance(void) {
         return sdk::GetInterface<CSchemaSystem>("schemasystem.dll", "SchemaSystem_0");
     }
 };
