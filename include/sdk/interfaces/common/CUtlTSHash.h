@@ -108,7 +108,7 @@ public:
         return m_EntryMemory.m_BlocksPerBlob;
     }
 
-    [[nodiscard]] int Count() const {
+    [[nodiscard]] int PeakAlloc() const {
         return m_EntryMemory.m_PeakAlloc;
     }
 
@@ -170,7 +170,7 @@ template <class T, class Keytype, int BucketCount, class HashFuncs>
 std::vector<T> CUtlTSHashV1<T, Keytype, BucketCount, HashFuncs>::GetElements(void) {
     std::vector<T> list;
 
-    const int n_count = Count();
+    const int n_count = PeakAlloc();
     auto n_index = 0;
 
     if (!m_EntryMemory.m_pBlobHead)
@@ -201,14 +201,14 @@ public:
     [[nodiscard]] int BlockSize() const {
         return m_EntryMemory.m_BlockSize;
     }
-    [[nodiscard]] int PeakAllocSize() const {
+    [[nodiscard]] int PeakAlloc() const {
         return m_EntryMemory.m_PeakAlloc;
     }
     [[nodiscard]] int BlocksAllocated() const {
         return m_EntryMemory.m_BlocksAllocated;
     }
     [[nodiscard]] int Count() const {
-        return BlocksAllocated() == 0 ? PeakAllocSize() : BlocksAllocated();
+        return BlocksAllocated() == 0 ? PeakAlloc() : BlocksAllocated();
     }
 
     // Returns elements in the table
@@ -269,7 +269,7 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int
     }
 
     /// @note: @og: basically, its hacky-way to obtain first-time commited information to memory
-    n_count = PeakAllocSize();
+    n_count = PeakAlloc();
     std::vector<T> unAllocatedList;
     if (n_count > 0) {
         int nIndex = 0;
