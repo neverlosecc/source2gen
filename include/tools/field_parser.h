@@ -18,6 +18,7 @@ namespace field_parser {
         std::vector<std::size_t> m_array_sizes = {};
 
         std::size_t m_bitfield_size = 0ull; // bitfield size, set to 0 if var isn't a bitfield
+
     public:
         bool is_bitfield() const noexcept {
             return static_cast<bool>(m_bitfield_size);
@@ -26,6 +27,7 @@ namespace field_parser {
         bool is_array() const noexcept {
             return !m_array_sizes.empty();
         }
+
     public:
         std::size_t total_array_size() const {
             std::size_t result = 0ull;
@@ -41,6 +43,7 @@ namespace field_parser {
 
             return result;
         }
+
     public:
         std::string formatted_array_sizes() const {
             std::string result;

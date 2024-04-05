@@ -149,6 +149,7 @@ public:
     CTree* AccessTree() {
         return &m_Tree;
     }
+
 protected:
     CTree m_Tree;
 };
@@ -168,4 +169,3 @@ protected:
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-

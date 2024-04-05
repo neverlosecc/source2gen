@@ -317,6 +317,7 @@ public:
     bool IsA(CSchemaType* pType) {
         return Virtual::Get<bool (*)(void*, CSchemaType*)>(this, 7)(this, pType);
     }
+
 public:
     // @note: @og: wrapper around GetSizes, this one gets CSchemaClassInfo->m_nSize
     bool GetSize(int* nOutSize) {
@@ -393,7 +394,7 @@ enum class SchemaAtomicFunctionIndex : std::int32_t {
     Schema_Atomic_Set_Count,
 };
 
-using SchemaAtomicFunction = void(*)(SchemaAtomicFunctionIndex, void*, void*, void*);
+using SchemaAtomicFunction = void (*)(SchemaAtomicFunctionIndex, void*, void*, void*);
 
 class CSchemaType_Atomic_CollectionOfT : public CSchemaType_Atomic_T {
 public:
@@ -510,6 +511,7 @@ public:
         kDestroyInstanceWithMemory = 6,
         kSchemaDynamicBinding = 7
     };
+
 public:
     SchemaClassInfoData_t* m_pSelf; // 0x0000
     const char* m_pszName; // 0x0008
@@ -898,6 +900,7 @@ public:
     [[nodiscard]] std::int32_t GetIgnoredBytes() const {
         return m_nIgnoredBytes;
     }
+
 private:
     char pad_0x0000[kSchemaSystem_PAD0] = {}; // 0x0000
     CUtlVector<CSchemaSystemTypeScope*> m_TypeScopes = {}; // SCHEMASYSTEM_TYPE_SCOPES_OFFSET
@@ -906,6 +909,7 @@ private:
     std::int32_t m_nIgnored = 0; // 0x02C4
     std::int32_t m_nRedundant = 0; // 0x02C8
     std::size_t m_nIgnoredBytes = 0; // 0x02CC
+
 public:
     static CSchemaSystem* GetInstance(void) {
         return sdk::GetInterface<CSchemaSystem>("schemasystem.dll", "SchemaSystem_0");

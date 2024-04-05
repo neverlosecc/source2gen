@@ -335,10 +335,9 @@ namespace sdk {
 
                     class_dump.AddRefToClass(field->m_pSchemaType);
 
-                    auto field_class =
-                        std::ranges::find_if(classes_to_dump, [field](const class_t& cls) {
-                            return cls.target_ == reinterpret_cast<CSchemaType_DeclaredClass*>(field->m_pSchemaType)->m_pClassInfo;
-                        });
+                    auto field_class = std::ranges::find_if(classes_to_dump, [field](const class_t& cls) {
+                        return cls.target_ == reinterpret_cast<CSchemaType_DeclaredClass*>(field->m_pSchemaType)->m_pClassInfo;
+                    });
                     if (field_class != classes_to_dump.end())
                         field_class->used_count_++;
                 }

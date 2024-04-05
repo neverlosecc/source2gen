@@ -26,6 +26,7 @@ public:
     int PeakCount() const {
         return m_nPeakAlloc;
     }
+
 private:
     int32_t m_nBlocksSize = 0; // 0x0000
     int32_t m_nBlocksPerBlob = 0; // 0x0004
@@ -54,6 +55,7 @@ public:
 
     // Returns elements in the table
     std::vector<T> GetElements(void);
+
 public:
     // Templatized for memory tracking purposes
     template <typename DataT>
@@ -85,6 +87,7 @@ public:
         auto GetList() {
             return m_list_;
         }
+
     private:
         char pad_0x0000[0x18]; // 0x0000
         std::array<HashFixedDataT, 128> m_list_;
@@ -145,6 +148,7 @@ public:
         std::uint32_t m_writerId;
         std::int32_t m_nReaders;
     };
+
 public:
     void* m_pThreadSpin;
     LockInfo_t m_lockInfo;
@@ -174,6 +178,7 @@ public:
 
     // Returns elements in the table
     std::vector<T> GetElements(int nFirstElement = 0);
+
 public:
     class Blob_t {
     public:
