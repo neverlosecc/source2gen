@@ -725,10 +725,6 @@ class CSchemaPtrMap {
 public:
     CUtlMap<K, V> m_Map;
     CThreadFastMutex m_Mutex;
-
-#if !defined(CS2) && !defined(DOTA2)
-    char pad0x0020[8];
-#endif
 };
 
 class CSchemaSystemTypeScope {
@@ -870,10 +866,7 @@ private:
     CSchemaPtrMap<TypeAndCountInfo_t, CSchemaType_FixedArray*> m_FixedArrays; // 0x0558
     CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields; // 0x0588
 
-    
-#if defined(CS2)
-    std::uint64_t m_unUnknown1 = 0;
-#elif not defined(DOTA2)
+#if !defined(DOTA2) && !defined(CS2)
     CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 

@@ -11,6 +11,7 @@
 #include <sdk/interfaces/common/CThreadSpinRWLock.h>
 #include <sdk/interfaces/common/CThreadSpinMutex.h>
 #include <sdk/interfaces/common/CInterlockedInt.h>
+#include <sdk/interfaces/common/CTSList.h>
 #include <sdk/interfaces/common/CUtlMemoryPoolBase.h>
 #include <sdk/interfaces/common/CUtlMap.h>
 #include <sdk/interfaces/common/CUtlMemory.h>
