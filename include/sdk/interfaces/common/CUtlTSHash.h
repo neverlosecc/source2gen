@@ -161,8 +161,11 @@ public:
 
     CUtlMemoryPoolBase m_EntryMemory;
     std::array<HashBucket_t, BucketCount> m_aBuckets;
+
+#if defined(DOTA2)
     bool m_bNeedsCommit;
     CInterlockedInt m_ContentionCheck;
+#endif
 };
 
 // @note: @og: notice this is hacky-way to obtain elements from CUtlTSHash but its works, so why not
@@ -178,7 +181,7 @@ std::vector<T> CUtlTSHashV1<T, Keytype, BucketCount, HashFuncs>::GetElements(voi
 
     auto unallocated_data = reinterpret_cast<CBlob_Unallocated_t*>(m_EntryMemory.m_pBlobHead);
     for (auto element = unallocated_data; element; element = element->m_pNext) {
-        for (auto i = 0; i < BlockSize() && i != n_count; i++) {
+        for (auto i = 0; i < BucketCount; i++) {
             list.emplace_back(element->m_List.at(i).m_Data);
             n_index++;
 
@@ -245,6 +248,7 @@ public:
     std::array<HashBucket_t, BucketCount> m_aBuckets;
     bool m_bNeedsCommit;
     CInterlockedInt m_ContentionCheck;
+    std::int64_t m_Unk1;
 };
 
 template <class T, class Keytype, int BucketCount, class HashFuncs>
