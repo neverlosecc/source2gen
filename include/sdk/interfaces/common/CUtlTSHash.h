@@ -248,7 +248,6 @@ public:
     std::array<HashBucket_t, BucketCount> m_aBuckets;
     bool m_bNeedsCommit;
     CInterlockedInt m_ContentionCheck;
-    std::int64_t m_Unk1;
 };
 
 template <class T, class Keytype, int BucketCount, class HashFuncs>
@@ -277,8 +276,7 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int
     std::vector<T> unAllocatedList;
     if (n_count > 0) {
         int nIndex = 0;
-
-        auto m_unBuckets = reinterpret_cast<HashAllocatedBlob_t*>(m_EntryMemory.m_pHeadOfFreeList);
+        auto m_unBuckets = *reinterpret_cast<HashAllocatedBlob_t**>(&m_EntryMemory.m_FreeBlocks.m_Head.value32);
         for (auto unallocated_element = m_unBuckets; unallocated_element; unallocated_element = unallocated_element->m_unAllocatedNext) {
             if (unallocated_element->m_unAllocatedData == nullptr)
                 continue;

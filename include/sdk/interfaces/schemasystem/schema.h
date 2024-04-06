@@ -725,10 +725,6 @@ class CSchemaPtrMap {
 public:
     CUtlMap<K, V> m_Map;
     CThreadFastMutex m_Mutex;
-
-#if !defined(CS2) && !defined(DOTA2)
-    char pad0x0020[8];
-#endif
 };
 
 class CSchemaSystemTypeScope {
@@ -846,7 +842,6 @@ private:
     std::array<char, 256> m_szName = {}; // 0x0008
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
     bool m_bBuiltinTypesInitialized = false; // 0x0110
-    char pad_0111[kSchemaSystemTypeScope_PAD0] = {}; // 0x0111
     std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118
     CSchemaPtrMap<CSchemaType*, CSchemaType_Ptr*> m_Ptrs; // 0x0348
     CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
@@ -870,15 +865,12 @@ private:
     CSchemaPtrMap<TypeAndCountInfo_t, CSchemaType_FixedArray*> m_FixedArrays; // 0x0558
     CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields; // 0x0588
 
-    
-#if defined(CS2)
-    std::uint64_t m_unUnknown1 = 0;
-#elif not defined(DOTA2)
+#if !defined(DOTA2) && !defined(CS2)
     CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 
-    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings; // 0x05C0
-    CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings; // 0x2E50
+    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x05C0
+    CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings = {}; // 0x2E50
 };
 
 enum SchemaTypeScope_t : std::uint8_t {

@@ -86,20 +86,15 @@ public:
     std::uint16_t m_nAlignment;
     std::uint16_t m_NumBlobs;
 
-    FreeList_t** m_ppTailOfFreeList;
-    FreeList_t* m_pHeadOfFreeList;
+    CTSListBase m_FreeBlocks;
 
-    std::uint64_t m_Unk1;
-
-    int m_Unk2;
+    MemAllocAttribute_t m_AllocAttribute;
 
     CThreadMutex m_Mutex;
 
     CBlob* m_pBlobHead;
 
-    int m_Unk3;
-
-    MemAllocAttribute_t m_AllocAttribute;
+    int m_TotalSize; // m_BlocksPerBlob * (m_NumBlobs + 1) + (m_nAligment + 14)
 };
 static_assert(sizeof(CUtlMemoryPoolBaseV2) == 0x80);
 
