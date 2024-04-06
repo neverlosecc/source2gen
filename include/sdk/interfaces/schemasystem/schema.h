@@ -869,8 +869,8 @@ private:
     CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 
-    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings; // 0x05C0
-    CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings; // 0x2E50
+    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x05C0
+    CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings = {}; // 0x2E50
 };
 
 enum SchemaTypeScope_t : std::uint8_t {
