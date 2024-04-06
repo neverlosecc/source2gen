@@ -842,7 +842,6 @@ private:
     std::array<char, 256> m_szName = {}; // 0x0008
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
     bool m_bBuiltinTypesInitialized = false; // 0x0110
-    char pad_0111[kSchemaSystemTypeScope_PAD0] = {}; // 0x0111
     std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118
     CSchemaPtrMap<CSchemaType*, CSchemaType_Ptr*> m_Ptrs; // 0x0348
     CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
