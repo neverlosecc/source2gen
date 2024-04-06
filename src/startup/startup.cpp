@@ -17,10 +17,11 @@ namespace {
         "engine2.dll"sv,
         "schemasystem.dll"sv,
         "tier0.dll"sv,
-        
+
+        #if defined(DOTA2)
         // @note: @soufiw: latest modules that gets loaded in the main menu
         "navsystem.dll"sv,
-        #if defined(CS2)
+        #elif defined(CS2)
         "matchmaking.dll"sv,
         #endif
     };
@@ -33,7 +34,7 @@ namespace source2_gen {
     void Setup() try {
         // @note: @es3n1n: Waiting for game init
         //
-        const auto required_modules_present = []() [[msvc::forceinline]] -> bool {
+        const auto required_modules_present = []() -> bool {
             bool result = true;
 
             for (auto& name : kRequiredGameModules)

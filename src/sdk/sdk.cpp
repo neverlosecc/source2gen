@@ -262,7 +262,7 @@ namespace sdk {
                 }
 
                 void AddRefToClass(CSchemaType* type) {
-                    if (type->m_unTypeCategory == ETypeCategory::Schema_DeclaredClass) {
+                    if (type->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
                         refs_.insert(reinterpret_cast<CSchemaType_DeclaredClass*>(type)->m_pClassInfo);
                     }
 
@@ -328,7 +328,7 @@ namespace sdk {
                     // @todo: maybe we need to forward declare only pointers to classes?
                     auto ptr = field->m_pSchemaType->GetRefClass();
 
-                    if (auto actual_type = ptr ? ptr : field->m_pSchemaType; actual_type->m_unTypeCategory == ETypeCategory::Schema_DeclaredClass) {
+                    if (auto actual_type = ptr ? ptr : field->m_pSchemaType; actual_type->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
                         builder.forward_declaration(actual_type->m_pszName);
                         did_forward_decls = true;
                     }
@@ -389,14 +389,14 @@ namespace sdk {
                 std::string base_type;
                 std::vector<std::size_t> sizes;
 
-                if (actual_type->m_unTypeCategory == ETypeCategory::Schema_FixedArray) {
+                if (actual_type->GetTypeCategory() == ETypeCategory::Schema_FixedArray) {
                     // dump all sizes.
                     auto schema = reinterpret_cast<CSchemaType_FixedArray*>(actual_type);
                     while (true) {
                         sizes.emplace_back(schema->m_nElementCount);
                         schema = reinterpret_cast<CSchemaType_FixedArray*>(schema->m_pElementType);
 
-                        if (schema->m_unTypeCategory != ETypeCategory::Schema_FixedArray) {
+                        if (schema->GetTypeCategory() != ETypeCategory::Schema_FixedArray) {
                             base_type = schema->m_pszName;
                             break;
                         }

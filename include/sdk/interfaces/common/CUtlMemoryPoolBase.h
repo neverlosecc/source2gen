@@ -12,7 +12,7 @@ constexpr auto kUtlMemoryPoolBaseVersion = 1;
 
 
 // Ways the memory pool can grow when it needs to make a new blob.
-enum MemoryPoolGrowType_t {
+enum class MemoryPoolGrowType_t : std::int32_t {
     UTLMEMORYPOOL_GROW_NONE = 0, // Don't allow new blobs.
     UTLMEMORYPOOL_GROW_FAST = 1, // New blob size is numElements * (i+1)  (ie: the blocks it allocates get larger and larger each time it allocates one).
     UTLMEMORYPOOL_GROW_SLOW = 2, // New blob size is numElements.
@@ -46,6 +46,7 @@ public:
 
     CInterlockedInt m_BlocksAllocated;
     CInterlockedInt m_PeakAlloc;
+
     std::uint16_t m_nAlignment;
     std::uint16_t m_NumBlobs;
 

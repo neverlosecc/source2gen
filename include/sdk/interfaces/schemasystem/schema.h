@@ -3,84 +3,105 @@
 #pragma once
 
 #if defined(SBOX)
-// untested, CSchemaType::m_pSchemaType might be wrong
+// untested might be wrong
 
 constexpr auto kSchemaSystemVersion = 1;
 constexpr auto kSchemaSystem_PAD0 = 0x5420;
-constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
-constexpr auto kSchemaSystemTypeScope_PAD2 = 0x27FC;
+constexpr auto kSchemaSystem_PAD1 = 0x120;
+constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
 enum {
-    kSchemaType_GetSizeWithAlignOf = 5,
+    kSchemaType_GetSizeWithAlignOf = 4,
+    kSchemaSystem_GetClassInfoBinaryName = 21,
+    kSchemaSystem_GetClassProjectName = 22,
+    kSchemaSystem_GetEnumBinaryName = 23,
+    kSchemaSystem_GetEnumProjectName = 24,
     kSchemaSystem_ValidateClasses = 34,
     kSchemaSystemTypeScope_DeclaredClass = 13,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
-    kSchemaSystemTypeScope_GetScopeName = 30,
+    kSchemaSystemTypeScope_GetScopeName = 28,
     kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
 };
 
 #elif defined(ARTIFACT2)
-// untested, CSchemaType::m_pSchemaType might be wrong
+
+// untested
 
 constexpr auto kSchemaSystemVersion = 1;
 constexpr auto kSchemaSystem_PAD0 = 0x5430;
-constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
-constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2804;
+constexpr auto kSchemaSystem_PAD1 = 0x120;
+constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
 enum {
-    kSchemaType_GetSizeWithAlignOf = 5,
+    kSchemaType_GetSizeWithAlignOf = 4,
+    kSchemaSystem_GetClassInfoBinaryName = 21,
+    kSchemaSystem_GetClassProjectName = 22,
+    kSchemaSystem_GetEnumBinaryName = 23,
+    kSchemaSystem_GetEnumProjectName = 24,
     kSchemaSystem_ValidateClasses = 34,
     kSchemaSystemTypeScope_DeclaredClass = 13,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
-    kSchemaSystemTypeScope_GetScopeName = 30,
+    kSchemaSystemTypeScope_GetScopeName = 28,
     kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
 };
 
 #elif defined(ARTIFACT1)
-// untested, CSchemaType::m_pSchemaType might be wrong
+
+// untested
 
 constexpr auto kSchemaSystemVersion = 1;
 constexpr auto kSchemaSystem_PAD0 = 0x4428;
-constexpr auto kSchemaSystemTypeScope_PAD1 = 0x4B8;
-constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2001;
+constexpr auto kSchemaSystem_PAD1 = 0x120;
+constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
 enum {
-    kSchemaType_GetSizeWithAlignOf = 5,
+    kSchemaType_GetSizeWithAlignOf = 4,
+    kSchemaSystem_GetClassInfoBinaryName = 21,
+    kSchemaSystem_GetClassProjectName = 22,
+    kSchemaSystem_GetEnumBinaryName = 23,
+    kSchemaSystem_GetEnumProjectName = 24,
     kSchemaSystem_ValidateClasses = 34,
     kSchemaSystemTypeScope_DeclaredClass = 13,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
-    kSchemaSystemTypeScope_GetScopeName = 30,
+    kSchemaSystemTypeScope_GetScopeName = 28,
     kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
 };
 
 #elif defined(UNDERLORDS)
 
-// untested, CSchemaType::m_pSchemaType might be wrong
-
 constexpr auto kSchemaSystemVersion = 1;
 constexpr auto kSchemaSystem_PAD0 = 0x5420;
-constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
-constexpr auto kSchemaSystemTypeScope_PAD2 = 0x27FC;
+constexpr auto kSchemaSystem_PAD1 = 0x120;
+constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
 enum {
-    kSchemaType_GetSizeWithAlignOf = 5,
+    kSchemaType_GetSizeWithAlignOf = 4,
     kSchemaSystem_ValidateClasses = 34,
+    kSchemaSystem_GetClassInfoBinaryName = 21,
+    kSchemaSystem_GetClassProjectName = 22,
+    kSchemaSystem_GetEnumBinaryName = 23,
+    kSchemaSystem_GetEnumProjectName = 24,
     kSchemaSystemTypeScope_DeclaredClass = 13,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
-    kSchemaSystemTypeScope_GetScopeName = 30,
+    kSchemaSystemTypeScope_GetScopeName = 28,
     kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
 };
 
 #elif defined(DESKJOB)
 
+// untested
+
 constexpr auto kSchemaSystemVersion = 1;
 constexpr auto kSchemaSystem_PAD0 = 0x3A0;
-constexpr auto kSchemaSystemTypeScope_PAD1 = 0x450;
-constexpr auto kSchemaSystemTypeScope_PAD2 = 0x2804;
+constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
 enum {
     kSchemaType_GetSizeWithAlignOf = 3,
     kSchemaSystem_ValidateClasses = 34,
+    kSchemaSystem_GetClassInfoBinaryName = 21,
+    kSchemaSystem_GetClassProjectName = 22,
+    kSchemaSystem_GetEnumBinaryName = 23,
+    kSchemaSystem_GetEnumProjectName = 24,
     kSchemaSystemTypeScope_DeclaredClass = 13,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
     kSchemaSystemTypeScope_GetScopeName = 30,
@@ -95,11 +116,16 @@ enum {
 
 constexpr auto kSchemaSystemVersion = 2;
 constexpr auto kSchemaSystem_PAD0 = 0x190;
+constexpr auto kSchemaSystem_PAD1 = 0x120;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
 enum {
     kSchemaType_GetSizeWithAlignOf = 3,
     kSchemaSystem_ValidateClasses = 35,
+    kSchemaSystem_GetClassInfoBinaryName = 22,
+    kSchemaSystem_GetClassProjectName = 23,
+    kSchemaSystem_GetEnumBinaryName = 24,
+    kSchemaSystem_GetEnumProjectName = 25,
     kSchemaSystemTypeScope_DeclaredClass = 14,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
     kSchemaSystemTypeScope_GetScopeName = 32,
@@ -110,13 +136,16 @@ enum {
 
 constexpr auto kSchemaSystemVersion = 2;
 constexpr auto kSchemaSystem_PAD0 = 0x190;
+constexpr auto kSchemaSystem_PAD1 = 0x120;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
-constexpr auto kSchemaSystemTypeScope_PAD1 = 0x8;
-constexpr auto kSchemaSystemTypeScope_PAD2 = 0x8;
 
 enum {
     kSchemaType_GetSizeWithAlignOf = 3,
     kSchemaSystem_ValidateClasses = 35,
+    kSchemaSystem_GetClassInfoBinaryName = 22,
+    kSchemaSystem_GetClassProjectName = 23,
+    kSchemaSystem_GetEnumBinaryName = 24,
+    kSchemaSystem_GetEnumProjectName = 25,
     kSchemaSystemTypeScope_DeclaredClass = 14,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
     kSchemaSystemTypeScope_GetScopeName = 32,
@@ -260,6 +289,7 @@ enum class ETypeCategory : std::uint8_t {
     Schema_None
 };
 
+#if defined(CS2) || defined(DOTA2)
 enum class EAtomicCategory : std::uint8_t {
     Atomic_Basic = 0,
     Atomic_T,
@@ -270,6 +300,16 @@ enum class EAtomicCategory : std::uint8_t {
     Atomic_I,
     Atomic_None
 };
+#else
+enum class EAtomicCategory : std::uint8_t {
+    Atomic_Basic = 0,
+    Atomic_T,
+    Atomic_CollectionOfT,
+    Atomic_TT,
+    Atomic_I,
+    Atomic_None
+};
+#endif
 
 enum class SchemaBuiltinType_t : std::uint32_t {
     Schema_Builtin_none = 0,
@@ -332,15 +372,33 @@ public:
     // @todo: @og: find out to what class pointer points.
     [[nodiscard]] CSchemaType* GetRefClass();
 
+    [[nodiscard]] ETypeCategory GetTypeCategory() {
+#if defined(CS2) || defined(DOTA2)
+        return m_unTypeCategory;
+#else
+        return Virtual::Get<ETypeCategory (*)(CSchemaType*)>(this, 0)(this);
+#endif
+    }
+
+    [[nodiscard]] EAtomicCategory GetAtomicCategory() {
+#if defined(CS2) || defined(DOTA2)
+        return m_unAtomicCategory;
+#else
+        return Virtual::Get<EAtomicCategory (*)(CSchemaType*)>(this, 1)(this);
+#endif
+    }
+
 public:
     std::uintptr_t* vftable; // 0x0000
     const char* m_pszName; // 0x0008
 
     CSchemaSystemTypeScope* m_pTypeScope; // 0x0010
+
+#if defined(CS2) || defined(DOTA2)
     ETypeCategory m_unTypeCategory; // 0x0018
     EAtomicCategory m_unAtomicCategory; // 0x0019
+#endif
 };
-static_assert(sizeof(CSchemaType) == 0x20);
 
 class CSchemaType_Ptr : public CSchemaType {
 public:
@@ -348,15 +406,17 @@ public:
 };
 
 [[nodiscard]] inline CSchemaType* CSchemaType::GetRefClass() {
-    if (m_unTypeCategory != ETypeCategory::Schema_Ptr)
+    if (GetTypeCategory() != ETypeCategory::Schema_Ptr)
         return nullptr;
 
     auto ptr = reinterpret_cast<CSchemaType_Ptr*>(this)->m_pObjectType;
-    while (ptr && ptr->m_unTypeCategory == ETypeCategory::Schema_Ptr)
+    while (ptr && ptr->GetTypeCategory() == ETypeCategory::Schema_Ptr)
         ptr = reinterpret_cast<CSchemaType_Ptr*>(ptr)->m_pObjectType;
 
     return ptr;
 }
+
+using CSchemaType_NoschemaType = CSchemaType;
 
 class CSchemaType_Builtin : public CSchemaType {
 public:
@@ -665,6 +725,10 @@ class CSchemaPtrMap {
 public:
     CUtlMap<K, V> m_Map;
     CThreadFastMutex m_Mutex;
+
+#if !defined(CS2) && !defined(DOTA2)
+    char pad0x0020[8];
+#endif
 };
 
 class CSchemaSystemTypeScope {
@@ -769,7 +833,6 @@ public:
         return m_EnumBindings;
     }
 
-#if defined(CS2) || defined(DOTA2)
     [[nodiscard]] CUtlMap<std::uint16_t, CSchemaType_DeclaredClass*>& GetDeclaredClasses() {
         return m_DeclaredClasses.m_Map;
     }
@@ -777,13 +840,10 @@ public:
     [[nodiscard]] CUtlMap<std::uint16_t, CSchemaType_DeclaredEnum*>& GetDeclaredEnums() {
         return m_DeclaredEnums.m_Map;
     }
-#endif
 
 private:
     void* vftable = nullptr;
     std::array<char, 256> m_szName = {}; // 0x0008
-
-#if defined(CS2) || defined(DOTA2)
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
     bool m_bBuiltinTypesInitialized = false; // 0x0110
     char pad_0111[kSchemaSystemTypeScope_PAD0] = {}; // 0x0111
@@ -792,27 +852,32 @@ private:
     CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT; // 0x03A8
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_CollectionOfT*> m_AtomicsCollectionOfT; // 0x03D8
+
+#if defined(CS2) || defined(DOTA2)
     CSchemaPtrMap<AtomicTypeInfo_TF_t, CSchemaType_Atomic_TF*> m_AtomicsTF; // 0x0408
+#endif
+
     CSchemaPtrMap<AtomicTypeInfo_TT_t, CSchemaType_Atomic_TT*> m_AtomicsTT; // 0x0438
+
+#if defined(CS2) || defined(DOTA2)
     CSchemaPtrMap<AtomicTypeInfo_TTF_t, CSchemaType_Atomic_TTF*> m_AtomicsTTF; // 0x0468
+#endif
+
     CSchemaPtrMap<AtomicTypeInfo_I_t, CSchemaType_Atomic_I*> m_AtomicsI; // 0x0498
     CSchemaPtrMap<std::uint16_t, CSchemaType_DeclaredClass*> m_DeclaredClasses; // 0x04C8
     CSchemaPtrMap<std::uint16_t, CSchemaType_DeclaredEnum*> m_DeclaredEnums; // 0x04F8
     CSchemaPtrMap<int, const SchemaAtomicTypeInfo_t*> m_AtomicInfos; // 0x0528
     CSchemaPtrMap<TypeAndCountInfo_t, CSchemaType_FixedArray*> m_FixedArrays; // 0x0558
     CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields; // 0x0588
-#endif
 
+    
 #if defined(CS2)
-    char pad_0x0108[kSchemaSystemTypeScope_PAD1] = {}; // 0x0108
+    std::uint64_t m_unUnknown1 = 0;
+#elif not defined(DOTA2)
+    CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 
     CUtlTSHash<CSchemaClassBinding*> m_ClassBindings; // 0x05C0
-
-#if defined(CS2)
-    char pad_0x0594[kSchemaSystemTypeScope_PAD2] = {}; // 0x05F8
-#endif
-
     CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings; // 0x2E50
 };
 
@@ -873,19 +938,19 @@ public:
     }
 
     [[nodiscard]] const char* GetClassInfoBinaryName(CSchemaClassBinding* pBinding) {
-        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, 22)(this, pBinding);
+        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, kSchemaSystem_GetClassInfoBinaryName)(this, pBinding);
     }
 
     [[nodiscard]] const char* GetClassProjectName(CSchemaClassBinding* pBinding) {
-        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, 23)(this, pBinding);
+        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, kSchemaSystem_GetClassProjectName)(this, pBinding);
     }
 
     [[nodiscard]] const char* GetEnumBinaryName(CSchemaEnumBinding* pBinding) {
-        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, 24)(this, pBinding);
+        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, kSchemaSystem_GetEnumBinaryName)(this, pBinding);
     }
 
     [[nodiscard]] const char* GetEnumProjectName(CSchemaEnumBinding* pBinding) {
-        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, 25)(this, pBinding);
+        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, kSchemaSystem_GetEnumProjectName)(this, pBinding);
     }
 
     CSchemaClassBinding* ValidateClasses(CSchemaClassBinding** ppBinding) {
@@ -928,7 +993,7 @@ public:
 private:
     char pad_0x0000[kSchemaSystem_PAD0] = {}; // 0x0000
     CUtlVector<CSchemaSystemTypeScope*> m_TypeScopes = {}; // SCHEMASYSTEM_TYPE_SCOPES_OFFSET
-    char pad_01A0[288] = {}; // 0x01A0
+    char pad_01A0[kSchemaSystem_PAD1] = {}; // 0x01A0
     std::int32_t m_nRegistrations = 0; // 0x02C0
     std::int32_t m_nIgnored = 0; // 0x02C4
     std::int32_t m_nRedundant = 0; // 0x02C8
