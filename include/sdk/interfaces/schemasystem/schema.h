@@ -726,7 +726,7 @@ public:
     CUtlMap<K, V> m_Map;
     CThreadFastMutex m_Mutex;
 
-#if not defined(CS2) && not defined(DOTA2)
+#if !defined(CS2) && !defined(DOTA2)
     char pad0x0020[8];
 #endif
 };
