@@ -236,6 +236,7 @@ public:
 
         return {};
     }
+
 public:
     fieldtype_t m_iFieldType;
     const char* m_pszFieldName;
