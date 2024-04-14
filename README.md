@@ -1,9 +1,34 @@
-TODO: notes for the maintainers
+TODO: remove these notes
+
+Changes in this fork (ok = done, x = pending)
+
+- x unix compatibility
+  - ok compiles with clang
+    - ok alias/redirect windows APIs (`LoadLibraryA()` and friends)
+    - ok add missing includes
+    - ok fix source file case mismatches
+  - ok launches without crashing
+  - x dumps
+  - x compatible with unix AND windows (compile-time changes)
+- x source2gen is an executable (faster, easier to use, supports headless systems)
+  - ok is an executable
+    - ok cmake
+    - x premake
+    - ok `DLLMain` -> `main`
+  - ok source2gen loads required game libraries
+    - ok remove sleeps and threads
+  - x initializes libraries into a "dumpable" state (Call `InstallSchemaBindings()`?)
+
+Notes and questions for the upstream maintainers
 
 - is your compiler case-insensitive?
+  - includes
+  - function names
 - thanks for .clang-format
-- thanks for static_assert
-- no clue what you're doing with includes, I added some
+- thanks for `static_assert`s of struct sizes
+  - might need some work for 32 bit and 64 bit support
+- what's going on with the includes? I added some, might want to add an analyzer
+  to be friendlier to compilers and noisy linters
 
 # Source2Gen
 
@@ -32,13 +57,14 @@ git clone --recurse-submodules https://github.com/neverlosecc/source2gen.git
 
 ### Update the Game Definition
 
-Before building the project in Visual Studio, you will need to update the game definition. 
+Before building the project in Visual Studio, you will need to update the game definition.
 The default definition is `CS2`. \
-Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`. 
+Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`.
 
 or
 
 You can use premake5 options and specify which game you want to dump:
+
 ```bash
  --game=CS2          
  Choose a particular game for dumping source 2 sdk; one of:
@@ -57,29 +83,32 @@ You can use premake5 options and specify which game you want to dump:
 
 #### With premake5
 
-* Open a command prompt or terminal in the project's root directory.
-* Run the following command to generate the Visual Studio solution:
+- Open a command prompt or terminal in the project's root directory.
+- Run the following command to generate the Visual Studio solution:
 
 ```bash
 premake5 vs2019 --game=CS2
 ```
+
 * Open the generated source2gen.sln file in Visual Studio.
-* Build the solution in the desired configuration (Debug, Release, or Dist).
+- Build the solution in the desired configuration (Debug, Release, or Dist).
 
 #### With CMake
 
-* Open a command prompt or terminal in the project's root directory.
-* Run the following sequence of commands to build the project:
+- Open a command prompt or terminal in the project's root directory.
+- Run the following sequence of commands to build the project:
 
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
 cmake --build build
 ```
+
 ---
 
 ## Credits
 
-This project is made possible by the contributions of various individuals and projects. Special thanks to the following: 
+This project is made possible by the contributions of various individuals and projects. Special thanks to the following:
+
 - **[es3n1n](https://github.com/es3n1n)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=es3n1n)
 - **[cpz](https://github.com/cpz)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=cpz)
 - **[Soufiw](https://github.com/Soufiw)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=Soufiw)
@@ -87,6 +116,7 @@ This project is made possible by the contributions of various individuals and pr
 - **[praydog](https://github.com/praydog)** - the author of the original [Source2Gen](https://github.com/praydog/Source2Gen) project
 
 This project also utilizes the following open-source libraries:
+
 - **[Premake](https://github.com/premake/premake-core)** - Build configuration tool
 - **[CMake](https://github.com/Kitware/CMake)** - Build tool
 
