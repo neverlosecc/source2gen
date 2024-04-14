@@ -2,20 +2,8 @@
 // See end of file for extended copyright information.
 #include <Include.h>
 
-namespace {
-    void OnProcessAttach(const HMODULE h_module) {
-        std::thread([h_module]() -> void { source2_gen::main(h_module); }).detach();
-    }
-} // namespace
-
-BOOL APIENTRY DllMain(const HMODULE module, const DWORD reason, LPVOID reserved [[maybe_unused]]) {
-    switch (reason) {
-    case DLL_PROCESS_ATTACH:
-        OnProcessAttach(module);
-        break;
-    }
-
-    return TRUE;
+int main() {
+    source2_gen::main();
 }
 
 // source2gen - Source2 games SDK generator

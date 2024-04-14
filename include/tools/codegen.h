@@ -46,7 +46,7 @@ namespace codegen {
 
     public:
         constexpr generator_t() = default;
-        constexpr ~generator_t() = default;
+        ~generator_t() = default;
         constexpr self_ref operator=(self_ref v) {
             return v;
         }

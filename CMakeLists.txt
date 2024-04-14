@@ -12,6 +12,8 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(FATAL_ERROR "source2gen: 32-bit targets are not supported")
 endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_CXX_STANDARD 23 CACHE STRING "Default C++ standard")
 message(STATUS "source2gen: C++ standard set to ${CMAKE_CXX_STANDARD}")
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require C++ standard")
@@ -59,7 +61,7 @@ if(NOT SOURCE2GEN_GAME IN_LIST SOURCE2GEN_SUPPORTED_GAMES)
     message(FATAL_ERROR "source2gen: Invalid value for SOURCE2GEN_GAME: ${SOURCE2GEN_GAME}")
 endif()
 
-add_library(source2gen SHARED)
+add_executable(source2gen)
 
 file(GLOB_RECURSE source2gen_SOURCES "src/**.cpp")
 file(GLOB_RECURSE source2gen_HEADERS "include/**.h" "include/**.hpp")
@@ -84,8 +86,22 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
 endif()
 
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    target_compile_options(source2gen PRIVATE -Wno-nonportable-include-path -Wno-implicit-exception-spec-mismatch -Wno-invalid-offsetof -Wno-unknown-attributes)
+    target_compile_options(source2gen PRIVATE
+      -Wno-nonportable-include-path
+      -Wno-implicit-exception-spec-mismatch
+      -Wno-invalid-offsetof
+      -Wno-unknown-attributes
+    )
+
 endif()
+
+# TODO: make this conditional based on the compiler in use
+target_compile_definitions(source2gen PRIVATE
+  "FORCEINLINE="
+  "__forceinline="
+  "__thiscall="
+  "__cdecl="
+)
 
 target_compile_definitions(source2gen PRIVATE
     "${SOURCE2GEN_GAME}"

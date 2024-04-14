@@ -7,7 +7,7 @@
 namespace Virtual {
     template <typename T>
     inline T Get(void* instance, const unsigned int index) {
-        return (*static_cast<T**>(instance))[index];
+        return (*static_cast<T**>(instance))[index + 1]; // TODO: only do +1 on unix
     }
 
     template <typename T>

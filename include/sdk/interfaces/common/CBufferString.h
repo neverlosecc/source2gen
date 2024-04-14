@@ -3,7 +3,10 @@
 
 #pragma once
 
-template <size_t MAX_SIZE, bool AllowHeapAllocation>
+#include <cstddef>
+#include <cstring>
+
+template <std::size_t MAX_SIZE, bool AllowHeapAllocation>
 class CBufferStringGrowable;
 
 /*
@@ -57,13 +60,13 @@ public:
     };
 
     // Casts to CBufferStringGrowable. Very dirty solution until someone figures out the sane one.
-    template <size_t MAX_SIZE = 8, bool AllowHeapAllocation = true, typename T = CBufferStringGrowable<MAX_SIZE, AllowHeapAllocation>>
+    template <std::size_t MAX_SIZE = 8, bool AllowHeapAllocation = true, typename T = CBufferStringGrowable<MAX_SIZE, AllowHeapAllocation>>
     T* ToGrowable() {
         return (T*)this;
     }
 };
 
-template <size_t MAX_SIZE, bool AllowHeapAllocation = true>
+template <std::size_t MAX_SIZE, bool AllowHeapAllocation = true>
 class CBufferStringGrowable : public CBufferString {
     friend class CBufferString;
 

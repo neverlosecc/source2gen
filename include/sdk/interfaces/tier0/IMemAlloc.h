@@ -28,7 +28,7 @@ public:
 
     void FreeAligned(void* pMemory);
 
-    size_t GetSizeAligned(void* pMemory);
+    std::size_t GetSizeAligned(void* pMemory);
 
     std::size_t GetSize(void* pMemory) {
         return Virtual::Get<std::size_t(__thiscall*)(IMemAlloc*, void*)>(this, 17)(this, pMemory);

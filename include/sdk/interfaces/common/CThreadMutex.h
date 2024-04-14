@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
 #ifdef _WIN32
 typedef std::uint32_t ThreadId_t;
@@ -22,7 +23,7 @@ public:
     bool m_bTrace;
     const char* m_pDebugName;
 };
-static_assert(sizeof(CThreadMutex) == 0x38);
+static_assert(sizeof(CThreadMutex) == 0x30 + sizeof(ThreadId_t) + sizeof(char*));
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc

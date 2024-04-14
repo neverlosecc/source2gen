@@ -3,6 +3,7 @@
 // ReSharper disable CppClangTidyClangDiagnosticLanguageExtensionToken
 #include "sdk/sdk.h"
 #include <filesystem>
+#include <list>
 #include <set>
 #include <string_view>
 
@@ -13,8 +14,8 @@ namespace {
     constinit std::array include_paths = {"<cstdint>"sv, "\"!GlobalTypes.hpp\""sv};
 
     constexpr uint32_t kMaxReferencesForClassEmbed = 2;
-    constexpr size_t kMinFieldCountForClassEmbed = 2;
-    constexpr size_t kMaxFieldCountForClassEmbed = 12;
+    constexpr std::size_t kMinFieldCountForClassEmbed = 2;
+    constexpr std::size_t kMaxFieldCountForClassEmbed = 12;
 
     constinit std::array string_metadata_entries = {
         FNV32("MNetworkChangeCallback"),
@@ -691,7 +692,7 @@ namespace sdk {
     void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current) {
         // @note: @es3n1n: getting current scope name & formatting it
         //
-        constexpr std::string_view dll_extension = ".dll";
+        constexpr std::string_view dll_extension = ".so"; // TODO: switch platform
         auto scope_name = current->BGetScopeName();
         if (ends_with(scope_name, dll_extension.data()))
             scope_name = scope_name.substr(0, scope_name.size() - dll_extension.size());

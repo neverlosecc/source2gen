@@ -52,7 +52,7 @@ namespace detail {
             return cur_hash;
         }
 
-        static auto __forceinline hash_runtime_data(const void* data, const size_t sz) -> hash {
+        static auto __forceinline hash_runtime_data(const void* data, const std::size_t sz) -> hash {
             const auto bytes = static_cast<const uint8_t*>(data);
 
             auto result = hash_init();
@@ -80,7 +80,7 @@ namespace detail {
             return result;
         }
 
-        static auto __forceinline hash_runtime(const char* str, size_t sz) -> hash {
+        static auto __forceinline hash_runtime(const char* str,std::size_t sz) -> hash {
             auto end = str + sz;
             auto result = hash_init();
 
@@ -91,7 +91,7 @@ namespace detail {
             return result;
         }
 
-        static auto __forceinline hash_runtime(const wchar_t* str, size_t sz) -> hash {
+        static auto __forceinline hash_runtime(const wchar_t* str,std::size_t sz) -> hash {
             auto end = str + sz;
             auto result = hash_init();
 

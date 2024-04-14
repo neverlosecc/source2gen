@@ -4,7 +4,7 @@
 #include <emmintrin.h>
 
 // decls for aligning data
-#define DECL_ALIGN(x) __declspec(align(x))
+#define DECL_ALIGN(x)
 
 #ifdef _WIN64
 constexpr auto TSLIST_HEAD_ALIGNMENT = 16;
@@ -25,7 +25,10 @@ constexpr auto TSLIST_NODE_ALIGNMENT = 8;
     #define TSLIST_HEAD_ALIGN_POST DECL_ALIGN(TSLIST_HEAD_ALIGNMENT)
     #define TSLIST_NODE_ALIGN_POST DECL_ALIGN(TSLIST_NODE_ALIGNMENT)
 #else
-    #error
+    #define TSLIST_HEAD_ALIGN
+    #define TSLIST_NODE_ALIGN
+    #define TSLIST_HEAD_ALIGN_POST DECL_ALIGN(TSLIST_HEAD_ALIGNMENT)
+    #define TSLIST_NODE_ALIGN_POST DECL_ALIGN(TSLIST_NODE_ALIGNMENT)
 #endif
 
 struct TSLIST_NODE_ALIGN TSLNodeBase_t {

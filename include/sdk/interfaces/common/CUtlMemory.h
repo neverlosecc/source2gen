@@ -455,7 +455,7 @@ inline void CUtlMemory<T, I>::EnsureCapacity(int num) {
     m_nAllocationCount = num;
 
     if (m_pMemory) {
-        m_pMemory = (T*)GetMemAlloc()->ReAlloc(m_pMemory, m_nAllocationCount * sizeof(T));
+        m_pMemory = (T*)GetMemAlloc()->Realloc(m_pMemory, m_nAllocationCount * sizeof(T));
     } else {
         m_pMemory = (T*)GetMemAlloc()->Alloc(m_nAllocationCount * sizeof(T));
     }
@@ -507,7 +507,7 @@ void CUtlMemory<T, I>::Purge(int numElements) {
         return;
     }
     m_nAllocationCount = numElements;
-    m_pMemory = (T*)GetMemAlloc()->ReAlloc(m_pMemory, m_nAllocationCount * sizeof(T));
+    m_pMemory = (T*)GetMemAlloc()->Realloc(m_pMemory, m_nAllocationCount * sizeof(T));
 }
 
 // source2gen - Source2 games SDK generator

@@ -2,9 +2,12 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include <proc.h>
+#include <string>
+
 namespace util {
     inline std::string PrettifyNum(int num) {
-        static const auto fn = reinterpret_cast<const char* (*)(int)>(GetProcAddress(GetModuleHandleA("tier0.dll"), "V_PrettifyNum"));
+        static const auto fn = reinterpret_cast<const char* (*)(int)>(GetProcAddress(GetModuleHandleA(LIBRARY("tier0")), "V_PrettifyNum"));
 
         if (fn) {
             std::string_view res = fn(num);

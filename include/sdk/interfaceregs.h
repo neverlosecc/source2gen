@@ -2,6 +2,11 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include <cassert>
+#include <cstdint>
+#include <proc.h>
+#include <string_view>
+
 namespace sdk {
     using InstantiateInterfaceFn = void* (*)();
 
@@ -14,10 +19,15 @@ namespace sdk {
 
     inline const InterfaceReg* GetInterfaces(const char* library) {
         const auto library_handle = GetModuleHandleA(library);
+        assert(library_handle != 0);
 
         const auto createinterface_symbol = reinterpret_cast<std::uintptr_t>(GetProcAddress(library_handle, "CreateInterface"));
+        assert(createinterface_symbol != 0);
 
-        const uintptr_t interface_list = createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 3) + 7;
+        const auto createinterface_impl = createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 1) + 5;
+        const auto createinterface_mov = createinterface_impl + 0x10;
+
+        const uintptr_t interface_list = createinterface_mov + *reinterpret_cast<int32_t*>(createinterface_mov + 3) + 7;
 
         return *reinterpret_cast<InterfaceReg**>(interface_list);
     }

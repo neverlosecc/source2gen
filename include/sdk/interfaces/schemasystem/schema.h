@@ -2,6 +2,17 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include <array>
+#include <cstdint>
+#include <sdk/interfaces/client/game/datamap_t.h>
+#include <sdk/interfaces/common/CBufferString.h>
+#include <sdk/interfaces/common/CThreadSpinRWLock.h>
+#include <sdk/interfaces/common/CUtlMap.h>
+#include <sdk/interfaces/common/CUtlTSHash.h>
+#include <sdk/sdk.h>
+#include <tools/virtual.h>
+#include <vector>
+
 #if defined(SBOX)
 // untested might be wrong
 
@@ -596,7 +607,7 @@ public:
     SchemaMetadataEntryData_t* m_pStaticMetadata; // 0x0048
     CSchemaSystemTypeScope* m_pTypeScope; // 0x0050
     CSchemaType* m_pSchemaType; // 0x0058
-    SchemaClassFlags_t m_nClassFlags:8; // 0x0060
+    SchemaClassFlags_t m_nClassFlags:32; // 0x0060
     std::uint32_t m_unSequence; // 0x0064 // @note: @og: idk
     void* m_pFn; // 0x0068
 
@@ -953,12 +964,12 @@ public:
         return Virtual::Get<bool(__thiscall*)(void*)>(this, 26)(this);
     }
 
-    [[nodiscard]] void PrintSchemaStats() {
+    void PrintSchemaStats() {
         Virtual::Get<void(__thiscall*)(void*)>(this, 30)(this);
     }
 
     // @note: @og: there 2 options, "enum" or "class"
-    [[nodiscard]] void PrintSchemaMetaStats(const char* pszOptions) {
+    void PrintSchemaMetaStats(const char* pszOptions) {
         Virtual::Get<void(__thiscall*)(void*, const char*)>(this, 31)(this, pszOptions);
     }
 
@@ -993,7 +1004,7 @@ private:
 
 public:
     [[nodiscard]] static CSchemaSystem* GetInstance(void) {
-        return sdk::GetInterface<CSchemaSystem>("schemasystem.dll", "SchemaSystem_0");
+        return sdk::GetInterface<CSchemaSystem>(LIBRARY("schemasystem"), "SchemaSystem_0");
     }
 };
 

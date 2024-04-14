@@ -9,7 +9,6 @@
 #include <fstream>
 #include <thread>
 #include <unordered_map>
-#include <windows.h>
 
 using namespace std::chrono_literals;
 using namespace std::this_thread;
@@ -20,7 +19,7 @@ using namespace std::this_thread;
 #pragma endregion Format
 
 #pragma region Source Engine 2
-#include <SDK/SDK.h>
+// #include <SDK/SDK.h>
 #pragma endregion Source Engine 2
 
 #pragma region Tools
@@ -31,7 +30,7 @@ using namespace std::this_thread;
 #pragma endregion Tools
 
 namespace source2_gen {
-    void main(HMODULE h_module);
+    void main();
 }
 
 constexpr std::string_view kConsoleTitleMessage = {"source2gen :: github.com/neverlosecc/source2gen"};

@@ -1,16 +1,17 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
+#include <cassert>
+#include <cstring>
 #include <Include.h>
-#include <SDK/Interfaces/tier0/IMemAlloc.h>
+#include <proc.h>
+#include <sdk/interfaces/tier0/IMemAlloc.h>
 
 namespace {
     IMemAlloc* MemAllocSystemInitialize() {
-        HMODULE tier0 = nullptr;
-
         // Attempt to load tier0.dll
-        while (!tier0) {
-            tier0 = LoadLibraryA("tier0.dll");
-        }
+        HMODULE tier0 = LoadLibraryA(LIBRARY("tier0"));
+
+        assert(tier0 != nullptr);
 
         IMemAlloc* g_pMemAlloc = nullptr;
 
@@ -28,6 +29,7 @@ namespace {
             }
         }
 
+        assert(g_pMemAlloc != nullptr);
         return g_pMemAlloc;
     }
 }; // namespace
@@ -71,7 +73,7 @@ void* IMemAlloc::ReallocAligned(void* pMemory, std::size_t nSize, std::size_t nA
     memory = *static_cast<void**>(memory);
 
     // See if we have enough space
-    auto nOffset = reinterpret_cast<size_t>(pMemory) - reinterpret_cast<size_t>(memory);
+    auto nOffset = reinterpret_cast<std::size_t>(pMemory) - reinterpret_cast<std::size_t>(memory);
     auto nOldSize = GetSize(memory);
     if (nOldSize >= nSize + nOffset)
         return pMemory;
@@ -89,7 +91,7 @@ void* IMemAlloc::Calloc(std::size_t num, std::size_t nSize) {
     const auto memory = Alloc(total_size);
     if (memory) {
         static auto V_tier0_memset =
-            reinterpret_cast<void(__cdecl*)(void*, std::int8_t, std::size_t)>(GetProcAddress(GetModuleHandleA("tier0.dll"), "V_tier0_memset"));
+            reinterpret_cast<void(__cdecl*)(void*, std::int8_t, std::size_t)>(GetProcAddress(GetModuleHandleA(LIBRARY("tier0")), "V_tier0_memset"));
 
         if (V_tier0_memset != nullptr)
             V_tier0_memset(memory, 0, total_size);
@@ -118,7 +120,7 @@ size_t IMemAlloc::GetSizeAligned(void* pMemory) {
     void* memory = pMemory;
 
     // pAlloc points to the pointer to starting of the memory block
-    memory = reinterpret_cast<void*>((reinterpret_cast<size_t>(memory) & ~(sizeof(void*) - 1)) - sizeof(void*));
+    memory = reinterpret_cast<void*>((reinterpret_cast<std::size_t>(memory) & ~(sizeof(void*) - 1)) - sizeof(void*));
 
     // pAlloc is the pointer to the start of memory block
     memory = *static_cast<void**>(memory);
@@ -131,8 +133,8 @@ IMemAlloc* GetMemAlloc() {
 }
 
 // void *malloc(size_t size) { return GetMemAlloc()->Alloc(size); }
-// void *calloc(size_t size, size_t n) { return GetMemAlloc()->Calloc(size, n); }
-// void *realloc(void *p, size_t newsize) { return GetMemAlloc()->Realloc(p, newsize); }
+// void *calloc(size_t size,std::size_t n) { return GetMemAlloc()->Calloc(size, n); }
+// void *realloc(void *p,std::size_t newsize) { return GetMemAlloc()->Realloc(p, newsize); }
 // void  free(void *p) { GetMemAlloc()->Free(p); }
 
 void operator delete(void* p) noexcept {

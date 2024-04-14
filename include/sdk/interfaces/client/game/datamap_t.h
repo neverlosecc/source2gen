@@ -2,6 +2,8 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include <sdk/interfaces/common/CUtlVector.h>
+
 class ISaveRestoreOps;
 class typedescription_t;
 class IPredictionCopyOps;

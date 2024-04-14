@@ -1,3 +1,10 @@
+TODO: notes for the maintainers
+
+- is your compiler case-insensitive?
+- thanks for .clang-format
+- thanks for static_assert
+- no clue what you're doing with includes, I added some
+
 # Source2Gen
 
 Source2Gen is a tool to generate Source 2 SDKs. \

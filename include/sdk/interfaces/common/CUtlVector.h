@@ -69,7 +69,7 @@ template <typename T>
 void CUtlVector<T>::GrowVector(int num) {
     m_Size += num;
     if (m_pElements)
-        m_pElements = (T*)GetMemAlloc()->ReAlloc(m_pElements, m_Size * sizeof(T));
+        m_pElements = (T*)GetMemAlloc()->Realloc(m_pElements, m_Size * sizeof(T));
     else
         m_pElements = (T*)GetMemAlloc()->Alloc(m_Size * sizeof(T));
 }

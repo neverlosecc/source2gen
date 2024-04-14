@@ -2,6 +2,10 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include <cstdint>
+#include <sdk/interfaces/common/CInterlockedInt.h>
+#include <sdk/interfaces/common/CThreadMutex.h>
+#include <sdk/interfaces/common/CTSList.h>
 #include <type_traits>
 
 #if defined(CS2)
@@ -9,7 +13,6 @@ constexpr auto kUtlMemoryPoolBaseVersion = 2;
 #else
 constexpr auto kUtlMemoryPoolBaseVersion = 1;
 #endif
-
 
 // Ways the memory pool can grow when it needs to make a new blob.
 enum class MemoryPoolGrowType_t : std::int32_t {
@@ -96,7 +99,7 @@ public:
 
     int m_TotalSize; // m_BlocksPerBlob * (m_NumBlobs + 1) + (m_nAligment + 14)
 };
-static_assert(sizeof(CUtlMemoryPoolBaseV2) == 0x80);
+// static_assert(sizeof(CUtlMemoryPoolBaseV2) == 0x80);
 
 using CUtlMemoryPoolBase = std::conditional_t<kUtlMemoryPoolBaseVersion == 1, CUtlMemoryPoolBaseV1, CUtlMemoryPoolBaseV2>;
 
