@@ -115,7 +115,7 @@ enum {
 #elif defined(DOTA2)
 
 constexpr auto kSchemaSystemVersion = 2;
-constexpr auto kSchemaSystem_PAD0 = 0x190;
+constexpr auto kSchemaSystem_PAD0 = 0x188;
 constexpr auto kSchemaSystem_PAD1 = 0x120;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
@@ -123,12 +123,12 @@ enum {
     kSchemaType_GetSizeWithAlignOf = 3,
     kSchemaSystem_ValidateClasses = 35,
     kSchemaSystem_GetClassInfoBinaryName = 22,
-    kSchemaSystem_GetClassProjectName = 23,
-    kSchemaSystem_GetEnumBinaryName = 24,
-    kSchemaSystem_GetEnumProjectName = 25,
+    kSchemaSystem_GetClassProjectName = kSchemaSystem_GetClassInfoBinaryName + 1,
+    kSchemaSystem_GetEnumBinaryName = kSchemaSystem_GetClassProjectName + 1,
+    kSchemaSystem_GetEnumProjectName = kSchemaSystem_GetEnumBinaryName + 1,
     kSchemaSystemTypeScope_DeclaredClass = 14,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
-    kSchemaSystemTypeScope_GetScopeName = 32,
+    kSchemaSystemTypeScope_GetScopeName = 28,
     kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
 };
 
@@ -190,8 +190,8 @@ enum SchemaClassFlags_t {
     SCHEMA_CF1_INFO_TAG_MDisableDataDescValidation = (1 << 13),
     SCHEMA_CF1_INFO_TAG_MClassHasEntityLimitedDataDesc = (1 << 14),
     SCHEMA_CF1_INFO_TAG_MClassHasCustomAlignedNewDelete = (1 << 15),
-    SCHEMA_CF1_UNK016 = (1 << 16),
-    SCHEMA_CF1_UNK017 = (1 << 17),
+    SCHEMA_CF1_INFO_TAG_MNonConstructibleClassBase = (1 << 16),
+    SCHEMA_CF1_INFO_TAG_MConstructibleClassBase = (1 << 17),
     SCHEMA_CF1_INFO_TAG_MHasKV3TransferPolymorphicClassname = (1 << 18),
 };
 #else
@@ -289,7 +289,7 @@ enum class ETypeCategory : std::uint8_t {
     Schema_None
 };
 
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2)
 enum class EAtomicCategory : std::uint8_t {
     Atomic_Basic = 0,
     Atomic_T,
@@ -724,7 +724,10 @@ template <class K, class V>
 class CSchemaPtrMap {
 public:
     CUtlMap<K, V> m_Map;
+
+#if !defined(DOTA2)
     CThreadFastMutex m_Mutex;
+#endif
 };
 
 class CSchemaSystemTypeScope {
@@ -848,13 +851,13 @@ private:
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT; // 0x03A8
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_CollectionOfT*> m_AtomicsCollectionOfT; // 0x03D8
 
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2)
     CSchemaPtrMap<AtomicTypeInfo_TF_t, CSchemaType_Atomic_TF*> m_AtomicsTF; // 0x0408
 #endif
 
     CSchemaPtrMap<AtomicTypeInfo_TT_t, CSchemaType_Atomic_TT*> m_AtomicsTT; // 0x0438
 
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2)
     CSchemaPtrMap<AtomicTypeInfo_TTF_t, CSchemaType_Atomic_TTF*> m_AtomicsTTF; // 0x0468
 #endif
 

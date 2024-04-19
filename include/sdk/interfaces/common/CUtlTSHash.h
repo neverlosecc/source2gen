@@ -3,7 +3,7 @@
 #pragma once
 #include <type_traits>
 
-#if defined(CS2)
+#if defined(CS2) || defined(DOTA2)
 constexpr auto kUtlTsHashVersion = 2;
 #else
 constexpr auto kUtlTsHashVersion = 1;
@@ -29,7 +29,7 @@ using UtlTsHashHandleT = std::uint64_t;
 template <class T>
 class ITSHashConstructor {
 public:
-    virtual void Construct(T * pElement) = 0;
+    virtual void Construct(T* pElement) = 0;
 };
 
 template <class T>
@@ -217,6 +217,10 @@ public:
     // Returns elements in the table
     std::vector<T> GetElements(int nFirstElement = 0);
 
+private:
+    template <typename Predicate>
+    std::vector<T> merge_without_duplicates(const std::vector<T>& allocated_list, const std::vector<T>& un_allocated_list, Predicate pred);
+
 public:
     class HashAllocatedBlob_t {
     public:
@@ -250,6 +254,26 @@ public:
     CInterlockedInt m_ContentionCheck;
 };
 
+template <typename T>
+bool ptr_compare(const T& item1, const T& item2) {
+    return item1 == item2;
+}
+
+template <class T, class Keytype, int BucketCount, class HashFuncs>
+template <typename Predicate>
+inline std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::merge_without_duplicates(const std::vector<T>& allocated_list,
+                                                                                                 const std::vector<T>& un_allocated_list, Predicate pred) {
+    std::vector<T> merged_list = allocated_list;
+
+    for (const auto& item : un_allocated_list) {
+        if (std::find_if(allocated_list.begin(), allocated_list.end(), [&](const T& elem) { return pred(elem, item); }) == allocated_list.end()) {
+            merged_list.push_back(item);
+        }
+    }
+
+    return merged_list;
+}
+
 template <class T, class Keytype, int BucketCount, class HashFuncs>
 std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int nFirstElement) {
     int n_count = BlocksAllocated();
@@ -262,6 +286,9 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int
                 if (--nFirstElement >= 0)
                     continue;
 
+                if (pElement->m_Data == nullptr)
+                    continue;
+
                 AllocatedList.emplace_back(pElement->m_Data);
                 ++nIndex;
 
@@ -272,7 +299,11 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int
     }
 
     /// @note: @og: basically, its hacky-way to obtain first-time commited information to memory
+#if defined(CS2)
     n_count = PeakAlloc();
+#elif defined(DOTA2)
+    n_count = PeakAlloc() - BlocksAllocated();
+#endif
     std::vector<T> unAllocatedList;
     if (n_count > 0) {
         int nIndex = 0;
@@ -289,12 +320,15 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int
         }
     }
 
+#if defined(CS2)
     return unAllocatedList.size() > AllocatedList.size() ? unAllocatedList : AllocatedList;
+#elif defined(DOTA2)
+    return merge_without_duplicates(AllocatedList, unAllocatedList, ptr_compare<T>);
+#endif
 }
 
 template <class Ty>
 using CUtlTSHash = std::conditional_t<kUtlTsHashVersion == 1, CUtlTSHashV1<Ty>, CUtlTSHashV2<Ty>>;
-
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
