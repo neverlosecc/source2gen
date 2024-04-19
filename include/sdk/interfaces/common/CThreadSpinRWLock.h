@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include "sdk/interfaces/common/CThreadMutex.h"
+#include <type_traits>
+
 #if defined(CS2) || defined(DOTA2)
 constexpr auto kThreadSpinMutex = 2;
 #else

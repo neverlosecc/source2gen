@@ -310,7 +310,9 @@ namespace sdk {
             std::list<class_t> classes_to_dump;
             bool did_forward_decls = false;
 
-            for (const auto schema_class_binding : classes.GetElements()) {
+            for (const auto* schema_class_binding : classes.GetElements()) {
+                assert(schema_class_binding != nullptr);
+
                 const auto class_info = current->FindDeclaredClass(schema_class_binding->m_pszName);
 
                 auto& class_dump = classes_to_dump.emplace_back();

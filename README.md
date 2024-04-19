@@ -17,7 +17,19 @@ Changes in this fork (ok = done, x = pending)
     - ok `DLLMain` -> `main`
   - ok source2gen loads required game libraries
     - ok remove sleeps and threads
-  - x initializes libraries into a "dumpable" state (Call `InstallSchemaBindings()`?)
+  - x initializes libraries into a "dumpable" state
+    - x Call `CSchemaSystem::Connect()`?
+      - ok Who calls this in production? `CAppSystemDict::LoadSystemAndDependencies()` -> virtual call to `CSchemaSystem::Connect()`
+      - ok What factory? -> `AppSystemDictCreateInterfaceFn`
+      - manual call accesses `s_pAppSystemDict`, which is a `nullptr` -> crash
+        - `s_pAppSystemDict` is initialized via
+          - `Source2MainInternal()`
+          - -> `CMaterialSystem2AppSystemDict::CMaterialSystem2AppSystemDict()`
+          - -> `CTier2AppSystemDict::CTier2AppSystemDict()`
+          - -> `CAppSystemDict::CAppSystemDict()`
+        - all of these functions have tons of parameters
+      - Better let some other library call this? that'd be `Source2Main()`. if we call that, we might as well run cs2, which misses the point of this fork.
+    - x Call `InstallSchemaBindings()`. do we need this? doesn't imply `CSchemaSystem::Connect()`.
 
 Notes and questions for the upstream maintainers
 

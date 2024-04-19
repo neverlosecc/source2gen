@@ -1,6 +1,10 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include "sdk/interfaces/common/CThreadSpinMutex.h"
+#include "sdk/interfaces/common/CUtlMemory.h"
+#include "sdk/interfaces/common/CUtlMemoryPoolBase.h"
+#include <cstdint>
 #include <type_traits>
 
 #if defined(CS2)

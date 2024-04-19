@@ -408,8 +408,12 @@ public:
 #if defined(CS2) || defined(DOTA2)
     ETypeCategory m_unTypeCategory; // 0x0018
     EAtomicCategory m_unAtomicCategory; // 0x0019
+    char _pad_0x20[0x02];
 #endif
-};
+} __attribute__((packed));
+
+static_assert(offsetof(CSchemaType, m_pTypeScope) == 0x10);
+static_assert(sizeof(CSchemaType) == 0x1C);
 
 class CSchemaType_Ptr : public CSchemaType {
 public:
@@ -433,7 +437,13 @@ class CSchemaType_Builtin : public CSchemaType {
 public:
     SchemaBuiltinType_t m_eBuiltinType;
     std::uint8_t m_unSize;
+    char _pad_0x24[0x04];
 };
+
+static_assert(offsetof(CSchemaType_Builtin, m_pszName) == 0x08);
+static_assert(offsetof(CSchemaType_Builtin, m_eBuiltinType) == 0x1c);
+static_assert(offsetof(CSchemaType_Builtin, m_unSize) == 0x20);
+static_assert(sizeof(CSchemaType_Builtin) == 0x28);
 
 class CSchemaType_DeclaredClass : public CSchemaType {
 public:
@@ -750,10 +760,7 @@ public:
 
     [[nodiscard]] CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) {
         if constexpr (kSchemaSystemVersion == 2) {
-            CSchemaClassInfo* class_info;
-
-            Virtual::Get<void(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, szName.data());
-            return class_info;
+            return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());
         } else {
             return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());
         }
@@ -853,7 +860,8 @@ private:
     std::array<char, 256> m_szName = {}; // 0x0008
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
     bool m_bBuiltinTypesInitialized = false; // 0x0110
-    std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118
+    char _pad_0x114[0x04];
+    std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118, unix:0x0118
     CSchemaPtrMap<CSchemaType*, CSchemaType_Ptr*> m_Ptrs; // 0x0348
     CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT; // 0x03A8
@@ -890,8 +898,15 @@ enum SchemaTypeScope_t : std::uint8_t {
     SCHEMA_TYPESCOPE_DEFAULT,
 };
 
+// TODO: move to public/tier1/interface.h (That's source1, see ghidra assertions for source2 file)
+typedef void* (*CreateInterfaceFn)(const char* pName, int* pReturnCode);
+
 class CSchemaSystem {
 public:
+    [[nodiscard]] bool Connect(CreateInterfaceFn factory) {
+        return Virtual::Get<bool(__thiscall*)(void*, CreateInterfaceFn)>(this, -1)(this, factory);
+    }
+
     [[nodiscard]] CSchemaSystemTypeScope* GlobalTypeScope(void) {
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*)>(this, 11)(this);
     }
@@ -960,7 +975,7 @@ public:
         return Virtual::Get<CSchemaClassBinding*(__thiscall*)(void*, CSchemaClassBinding**)>(this, kSchemaSystem_ValidateClasses)(this, ppBinding);
     }
 
-    [[nodiscard]] bool IsSchemaSystemReady() {
+    [[nodiscard]] bool SchemaSystemIsReady() {
         return Virtual::Get<bool(__thiscall*)(void*)>(this, 26)(this);
     }
 

@@ -3,8 +3,10 @@
 #include <Include.h>
 #include <sdk/sdk.h>
 
+#include <fstream>
 #include <proc.h>
-#include <thread>
+#include <string>
+#include <string_view>
 
 namespace {
     using namespace std::string_view_literals;
@@ -30,6 +32,29 @@ namespace {
 } // namespace
 
 namespace source2_gen {
+    // TODO: remove
+    [[nodiscard]] auto find_module_base(const std::string_view module_name) -> std::optional<std::uintptr_t> {
+        auto file = std::ifstream{"/proc/self/maps"};
+
+        if (!file.is_open()) {
+            throw std::runtime_error{"cannot open /proc/self/maps for reading"};
+        }
+
+        std::string line{};
+        while (std::getline(file, line)) {
+            if (line.contains("lib" + std::string{module_name} + ".so")) {
+                if (line.contains("xp ")) {
+                    auto stream = std::istringstream{line};
+                    auto base = std::uint64_t{};
+                    stream >> std::hex >> base;
+                    return base;
+                }
+            }
+        }
+
+        return std::nullopt;
+    }
+
     void Dump() try {
         // @note: @es3n1n: Waiting for game init
         //
@@ -52,14 +77,29 @@ namespace source2_gen {
         if (!sdk::g_schema)
             throw std::runtime_error(std::format("Unable to obtain Schema interface"));
 
-        if (!sdk::g_schema->IsSchemaSystemReady())
-            throw std::runtime_error(std::format("Schema system is not ready"));
+        // TODO: remove this test code
+        // {
+        const auto client = find_module_base("client").value();
+
+        auto const InstallSchemaBindings = (std::uint8_t(*)(const char*, CSchemaSystem*))(client + 0x02d15f70 - 0x005ac000);
+        auto const installed = InstallSchemaBindings("SchemaSystem_001", sdk::g_schema);
+        std::cout << "installed: " << std::boolalpha << (bool)installed << std::endl;
+
+        //     auto const AppSystemDictCreateInterfaceFn = (CreateInterfaceFn)(engine2 + 0x00439440); // - 0x0010fb00);
+        //     auto const connected = sdk::g_schema->Connect(AppSystemDictCreateInterfaceFn);
+        //     std::cout << "connected: " << std::boolalpha << (bool)connected << std::endl;
+        // }
+
+        // TODO: uncomment if we still need it
+        // if (!sdk::g_schema->SchemaSystemIsReady())
+        //     throw std::runtime_error(std::format("Schema system is not ready"));
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk
-        //
-        const auto type_scopes = sdk::g_schema->GetTypeScopes();
-        for (auto i = 0; i < type_scopes.Count(); ++i)
-            sdk::GenerateTypeScopeSdk(type_scopes.m_pElements[i]);
+
+        // TODO: uncomment once !GlobalScope dump is working
+        // const auto type_scopes = sdk::g_schema->GetTypeScopes();
+        // for (auto i = 0; i < type_scopes.Count(); ++i)
+        //     sdk::GenerateTypeScopeSdk(type_scopes.m_pElements[i]);
 
         // @note: @es3n1n: Generating sdk for global type scope
         //

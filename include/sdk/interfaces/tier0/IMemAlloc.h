@@ -9,13 +9,13 @@
 class IMemAlloc {
 public:
     void* Alloc(std::size_t nSize) {
-        return Virtual::Get<void*(__thiscall*)(IMemAlloc*, std::size_t)>(this, 1)(this, nSize);
+        return Virtual::Get<void*(__thiscall*)(IMemAlloc*, std::size_t)>(this, 2)(this, nSize);
     }
 
     void* AllocAligned(std::size_t nSize, std::size_t nAlign);
 
     void* Realloc(void* pMemory, std::size_t nSize) {
-        return Virtual::Get<void*(__thiscall*)(IMemAlloc*, void*, std::size_t)>(this, 2)(this, pMemory, nSize);
+        return Virtual::Get<void*(__thiscall*)(IMemAlloc*, void*, std::size_t)>(this, 3)(this, pMemory, nSize);
     }
 
     void* ReallocAligned(void* pMemory, std::size_t nSize, std::size_t nAlign);
@@ -23,7 +23,7 @@ public:
     void* Calloc(std::size_t nNum, std::size_t nSize);
 
     void Free(void* pMemory) {
-        return Virtual::Get<void(__thiscall*)(IMemAlloc*, void*)>(this, 3)(this, pMemory);
+        return Virtual::Get<void(__thiscall*)(IMemAlloc*, void*)>(this, 4)(this, pMemory);
     }
 
     void FreeAligned(void* pMemory);
@@ -31,7 +31,7 @@ public:
     std::size_t GetSizeAligned(void* pMemory);
 
     std::size_t GetSize(void* pMemory) {
-        return Virtual::Get<std::size_t(__thiscall*)(IMemAlloc*, void*)>(this, 17)(this, pMemory);
+        return Virtual::Get<std::size_t(__thiscall*)(IMemAlloc*, void*)>(this, 18)(this, pMemory);
     }
 };
 
