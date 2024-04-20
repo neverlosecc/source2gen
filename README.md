@@ -2,14 +2,14 @@ TODO: remove these notes
 
 Changes in this fork (ok = done, x = pending)
 
-- x unix compatibility
+- x linux compatibility
   - ok compiles with clang
     - ok alias/redirect windows APIs (`LoadLibraryA()` and friends)
     - ok add missing includes
     - ok fix source file case mismatches
   - ok launches without crashing
   - ok dumps
-  - x compatible with unix AND windows (compile-time changes)
+  - x compatible with linux AND windows (compile-time changes)
 - x source2gen is an executable (faster, easier to use, supports headless systems)
   - ok is an executable
     - ok cmake
@@ -61,17 +61,17 @@ TODO: how to run on windows?
 source2gen <C:\\path\\to\\cs2>
 ```
 
-### Unix
+### Linux
 
 ```sh
 LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
   source2gen ~/.steam/steam/steamapps/common/cs2
 ```
 
-Source2Gen for Unix support is currently in an alpha state. There will be
+Source2Gen for Linux support is currently in an alpha state. There will be
 errors, bugs, and wrong output. Please only file issues if you want to work on
 them. This note will be removed once we have thoroughly tested Source2Gen on
-Unix.
+Linux.
 
 ## Getting Started
 
@@ -84,7 +84,7 @@ These instructions will help you set up the project on your local machine for de
 - Visual Studio 2019 or newer
 - premake5
 
-#### Unix
+#### Linux
 
 - clang++-17 or newer, other compilers are might work as well
 - CMake
@@ -157,7 +157,7 @@ This project is made possible by the contributions of various individuals and pr
 
 - **[es3n1n](https://github.com/es3n1n)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=es3n1n)
 - **[cpz](https://github.com/cpz)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=cpz)
-- **[Cre3per](https://github.com/Cre3per/)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=cre3per), Unix support
+- **[Cre3per](https://github.com/Cre3per/)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=cre3per), Linux support
 - **[Soufiw](https://github.com/Soufiw)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=Soufiw)
 - **[anarh1st47](https://github.com/anarh1st47)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=anarh1st47)
 - **[praydog](https://github.com/praydog)** - the author of the original [Source2Gen](https://github.com/praydog/Source2Gen) project

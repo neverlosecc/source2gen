@@ -3,25 +3,30 @@
 #include <cassert>
 #include <cstring>
 #include <Include.h>
-#include <proc.h>
 #include <sdk/interfaces/tier0/IMemAlloc.h>
+#include <tools/loader.h>
 
 namespace {
+    // don't use any allocating functions in here, it'll cause a recursive call
+    // to operator new()!
     IMemAlloc* MemAllocSystemInitialize() {
-        // Attempt to load tier0.dll
-        HMODULE tier0 = LoadLibraryA(LIBRARY("tier0"));
+        // Attempt to load tier0
+        auto tier0 = Loader::find_module_handle(LOADER_GET_MODULE_FILE_NAME("tier0"));
 
-        assert(tier0 != nullptr);
+        assert(tier0 != nullptr && "You cannot use any allocating functions before tier0 has been loaded."
+                                   "That includes std::string{} and std::format()!"
+                                   "We're overriding operator new() and friends and depend on tier0."
+                                   "Run a backtrace in your debugger to see where an allocation attempt was made, then adjust that code.");
 
         IMemAlloc* g_pMemAlloc = nullptr;
 
         // Continuously try to get the g_pMemAlloc pointer until it's successful
         while (!g_pMemAlloc) {
-            g_pMemAlloc = *reinterpret_cast<IMemAlloc**>(GetProcAddress(tier0, "g_pMemAlloc"));
+            g_pMemAlloc = *reinterpret_cast<IMemAlloc**>(Loader::find_module_symbol(tier0, "g_pMemAlloc"));
 
             // If g_pMemAlloc is not found, try initializing it
             if (!g_pMemAlloc) {
-                static const auto CMemAllocSystemInitialize = reinterpret_cast<void (*)()>(GetProcAddress(tier0, "CMemAllocSystemInitialize"));
+                static const auto CMemAllocSystemInitialize = reinterpret_cast<void (*)()>(Loader::find_module_symbol(tier0, "CMemAllocSystemInitialize"));
 
                 if (CMemAllocSystemInitialize) {
                     CMemAllocSystemInitialize();
@@ -90,8 +95,8 @@ void* IMemAlloc::Calloc(std::size_t num, std::size_t nSize) {
     const auto total_size = num * nSize;
     const auto memory = Alloc(total_size);
     if (memory) {
-        static auto V_tier0_memset =
-            reinterpret_cast<void(__cdecl*)(void*, std::int8_t, std::size_t)>(GetProcAddress(GetModuleHandleA(LIBRARY("tier0")), "V_tier0_memset"));
+        static auto V_tier0_memset = reinterpret_cast<void(__cdecl*)(void*, std::int8_t, std::size_t)>(
+            Loader::find_module_symbol(Loader::find_module_handle(Loader::get_module_file_name("tier0")), "V_tier0_memset"));
 
         if (V_tier0_memset != nullptr)
             V_tier0_memset(memory, 0, total_size);

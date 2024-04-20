@@ -5,80 +5,68 @@
 
 #include <array>
 #include <fstream>
-#include <proc.h>
 #include <string>
 #include <string_view>
+#include <tools/loader.h>
+#include <tools/platform.h>
 
 namespace {
-    using namespace std::string_view_literals;
-
-    // clang-format off
-    constexpr std::array kRequiredGameModules = std::to_array<std::string_view>({
+    [[nodiscard]] auto get_required_modules() {
+        // clang-format off
+      return std::to_array<std::string>({
         // @note: @es3n1n: modules that we'll use in our code
-        LIBRARY("client"),
-        LIBRARY("engine2"),
-        LIBRARY("schemasystem"),
-        LIBRARY("tier0"),
+        Loader::get_module_file_name("client"),
+        Loader::get_module_file_name("engine2"),
+        Loader::get_module_file_name("schemasystem"),
+        Loader::get_module_file_name("tier0"),
 
         #if defined(DOTA2)
         // @note: @soufiw: latest modules that gets loaded in the main menu
-        LIBRARY("navsystem"),
+        Loader::get_module_file_name("navsystem"),
         #elif defined(CS2)
-        LIBRARY("matchmaking"),
+        Loader::get_module_file_name("matchmaking"),
         #endif
 
         // modules that we'll dump (minus the ones listed above)
-        LIBRARY("animationsystem"),
-        LIBRARY("host"),
-        LIBRARY("materialsystem2"),
-        LIBRARY("meshsystem"),
-        LIBRARY("networksystem"),
-        LIBRARY("panorama"),
-        LIBRARY("particles"),
-        LIBRARY("pulse_system"),
-        // TODO: cfg_windows
-        // LIBRARY("rendersystemdx11"),
-        LIBRARY("resourcesystem"),
-        LIBRARY("scenefilecache"),
-        LIBRARY("scenesystem"),
-        LIBRARY("server"),
-        LIBRARY("soundsystem"),
-        LIBRARY("vphysics2"),
-        LIBRARY("worldrenderer")
+        Loader::get_module_file_name("animationsystem"),
+        Loader::get_module_file_name("host"),
+        Loader::get_module_file_name("materialsystem2"),
+        Loader::get_module_file_name("meshsystem"),
+        Loader::get_module_file_name("networksystem"),
+        Loader::get_module_file_name("panorama"),
+        Loader::get_module_file_name("particles"),
+        Loader::get_module_file_name("pulse_system"),
+        IF_WINDOWS(Loader::get_module_file_name("rendersystemdx11"),)
+        Loader::get_module_file_name("resourcesystem"),
+        Loader::get_module_file_name("scenefilecache"),
+        Loader::get_module_file_name("scenesystem"),
+        Loader::get_module_file_name("server"),
+        Loader::get_module_file_name("soundsystem"),
+        Loader::get_module_file_name("vphysics2"),
+        Loader::get_module_file_name("worldrenderer")
     });
-    // clang-format on
+        // clang-format on
+    }
 } // namespace
 
 namespace source2_gen {
-    // TODO: remove
-    [[nodiscard]] auto find_module_base(const std::string_view module_name) -> std::optional<std::uintptr_t> {
-        auto file = std::ifstream{"/proc/self/maps"};
-
-        if (!file.is_open()) {
-            throw std::runtime_error{"cannot open /proc/self/maps for reading"};
-        }
-
-        std::string line{};
-        while (std::getline(file, line)) {
-            if (line.contains("lib" + std::string{module_name} + ".so")) {
-                if (line.contains("xp ")) {
-                    auto stream = std::istringstream{line};
-                    auto base = std::uint64_t{};
-                    stream >> std::hex >> base;
-                    return base;
-                }
-            }
-        }
-
-        return std::nullopt;
-    }
-
     void Dump() try {
-        // @note: @es3n1n: Waiting for game init
-        //
-        for (const auto& name : kRequiredGameModules) {
+        // set up the allocator before anything else. we can't use any
+        // allocating functions without it.
+        if (Loader::load_module(LOADER_GET_MODULE_FILE_NAME("tier0")) == nullptr) {
+            // don't use any allocating functions in here. That might include
+            // dlerror() and FormatMessage(). Is there a friendly way to report
+            // this to the user?
+            std::fputs("could not load tier0. " IF_LINUX("Is LD_LIBRARY_PATH set?") IF_WINDOWS("Is PATH set?"), stderr);
+            std::terminate();
+        }
+        static_cast<void>(GetMemAlloc());
+
+        const auto modules = get_required_modules();
+
+        for (const auto& name : modules) {
             std::cout << "loading " << name << std::endl;
-            if (LoadLibraryA(name.data()) == nullptr) {
+            if (Loader::load_module(name.data()) == nullptr) {
                 // cannot use any functions that use `new` because we've
                 // overridden `new` in IMemAlloc.cpp and it relies on
                 // libraries being loaded.
@@ -95,11 +83,11 @@ namespace source2_gen {
         if (!sdk::g_schema)
             throw std::runtime_error(std::format("Unable to obtain Schema interface"));
 
-        for (const auto& name : kRequiredGameModules) {
-            auto* handle = GetModuleHandleA(name.data());
-            assert(handle != nullptr && "we loaded kRequiredGameModules at startup, where did they go?");
+        for (const auto& name : modules) {
+            auto* handle = Loader::find_module_handle(name.data());
+            assert(handle != nullptr && "we loaded modules at startup, where did they go?");
 
-            if (const auto* pInstallSchemaBindings = GetProcAddress(handle, "InstallSchemaBindings")) {
+            if (const auto* pInstallSchemaBindings = Loader::find_module_symbol(handle, "InstallSchemaBindings")) {
                 auto const InstallSchemaBindings = (std::uint8_t(*)(const char*, CSchemaSystem*))(pInstallSchemaBindings);
                 if (!InstallSchemaBindings("SchemaSystem_001", sdk::g_schema)) {
                     std::cerr << std::format("Unable to install schema bindings in {}", name) << std::endl;

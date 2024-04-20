@@ -862,7 +862,7 @@ private:
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
     bool m_bBuiltinTypesInitialized = false; // 0x0110
     char _pad_0x114[0x04];
-    std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118, unix:0x0118
+    std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118, linux:0x0118
     CSchemaPtrMap<CSchemaType*, CSchemaType_Ptr*> m_Ptrs; // 0x0348
     CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT; // 0x03A8
@@ -1020,7 +1020,7 @@ private:
 
 public:
     [[nodiscard]] static CSchemaSystem* GetInstance(void) {
-        return sdk::GetInterface<CSchemaSystem>(LIBRARY("schemasystem"), "SchemaSystem_0");
+        return sdk::GetInterface<CSchemaSystem>(Loader::get_module_file_name("schemasystem").c_str(), "SchemaSystem_0");
     }
 };
 

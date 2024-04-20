@@ -4,7 +4,7 @@
 
 #include <cassert>
 #include <cstdint>
-#include <proc.h>
+#include <tools/loader.h>
 #include <string_view>
 
 namespace sdk {
@@ -18,10 +18,10 @@ namespace sdk {
     };
 
     inline const InterfaceReg* GetInterfaces(const char* library) {
-        const auto library_handle = GetModuleHandleA(library);
+        const auto library_handle = Loader::find_module_handle(library);
         assert(library_handle != 0);
 
-        const auto createinterface_symbol = reinterpret_cast<std::uintptr_t>(GetProcAddress(library_handle, "CreateInterface"));
+        const auto createinterface_symbol = reinterpret_cast<std::uintptr_t>(Loader::find_module_symbol(library_handle, "CreateInterface"));
         assert(createinterface_symbol != 0);
 
         const auto createinterface_impl = createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 1) + 5;

@@ -747,6 +747,7 @@ namespace sdk {
         std::ofstream f(out_file_path, std::ios::out);
         f << builder.str();
         if (f.good()) {
+            // TODO: move this to the process exit
             std::cout << std::format("Wrote dump to {}", out_file_path) << std::endl;
         } else {
             std::cerr << std::format("Could not write to {}: {}", out_file_path, std::strerror(errno)) << std::endl;

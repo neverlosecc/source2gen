@@ -85,7 +85,8 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
     target_compile_definitions(source2gen PRIVATE "source2gen_RELEASE" "NDEBUG")
 endif()
 
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
+   ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang")
     target_compile_options(source2gen PRIVATE
       -Wno-nonportable-include-path
       -Wno-implicit-exception-spec-mismatch
@@ -95,13 +96,16 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQ
 
 endif()
 
-# TODO: make this conditional based on the compiler in use
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
+   ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang" OR
+   ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
 target_compile_definitions(source2gen PRIVATE
   "FORCEINLINE="
   "__forceinline="
   "__thiscall="
   "__cdecl="
 )
+endif()
 
 target_compile_definitions(source2gen PRIVATE
     "${SOURCE2GEN_GAME}"
