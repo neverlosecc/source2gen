@@ -146,7 +146,7 @@ enum {
 #elif defined(CS2)
 
 constexpr auto kSchemaSystemVersion = 2;
-constexpr auto kSchemaSystem_PAD0 = 0x190;
+constexpr auto kSchemaSystem_PAD0 = 0x1F8;
 constexpr auto kSchemaSystem_PAD1 = 0x120;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 

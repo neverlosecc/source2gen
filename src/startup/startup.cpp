@@ -3,6 +3,7 @@
 #include <Include.h>
 #include <sdk/sdk.h>
 
+#include <array>
 #include <fstream>
 #include <proc.h>
 #include <string>
@@ -25,10 +26,27 @@ namespace {
         #elif defined(CS2)
         LIBRARY("matchmaking"),
         #endif
+
+        // modules that we'll dump (minus the ones listed above)
+        LIBRARY("animationsystem"),
+        LIBRARY("host"),
+        LIBRARY("materialsystem2"),
+        LIBRARY("meshsystem"),
+        LIBRARY("networksystem"),
+        LIBRARY("panorama"),
+        LIBRARY("particles"),
+        LIBRARY("pulse_system"),
+        // TODO: cfg_windows
+        // LIBRARY("rendersystemdx11"),
+        LIBRARY("resourcesystem"),
+        LIBRARY("scenefilecache"),
+        LIBRARY("scenesystem"),
+        LIBRARY("server"),
+        LIBRARY("soundsystem"),
+        LIBRARY("vphysics2"),
+        LIBRARY("worldrenderer")
     });
     // clang-format on
-
-    std::atomic_bool is_finished = false;
 } // namespace
 
 namespace source2_gen {
@@ -58,7 +76,7 @@ namespace source2_gen {
     void Dump() try {
         // @note: @es3n1n: Waiting for game init
         //
-        for (auto& name : kRequiredGameModules) {
+        for (const auto& name : kRequiredGameModules) {
             std::cout << "loading " << name << std::endl;
             if (LoadLibraryA(name.data()) == nullptr) {
                 // cannot use any functions that use `new` because we've
@@ -77,29 +95,26 @@ namespace source2_gen {
         if (!sdk::g_schema)
             throw std::runtime_error(std::format("Unable to obtain Schema interface"));
 
-        // TODO: remove this test code
-        // {
-        const auto client = find_module_base("client").value();
+        for (const auto& name : kRequiredGameModules) {
+            auto* handle = GetModuleHandleA(name.data());
+            assert(handle != nullptr && "we loaded kRequiredGameModules at startup, where did they go?");
 
-        auto const InstallSchemaBindings = (std::uint8_t(*)(const char*, CSchemaSystem*))(client + 0x02d15f70 - 0x005ac000);
-        auto const installed = InstallSchemaBindings("SchemaSystem_001", sdk::g_schema);
-        std::cout << "installed: " << std::boolalpha << (bool)installed << std::endl;
-
-        //     auto const AppSystemDictCreateInterfaceFn = (CreateInterfaceFn)(engine2 + 0x00439440); // - 0x0010fb00);
-        //     auto const connected = sdk::g_schema->Connect(AppSystemDictCreateInterfaceFn);
-        //     std::cout << "connected: " << std::boolalpha << (bool)connected << std::endl;
-        // }
-
-        // TODO: uncomment if we still need it
-        // if (!sdk::g_schema->SchemaSystemIsReady())
-        //     throw std::runtime_error(std::format("Schema system is not ready"));
+            if (const auto* pInstallSchemaBindings = GetProcAddress(handle, "InstallSchemaBindings")) {
+                auto const InstallSchemaBindings = (std::uint8_t(*)(const char*, CSchemaSystem*))(pInstallSchemaBindings);
+                if (!InstallSchemaBindings("SchemaSystem_001", sdk::g_schema)) {
+                    std::cerr << std::format("Unable to install schema bindings in {}", name) << std::endl;
+                    std::terminate();
+                }
+            } else {
+                std::cout << std::format("No InstallSchemaBindings() in {}", name) << std::endl;
+            }
+        }
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk
 
-        // TODO: uncomment once !GlobalScope dump is working
-        // const auto type_scopes = sdk::g_schema->GetTypeScopes();
-        // for (auto i = 0; i < type_scopes.Count(); ++i)
-        //     sdk::GenerateTypeScopeSdk(type_scopes.m_pElements[i]);
+        const auto type_scopes = sdk::g_schema->GetTypeScopes();
+        for (auto i = 0; i < type_scopes.Count(); ++i)
+            sdk::GenerateTypeScopeSdk(type_scopes.m_pElements[i]);
 
         // @note: @es3n1n: Generating sdk for global type scope
         //
@@ -109,13 +124,8 @@ namespace source2_gen {
                                  util::PrettifyNum(sdk::g_schema->GetRegistration()), util::PrettifyNum(sdk::g_schema->GetRedundant()),
                                  util::PrettifyNum(sdk::g_schema->GetIgnored()), util::PrettifyNum(sdk::g_schema->GetIgnoredBytes()))
                   << std::endl;
-
-        // @note: @es3n1n: We are done here
-        //
-        is_finished = true;
     } catch (std::runtime_error& err) {
         std::cout << std::format("{} :: ERROR :: {}", __FUNCTION__, err.what()) << std::endl;
-        is_finished = true;
     }
 
     void main() {

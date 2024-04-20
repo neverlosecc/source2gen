@@ -8,7 +8,7 @@ Changes in this fork (ok = done, x = pending)
     - ok add missing includes
     - ok fix source file case mismatches
   - ok launches without crashing
-  - x dumps
+  - ok dumps
   - x compatible with unix AND windows (compile-time changes)
 - x source2gen is an executable (faster, easier to use, supports headless systems)
   - ok is an executable
@@ -18,8 +18,8 @@ Changes in this fork (ok = done, x = pending)
   - ok source2gen loads required game libraries
     - ok remove sleeps and threads
   - x command line flags (e.g. output directory)
-  - x initializes libraries into a "dumpable" state
-    - x Call `CSchemaSystem::Connect()`?
+  - ok initializes libraries into a "dumpable" state
+    - ok (not needed) Call `CSchemaSystem::Connect()`?
       - ok Who calls this in production? `CAppSystemDict::LoadSystemAndDependencies()` -> virtual call to `CSchemaSystem::Connect()`
       - ok What factory? -> `AppSystemDictCreateInterfaceFn`
       - manual call accesses `s_pAppSystemDict`, which is a `nullptr` -> crash
@@ -30,7 +30,7 @@ Changes in this fork (ok = done, x = pending)
           - -> `CAppSystemDict::CAppSystemDict()`
         - all of these functions have tons of parameters
       - Better let some other library call this? that'd be `Source2Main()`. if we call that, we might as well run cs2, which misses the point of this fork.
-    - x Call `InstallSchemaBindings()`. do we need this? doesn't imply `CSchemaSystem::Connect()`.
+    - ok Call `InstallSchemaBindings()`
 
 Notes and questions for the upstream maintainers
 
@@ -51,14 +51,43 @@ An example of such SDKs could be found at [source2sdk](https://github.com/neverl
 
 ---
 
+## Usage
+
+### Windows
+
+TODO: how to run on windows?
+
+```sh
+source2gen <C:\\path\\to\\cs2>
+```
+
+### Unix
+
+```sh
+LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
+  source2gen ~/.steam/steam/steamapps/common/cs2
+```
+
+Source2Gen for Unix support is currently in an alpha state. There will be
+errors, bugs, and wrong output. Please only file issues if you want to work on
+them. This note will be removed once we have thoroughly tested Source2Gen on
+Unix.
+
 ## Getting Started
 
 These instructions will help you set up the project on your local machine for development and testing purposes.
 
 ### Prerequisites
 
+#### Windows
+
 - Visual Studio 2019 or newer
 - premake5
+
+#### Unix
+
+- clang++-17 or newer, other compilers are might work as well
+- CMake
 
 ### Clone the repository
 
@@ -92,6 +121,10 @@ You can use premake5 options and specify which game you want to dump:
      UNDERLORDS       Dota Underlords
 ```
 
+or
+
+When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
+
 ### Building the project
 
 #### With premake5
@@ -103,7 +136,7 @@ You can use premake5 options and specify which game you want to dump:
 premake5 vs2019 --game=CS2
 ```
 
-* Open the generated source2gen.sln file in Visual Studio.
+- Open the generated source2gen.sln file in Visual Studio.
 - Build the solution in the desired configuration (Debug, Release, or Dist).
 
 #### With CMake
@@ -124,6 +157,7 @@ This project is made possible by the contributions of various individuals and pr
 
 - **[es3n1n](https://github.com/es3n1n)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=es3n1n)
 - **[cpz](https://github.com/cpz)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=cpz)
+- **[Cre3per](https://github.com/Cre3per/)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=cre3per), Unix support
 - **[Soufiw](https://github.com/Soufiw)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=Soufiw)
 - **[anarh1st47](https://github.com/anarh1st47)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=anarh1st47)
 - **[praydog](https://github.com/praydog)** - the author of the original [Source2Gen](https://github.com/praydog/Source2Gen) project

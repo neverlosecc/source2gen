@@ -2,7 +2,7 @@
 // See end of file for extended copyright information.
 #include <Include.h>
 
-int main() {
+int main(int argc, char* argv[]) {
     source2_gen::main();
 }
 
