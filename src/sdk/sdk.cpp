@@ -10,7 +10,7 @@
 namespace {
     using namespace std::string_view_literals;
 
-    constexpr std::string_view kOutDirName = "sdk"sv;
+    constexpr std::string_view kOutDirName = "/tmp/sdk"sv;
     constinit std::array include_paths = {"<cstdint>"sv, "\"!GlobalTypes.hpp\""sv};
 
     constexpr uint32_t kMaxReferencesForClassEmbed = 2;
@@ -637,7 +637,7 @@ namespace sdk {
                     const auto& dm = class_info->m_pFieldMetadataOverrides;
 
                     for (std::uint64_t s = 0; s < dm->m_iTypeDescriptionCount; s++) {
-                        auto t = &dm->m_pTypeDescription[s];
+                        auto* t = &dm->m_pTypeDescription[s];
                         if (!t)
                             continue;
 
@@ -707,7 +707,7 @@ namespace sdk {
         //
         if (!std::filesystem::exists(kOutDirName))
             std::filesystem::create_directories(kOutDirName);
-        const std::string out_file_path = std::format("{}\\{}.hpp", kOutDirName, scope_name);
+        const std::string out_file_path = std::format("{}/{}.hpp", kOutDirName, scope_name);
 
         // @note: @es3n1n: init codegen
         //
@@ -745,7 +745,12 @@ namespace sdk {
         //
         std::ofstream f(out_file_path, std::ios::out);
         f << builder.str();
-        f.close();
+        if (f.good()) {
+            std::cout << std::format("Wrote dump to {}", out_file_path) << std::endl;
+        } else {
+            std::cerr << std::format("Could not write to {}: {}", out_file_path, std::strerror(errno)) << std::endl;
+            // TODO: abort
+        }
     }
 } // namespace sdk
 

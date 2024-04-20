@@ -760,6 +760,7 @@ public:
 
     [[nodiscard]] CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) {
         if constexpr (kSchemaSystemVersion == 2) {
+
             return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());
         } else {
             return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());

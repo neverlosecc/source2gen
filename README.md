@@ -17,6 +17,7 @@ Changes in this fork (ok = done, x = pending)
     - ok `DLLMain` -> `main`
   - ok source2gen loads required game libraries
     - ok remove sleeps and threads
+  - x command line flags (e.g. output directory)
   - x initializes libraries into a "dumpable" state
     - x Call `CSchemaSystem::Connect()`?
       - ok Who calls this in production? `CAppSystemDict::LoadSystemAndDependencies()` -> virtual call to `CSchemaSystem::Connect()`
