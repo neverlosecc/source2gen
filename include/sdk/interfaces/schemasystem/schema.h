@@ -145,8 +145,9 @@ enum {
 
 #elif defined(CS2)
 
-constexpr auto kSchemaSystemVersion = 2;
-constexpr auto kSchemaSystem_PAD0 = 0x1F8;
+/// 2 has return-value-optimization, 1 doesn't
+constexpr auto kSchemaSystemVersion = IF_WINDOWS(2) IF_LINUX(1);
+constexpr auto kSchemaSystem_PAD0 = IF_WINDOWS(0x190) IF_LINUX(0x1F8);
 constexpr auto kSchemaSystem_PAD1 = 0x120;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
@@ -408,7 +409,7 @@ public:
 #if defined(CS2) || defined(DOTA2)
     ETypeCategory m_unTypeCategory; // 0x0018
     EAtomicCategory m_unAtomicCategory; // 0x0019
-    char _pad_0x20[0x02];
+    IF_LINUX(char _pad_0x20[0x02];)
 #endif
 } __attribute__((packed));
 
@@ -440,7 +441,6 @@ public:
     char _pad_0x24[0x04];
 };
 
-static_assert(offsetof(CSchemaType_Builtin, m_pszName) == 0x08);
 static_assert(offsetof(CSchemaType_Builtin, m_eBuiltinType) == 0x1c);
 static_assert(offsetof(CSchemaType_Builtin, m_unSize) == 0x20);
 static_assert(sizeof(CSchemaType_Builtin) == 0x28);
@@ -763,8 +763,10 @@ public:
 
     [[nodiscard]] CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) {
         if constexpr (kSchemaSystemVersion == 2) {
+            CSchemaClassInfo* class_info;
 
-            return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());
+            Virtual::Get<void(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, szName.data());
+            return class_info;
         } else {
             return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());
         }
@@ -864,8 +866,8 @@ private:
     std::array<char, 256> m_szName = {}; // 0x0008
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
     bool m_bBuiltinTypesInitialized = false; // 0x0110
-    char _pad_0x114[0x04];
-    std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118, linux:0x0118
+    IF_LINUX(char _pad_0x114[0x04];)
+    std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118
     CSchemaPtrMap<CSchemaType*, CSchemaType_Ptr*> m_Ptrs; // 0x0348
     CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT; // 0x03A8
@@ -907,10 +909,6 @@ typedef void* (*CreateInterfaceFn)(const char* pName, int* pReturnCode);
 
 class CSchemaSystem {
 public:
-    [[nodiscard]] bool Connect(CreateInterfaceFn factory) {
-        return Virtual::Get<bool(__thiscall*)(void*, CreateInterfaceFn)>(this, -1)(this, factory);
-    }
-
     [[nodiscard]] CSchemaSystemTypeScope* GlobalTypeScope(void) {
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*)>(this, 11)(this);
     }
@@ -977,10 +975,6 @@ public:
 
     CSchemaClassBinding* ValidateClasses(CSchemaClassBinding** ppBinding) {
         return Virtual::Get<CSchemaClassBinding*(__thiscall*)(void*, CSchemaClassBinding**)>(this, kSchemaSystem_ValidateClasses)(this, ppBinding);
-    }
-
-    [[nodiscard]] bool SchemaSystemIsReady() {
-        return Virtual::Get<bool(__thiscall*)(void*)>(this, 26)(this);
     }
 
     void PrintSchemaStats() {

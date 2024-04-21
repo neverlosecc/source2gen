@@ -252,7 +252,7 @@ public:
     // for associating function with string names
     void* m_pInputFn;
 
-    char _pad_0x38[0x08];
+    IF_LINUX(char _pad_0x38[0x08];)
 
     // For embedding additional datatables inside this one
     union {
@@ -277,8 +277,8 @@ public:
 };
 
 static_assert(offsetof(typedescription_t, m_pszFieldName) == 0x08);
-static_assert(offsetof(typedescription_t, m_pDataMap) == 0x40);
-static_assert(sizeof(typedescription_t) == 0x70);
+static_assert(offsetof(typedescription_t, m_pDataMap) == IF_WINDOWS(0x3C) IF_LINUX(0x40));
+static_assert(sizeof(typedescription_t) == IF_WINDOWS(0x68) IF_LINUX(0x70));
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc

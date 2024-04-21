@@ -1,10 +1,15 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include <cstdint>
 #include <emmintrin.h>
 
 // decls for aligning data
-#define DECL_ALIGN(x)
+#if TARGET_OS == WINDOWS
+    #define DECL_ALIGN(x) __declspec(align(x))
+#else
+    #define DECL_ALIGN(x)
+#endif
 
 #ifdef _WIN64
 constexpr auto TSLIST_HEAD_ALIGNMENT = 16;
@@ -19,16 +24,13 @@ constexpr auto TSLIST_NODE_ALIGNMENT = 8;
     #define TSLIST_NODE_ALIGN DECL_ALIGN(TSLIST_NODE_ALIGNMENT)
     #define TSLIST_HEAD_ALIGN_POST
     #define TSLIST_NODE_ALIGN_POST
-#elif defined(GNUC)
+#elif defined(__GNUC__)
     #define TSLIST_HEAD_ALIGN
     #define TSLIST_NODE_ALIGN
     #define TSLIST_HEAD_ALIGN_POST DECL_ALIGN(TSLIST_HEAD_ALIGNMENT)
     #define TSLIST_NODE_ALIGN_POST DECL_ALIGN(TSLIST_NODE_ALIGNMENT)
 #else
-    #define TSLIST_HEAD_ALIGN
-    #define TSLIST_NODE_ALIGN
-    #define TSLIST_HEAD_ALIGN_POST DECL_ALIGN(TSLIST_HEAD_ALIGNMENT)
-    #define TSLIST_NODE_ALIGN_POST DECL_ALIGN(TSLIST_NODE_ALIGNMENT)
+    #error
 #endif
 
 struct TSLIST_NODE_ALIGN TSLNodeBase_t {

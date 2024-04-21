@@ -80,7 +80,7 @@ namespace detail {
             return result;
         }
 
-        static auto __forceinline hash_runtime(const char* str,std::size_t sz) -> hash {
+        static auto __forceinline hash_runtime(const char* str, std::size_t sz) -> hash {
             auto end = str + sz;
             auto result = hash_init();
 
@@ -91,7 +91,7 @@ namespace detail {
             return result;
         }
 
-        static auto __forceinline hash_runtime(const wchar_t* str,std::size_t sz) -> hash {
+        static auto __forceinline hash_runtime(const wchar_t* str, std::size_t sz) -> hash {
             auto end = str + sz;
             auto result = hash_init();
 

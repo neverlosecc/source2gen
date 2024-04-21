@@ -4,8 +4,8 @@
 
 #include <cassert>
 #include <cstdint>
-#include <tools/loader.h>
 #include <string_view>
+#include <tools/loader.h>
 
 namespace sdk {
     using InstantiateInterfaceFn = void* (*)();
@@ -24,10 +24,14 @@ namespace sdk {
         const auto createinterface_symbol = reinterpret_cast<std::uintptr_t>(Loader::find_module_symbol(library_handle, "CreateInterface"));
         assert(createinterface_symbol != 0);
 
+#if TARGET_OS == WINDOWS
+        const uintptr_t interface_list = createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 3) + 7;
+#elif TARGET_OS == LINUX
         const auto createinterface_impl = createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 1) + 5;
         const auto createinterface_mov = createinterface_impl + 0x10;
 
         const uintptr_t interface_list = createinterface_mov + *reinterpret_cast<int32_t*>(createinterface_mov + 3) + 7;
+#endif
 
         return *reinterpret_cast<InterfaceReg**>(interface_list);
     }

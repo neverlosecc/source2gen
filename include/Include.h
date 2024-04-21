@@ -18,10 +18,6 @@ using namespace std::this_thread;
 #include <iostream>
 #pragma endregion Format
 
-#pragma region Source Engine 2
-// #include <SDK/SDK.h>
-#pragma endregion Source Engine 2
-
 #pragma region Tools
 #include "tools/codegen.h"
 #include "tools/field_parser.h"

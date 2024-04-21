@@ -10,7 +10,7 @@
 namespace {
     using namespace std::string_view_literals;
 
-    constexpr std::string_view kOutDirName = "/tmp/sdk"sv;
+    constexpr std::string_view kOutDirName = "sdk"sv;
     constinit std::array include_paths = {"<cstdint>"sv, "\"!GlobalTypes.hpp\""sv};
 
     constexpr uint32_t kMaxReferencesForClassEmbed = 2;
@@ -694,9 +694,10 @@ namespace sdk {
     void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current) {
         // @note: @es3n1n: getting current scope name & formatting it
         //
-        constexpr std::string_view module_file_prefix = "lib"; // TODO: switch platform
-        constexpr std::string_view module_file_suffix = ".so"; // TODO: switch platform
+        constexpr std::string_view module_file_prefix = IF_WINDOWS("") IF_LINUX("lib");
+        constexpr std::string_view module_file_suffix = IF_WINDOWS(".dll") IF_LINUX(".so");
         auto scope_name = current->BGetScopeName();
+        // TODO: remove ends_with() in favor of std::string_view::ends_with()
         if (ends_with(scope_name, module_file_suffix.data()))
             scope_name = scope_name.substr(module_file_prefix.size(), scope_name.size() - module_file_suffix.size());
 

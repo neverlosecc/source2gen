@@ -6,6 +6,7 @@
 #include <sdk/interfaces/common/CInterlockedInt.h>
 #include <sdk/interfaces/common/CThreadMutex.h>
 #include <sdk/interfaces/common/CTSList.h>
+#include <tools/platform.h>
 #include <type_traits>
 
 #if defined(CS2) || defined(DOTA2)
@@ -99,7 +100,7 @@ public:
 
     int m_TotalSize; // m_BlocksPerBlob * (m_NumBlobs + 1) + (m_nAligment + 14)
 };
-// static_assert(sizeof(CUtlMemoryPoolBaseV2) == 0x80);
+static_assert(sizeof(CUtlMemoryPoolBaseV2) == IF_WINDOWS(0x80) IF_LINUX(0x90));
 
 using CUtlMemoryPoolBase = std::conditional_t<kUtlMemoryPoolBaseVersion == 1, CUtlMemoryPoolBaseV1, CUtlMemoryPoolBaseV2>;
 

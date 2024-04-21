@@ -21,7 +21,7 @@ namespace {
         IMemAlloc* g_pMemAlloc = nullptr;
 
         // Continuously try to get the g_pMemAlloc pointer until it's successful
-        while (!g_pMemAlloc) {
+        if (!g_pMemAlloc) {
             g_pMemAlloc = *reinterpret_cast<IMemAlloc**>(Loader::find_module_symbol(tier0, "g_pMemAlloc"));
 
             // If g_pMemAlloc is not found, try initializing it
@@ -34,6 +34,7 @@ namespace {
             }
         }
 
+        // TODO: this should be a release error as well
         assert(g_pMemAlloc != nullptr);
         return g_pMemAlloc;
     }
@@ -138,8 +139,8 @@ IMemAlloc* GetMemAlloc() {
 }
 
 // void *malloc(size_t size) { return GetMemAlloc()->Alloc(size); }
-// void *calloc(size_t size,std::size_t n) { return GetMemAlloc()->Calloc(size, n); }
-// void *realloc(void *p,std::size_t newsize) { return GetMemAlloc()->Realloc(p, newsize); }
+// void *calloc(size_t size, std::size_t n) { return GetMemAlloc()->Calloc(size, n); }
+// void *realloc(void *p, std::size_t newsize) { return GetMemAlloc()->Realloc(p, newsize); }
 // void  free(void *p) { GetMemAlloc()->Free(p); }
 
 void operator delete(void* p) noexcept {

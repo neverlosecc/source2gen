@@ -66,11 +66,11 @@ namespace source2_gen {
 
         for (const auto& name : modules) {
             std::cout << "loading " << name << std::endl;
-            if (Loader::load_module(name.data()) == nullptr) {
+            if (Loader::load_module(name) == nullptr) {
                 // cannot use any functions that use `new` because we've
                 // overridden `new` in IMemAlloc.cpp and it relies on
                 // libraries being loaded.
-                std::fprintf(stderr, "Unable to load library %s, is LD_LIBRARY_PATH set?\n", name.data());
+                std::cerr << std::format("Unable to load module {}, is {} set?", name, IF_WINDOWS("PATH") IF_LINUX("LD_LIBRARY_PATH")) << std::endl;
                 std::terminate();
             }
         }
@@ -91,10 +91,11 @@ namespace source2_gen {
                 auto const InstallSchemaBindings = (std::uint8_t(*)(const char*, CSchemaSystem*))(pInstallSchemaBindings);
                 if (!InstallSchemaBindings("SchemaSystem_001", sdk::g_schema)) {
                     std::cerr << std::format("Unable to install schema bindings in {}", name) << std::endl;
+                    // TODO: return instead of terminating
                     std::terminate();
                 }
             } else {
-                std::cout << std::format("No InstallSchemaBindings() in {}", name) << std::endl;
+                std::cout << std::format("No schemas in {}", name) << std::endl;
             }
         }
 
