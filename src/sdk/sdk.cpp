@@ -71,10 +71,6 @@ namespace {
         FNV32("MNetworkMaxValue"),
     };
 
-    inline bool ends_with(const std::string& str, const std::string& suffix) {
-        return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
-    }
-
     // @note: @es3n1n: some more utils
     //
     std::string GetMetadataValue(const SchemaMetadataEntryData_t metadata_entry) {
@@ -426,7 +422,7 @@ namespace sdk {
                 //
                 const auto class_parent = class_dump.GetParent();
                 const auto class_info = class_dump.target_;
-                const auto is_struct = ends_with(class_info->m_pszName, "_t");
+                const auto is_struct = std::string_view{class_info->m_pszName}.ends_with("_t");
                 PrintClassInfo(builder, class_info);
 
                 // @note: @es3n1n: get parent name
@@ -697,9 +693,8 @@ namespace sdk {
         constexpr std::string_view module_file_prefix = IF_WINDOWS("") IF_LINUX("lib");
         constexpr std::string_view module_file_suffix = IF_WINDOWS(".dll") IF_LINUX(".so");
         auto scope_name = current->BGetScopeName();
-        // TODO: remove ends_with() in favor of std::string_view::ends_with()
-        if (ends_with(scope_name, module_file_suffix.data()))
-            scope_name = scope_name.substr(module_file_prefix.size(), scope_name.size() - module_file_suffix.size());
+        if (scope_name.ends_with(module_file_suffix))
+            scope_name = scope_name.substr(module_file_prefix.size(), scope_name.size() - (module_file_prefix.size() + module_file_suffix.size()));
 
         // @note: @es3n1n: print debug info
         //
