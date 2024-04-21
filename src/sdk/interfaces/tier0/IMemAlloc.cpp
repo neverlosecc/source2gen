@@ -34,8 +34,12 @@ namespace {
             }
         }
 
-        // TODO: this should be a release error as well
-        assert(g_pMemAlloc != nullptr);
+        if (g_pMemAlloc == nullptr) {
+            // there is no way to recover, we don't have an allocator, abort
+            std::fputs("could not initialize g_pMemAlloc, source2gen does not work with this version of the game", stderr);
+            std::abort();
+        }
+
         return g_pMemAlloc;
     }
 }; // namespace

@@ -57,8 +57,8 @@ namespace source2_gen {
             // don't use any allocating functions in here. That might include
             // dlerror() and FormatMessage(). Is there a friendly way to report
             // this to the user?
-            std::fputs("could not load tier0. " IF_LINUX("Is LD_LIBRARY_PATH set?") IF_WINDOWS("Is PATH set?"), stderr);
-            std::terminate();
+            std::fputs("could not load tier0. is " IF_LINUX("LD_LIBRARY_PATH") IF_WINDOWS("PATH") " set?", stderr);
+            std::abort();
         }
         static_cast<void>(GetMemAlloc());
 
@@ -71,7 +71,8 @@ namespace source2_gen {
                 // overridden `new` in IMemAlloc.cpp and it relies on
                 // libraries being loaded.
                 std::cerr << std::format("Unable to load module {}, is {} set?", name, IF_WINDOWS("PATH") IF_LINUX("LD_LIBRARY_PATH")) << std::endl;
-                std::terminate();
+                // TODO: return instead of terminating
+                std::exit(1);
             }
         }
 
@@ -92,7 +93,7 @@ namespace source2_gen {
                 if (!InstallSchemaBindings("SchemaSystem_001", sdk::g_schema)) {
                     std::cerr << std::format("Unable to install schema bindings in {}", name) << std::endl;
                     // TODO: return instead of terminating
-                    std::terminate();
+                    std::exit(1);
                 }
             } else {
                 std::cout << std::format("No schemas in {}", name) << std::endl;

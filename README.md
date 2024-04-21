@@ -59,6 +59,8 @@ TODO: how to run on windows?
 
 ```sh
 source2gen <C:\\path\\to\\cs2>
+# view generated sdk
+dir .\sdk
 ```
 
 ### Linux
@@ -66,6 +68,8 @@ source2gen <C:\\path\\to\\cs2>
 ```sh
 LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
   source2gen ~/.steam/steam/steamapps/common/cs2
+# view generated sdk
+ls ./sdk
 ```
 
 Source2Gen for Linux support is currently in an alpha state. There will be
