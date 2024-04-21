@@ -1,4 +1,4 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 
@@ -7,14 +7,14 @@
 #include <sdk/interfaces/tier0/IMemAlloc.h>
 
 #include <sdk/interfaces/common/CBufferString.h>
-#include <sdk/interfaces/common/CThreadMutex.h>
-#include <sdk/interfaces/common/CThreadSpinRWLock.h>
-#include <sdk/interfaces/common/CThreadSpinMutex.h>
 #include <sdk/interfaces/common/CInterlockedInt.h>
+#include <sdk/interfaces/common/CThreadMutex.h>
+#include <sdk/interfaces/common/CThreadSpinMutex.h>
+#include <sdk/interfaces/common/CThreadSpinRWLock.h>
 #include <sdk/interfaces/common/CTSList.h>
-#include <sdk/interfaces/common/CUtlMemoryPoolBase.h>
 #include <sdk/interfaces/common/CUtlMap.h>
 #include <sdk/interfaces/common/CUtlMemory.h>
+#include <sdk/interfaces/common/CUtlMemoryPoolBase.h>
 #include <sdk/interfaces/common/CUtlRBTree.h>
 #include <sdk/interfaces/common/CUtlString.h>
 #include <sdk/interfaces/common/CUtlTSHash.h>
@@ -31,7 +31,7 @@ namespace sdk {
 } // namespace sdk
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

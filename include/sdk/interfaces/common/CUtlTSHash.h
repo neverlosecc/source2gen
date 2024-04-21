@@ -1,4 +1,4 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 #include "sdk/interfaces/common/CThreadSpinMutex.h"
@@ -335,7 +335,7 @@ template <class Ty>
 using CUtlTSHash = std::conditional_t<kUtlTsHashVersion == 1, CUtlTSHashV1<Ty>, CUtlTSHashV2<Ty>>;
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
