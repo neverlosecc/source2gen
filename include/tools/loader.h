@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <expected>
 #include <string>
 #include <string_view>
 #include <tools/platform.h>
@@ -13,9 +14,8 @@
     #include "loader_linux.h"
 #endif
 
-// TODO: incomplete comment, remove
 /// Prefer using Loader::get_module_file_name(). Only use these macros if you
-/// cannot allocate memory
+/// cannot use C++ allocations, e.g. before tier0 has been loaded.
 #if TARGET_OS == WINDOWS
     #define LOADER_GET_MODULE_FILE_NAME(expr) LOADER_WINDOWS_GET_MODULE_FILE_NAME(expr)
 #elif TARGET_OS == LINUX
@@ -33,6 +33,8 @@ namespace Loader {
 #endif
 
     using module_handle_t = Platform::module_handle_t;
+    /// Guaranteed not to use allocating C++ functions
+    using LoadModuleError = Platform::LoadModuleError;
 
     [[nodiscard]] inline auto get_module_file_name(std::string name) -> std::string {
         return Platform::get_module_file_name(std::move(name));
@@ -42,7 +44,7 @@ namespace Loader {
         return Platform::find_module_handle(name);
     }
 
-    [[nodiscard]] inline auto load_module(std::string_view name) -> module_handle_t {
+    [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
         return Platform::load_module(name);
     }
 

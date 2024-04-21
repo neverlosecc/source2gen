@@ -8,6 +8,7 @@
 #include <tools/loader.h>
 
 namespace sdk {
+    using CreateInterfaceFn = void* (*)(const char* pName, int* pReturnCode);
     using InstantiateInterfaceFn = void* (*)();
 
     class InterfaceReg {

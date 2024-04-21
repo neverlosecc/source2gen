@@ -26,8 +26,10 @@ using namespace std::this_thread;
 #pragma endregion Tools
 
 namespace source2_gen {
-    void main();
-}
+    /// Logs errors. Calls @ref std::abort() on fatal errors.
+    /// @return true on success
+    bool Dump();
+} // namespace source2_gen
 
 constexpr std::string_view kConsoleTitleMessage = {"source2gen :: github.com/neverlosecc/source2gen"};
 constexpr std::string_view kPoweredByMessage = {"Powered by github.com/neverlosecc/source2gen"};

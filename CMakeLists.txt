@@ -86,25 +86,21 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
 endif()
 
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
-   ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang")
+   ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang" OR
+   ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     target_compile_options(source2gen PRIVATE
-      -Wno-nonportable-include-path
+      -Wno-address-of-packed-member
       -Wno-implicit-exception-spec-mismatch
       -Wno-invalid-offsetof
       -Wno-unknown-attributes
     )
 
-endif()
-
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
-   ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang" OR
-   ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-target_compile_definitions(source2gen PRIVATE
-  "FORCEINLINE="
-  "__forceinline="
-  "__thiscall="
-  "__cdecl="
-)
+    target_compile_definitions(source2gen PRIVATE
+      "FORCEINLINE="
+      "__forceinline="
+      "__thiscall="
+      "__cdecl="
+    )
 endif()
 
 target_compile_definitions(source2gen PRIVATE

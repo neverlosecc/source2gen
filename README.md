@@ -90,7 +90,7 @@ These instructions will help you set up the project on your local machine for de
 
 #### Linux
 
-- clang++-17 or newer, other compilers are might work as well
+- g++-13 or newer
 - CMake
 
 ### Clone the repository
@@ -149,7 +149,7 @@ premake5 vs2019 --game=CS2
 - Run the following sequence of commands to build the project:
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
+cmake -B build -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
 cmake --build build
 ```
 

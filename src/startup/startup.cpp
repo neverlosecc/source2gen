@@ -50,14 +50,14 @@ namespace {
 } // namespace
 
 namespace source2_gen {
-    void Dump() try {
-        // set up the allocator before anything else. we can't use any
-        // allocating functions without it.
-        if (Loader::load_module(LOADER_GET_MODULE_FILE_NAME("tier0")) == nullptr) {
-            // don't use any allocating functions in here. That might include
-            // dlerror() and FormatMessage(). Is there a friendly way to report
-            // this to the user?
-            std::fputs("could not load tier0. is " IF_LINUX("LD_LIBRARY_PATH") IF_WINDOWS("PATH") " set?", stderr);
+    bool Dump() try {
+        // set up the allocator before anything else. we can't use allocating
+        // C++ functions without it.
+        if (const auto loaded{Loader::load_module(LOADER_GET_MODULE_FILE_NAME("tier0"))}; !loaded.has_value()) {
+            // don't use any allocating C++ functions in here.
+            std::fputs("could not load tier0. is " IF_LINUX("LD_LIBRARY_PATH") IF_WINDOWS("PATH") " set?\n", stderr);
+            std::fputs(loaded.error().as_string().data(), stderr);
+            std::fputc('\n', stderr);
             std::abort();
         }
         static_cast<void>(GetMemAlloc());
@@ -71,8 +71,7 @@ namespace source2_gen {
                 // overridden `new` in IMemAlloc.cpp and it relies on
                 // libraries being loaded.
                 std::cerr << std::format("Unable to load module {}, is {} set?", name, IF_WINDOWS("PATH") IF_LINUX("LD_LIBRARY_PATH")) << std::endl;
-                // TODO: return instead of terminating
-                std::exit(1);
+                return false;
             }
         }
 
@@ -81,8 +80,10 @@ namespace source2_gen {
         // @note: @es3n1n: Capture interfaces
         //
         sdk::g_schema = CSchemaSystem::GetInstance();
-        if (!sdk::g_schema)
-            throw std::runtime_error(std::format("Unable to obtain Schema interface"));
+        if (!sdk::g_schema) {
+            std::cerr << "Unable to obtain Schema interface" << std::endl;
+            return false;
+        }
 
         for (const auto& name : modules) {
             auto* handle = Loader::find_module_handle(name.data());
@@ -92,8 +93,7 @@ namespace source2_gen {
                 auto const InstallSchemaBindings = (std::uint8_t(*)(const char*, CSchemaSystem*))(pInstallSchemaBindings);
                 if (!InstallSchemaBindings("SchemaSystem_001", sdk::g_schema)) {
                     std::cerr << std::format("Unable to install schema bindings in {}", name) << std::endl;
-                    // TODO: return instead of terminating
-                    std::exit(1);
+                    return false;
                 }
             } else {
                 std::cout << std::format("No schemas in {}", name) << std::endl;
@@ -114,15 +114,11 @@ namespace source2_gen {
                                  util::PrettifyNum(sdk::g_schema->GetRegistration()), util::PrettifyNum(sdk::g_schema->GetRedundant()),
                                  util::PrettifyNum(sdk::g_schema->GetIgnored()), util::PrettifyNum(sdk::g_schema->GetIgnoredBytes()))
                   << std::endl;
-    } catch (std::runtime_error& err) {
+
+        return true;
+    } catch (const std::runtime_error& err) {
         std::cout << std::format("{} :: ERROR :: {}", __FUNCTION__, err.what()) << std::endl;
-    }
-
-    void main() {
-        Dump();
-
-        std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
-        std::cout << kPoweredByMessage << std::endl;
+        return false;
     }
 } // namespace source2_gen
 

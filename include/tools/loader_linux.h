@@ -1,7 +1,10 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
+#include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <dlfcn.h>
+#include <expected>
 #include <string>
 #include <string_view>
 
@@ -11,20 +14,45 @@
 namespace Loader::Linux {
     using module_handle_t = void*;
 
+    class LoadModuleError {
+    public:
+        /// @return Lifetime bound to this @ref LoadModuleError
+        [[nodiscard]] auto as_string() const -> std::string_view {
+            return this->m_errorMessage;
+        }
+
+        static auto from_string(std::string_view str) {
+            return LoadModuleError{str};
+        }
+
+    private:
+        // we can't use allocating C++ functions (std::string) in here, see doc
+        // of LoadModuleError in loader.h.
+        char m_errorMessage[512]{};
+
+        LoadModuleError(std::string_view str) {
+            std::strncpy(this->m_errorMessage, str.data(), std::min(std::size(m_errorMessage), std::size(str)));
+        }
+    };
+
     // keep in sync with LOADER_LINUX_GET_MODULE_FILE_NAME
     [[nodiscard]] inline auto get_module_file_name(std::string name) -> std::string {
         return name.insert(0, "lib").append(".so");
     }
 
-    [[nodiscard]] inline auto find_module_handle(std::string_view name) -> void* {
+    [[nodiscard]] inline auto find_module_handle(std::string_view name) -> module_handle_t {
         return dlopen(name.data(), RTLD_LAZY | RTLD_NOLOAD);
     }
 
-    [[nodiscard]] inline auto load_module(std::string_view name) -> void* {
-        return dlopen(name.data(), RTLD_LAZY);
+    [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
+        if (auto* const handle{dlopen(name.data(), RTLD_LAZY)}) {
+            return handle;
+        } else {
+            return std::unexpected{LoadModuleError::from_string(dlerror())};
+        }
     }
 
-    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> void* {
+    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> module_handle_t {
         assert(handle != nullptr && "If you need RTLD_DEFAULT, write a new function to avoid magic values. Most of the time when handle=nullptr, a "
                                     "developer made a mistake and we want to catch that.");
         return dlsym(handle, name.data());

@@ -3,7 +3,13 @@
 #include <Include.h>
 
 int main(int argc, char* argv[]) {
-    source2_gen::main();
+    if (source2_gen::Dump()) {
+        std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
+        std::cout << kPoweredByMessage << std::endl;
+    } else {
+        // error was logged by Dump()
+        return 1;
+    }
 }
 
 // source2gen - Source2 games SDK generator

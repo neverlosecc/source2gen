@@ -904,9 +904,6 @@ enum SchemaTypeScope_t : std::uint8_t {
     SCHEMA_TYPESCOPE_DEFAULT,
 };
 
-// TODO: move to public/tier1/interface.h (That's source1, see ghidra assertions for source2 file)
-typedef void* (*CreateInterfaceFn)(const char* pName, int* pReturnCode);
-
 class CSchemaSystem {
 public:
     [[nodiscard]] CSchemaSystemTypeScope* GlobalTypeScope(void) {

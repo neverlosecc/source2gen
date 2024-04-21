@@ -36,7 +36,7 @@ namespace {
 
         if (g_pMemAlloc == nullptr) {
             // there is no way to recover, we don't have an allocator, abort
-            std::fputs("could not initialize g_pMemAlloc, source2gen does not work with this version of the game", stderr);
+            std::fputs("could not initialize g_pMemAlloc, source2gen does not work with this version of the game.\n", stderr);
             std::abort();
         }
 
