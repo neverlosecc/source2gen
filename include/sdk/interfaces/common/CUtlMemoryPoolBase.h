@@ -8,7 +8,7 @@
 #include <sdk/interfaces/common/CTSList.h>
 #include <type_traits>
 
-#if defined(CS2)
+#if defined(CS2) || defined(DOTA2)
 constexpr auto kUtlMemoryPoolBaseVersion = 2;
 #else
 constexpr auto kUtlMemoryPoolBaseVersion = 1;
