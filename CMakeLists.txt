@@ -92,7 +92,7 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
       -Wno-address-of-packed-member
       -Wno-implicit-exception-spec-mismatch
       -Wno-invalid-offsetof
-      -Wno-unknown-attributes
+      $<IF:$<CXX_COMPILER_ID:GNU>,-Wno-attributes,-Wno-unknown-attributes>
     )
 
     target_compile_definitions(source2gen PRIVATE
