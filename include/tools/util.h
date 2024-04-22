@@ -8,7 +8,7 @@
 namespace util {
     inline std::string PrettifyNum(int num) {
         static const auto fn = reinterpret_cast<const char* (*)(int)>(
-            Loader::find_module_symbol(Loader::find_module_handle(Loader::get_module_file_name("tier0")), "V_PrettifyNum"));
+            loader::find_module_symbol(loader::find_module_handle(loader::get_module_file_name("tier0")), "V_PrettifyNum"));
 
         if (fn) {
             std::string_view res = fn(num);

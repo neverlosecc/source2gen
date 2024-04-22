@@ -10,7 +10,7 @@
 // keep in sync with get_module_file_name()
 #define LOADER_WINDOWS_GET_MODULE_FILE_NAME(name) name ".dll"
 
-namespace Loader::Windows {
+namespace loader::windows {
     using module_handle_t = HMODULE;
 
     class LoadModuleError {
@@ -64,7 +64,7 @@ namespace Loader::Windows {
             return std::unexpected{LoadModuleError::from_error(GetLastError())};
         }
     }
-} // namespace Loader::Windows
+} // namespace loader::Windows
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

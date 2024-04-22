@@ -15,35 +15,35 @@ namespace {
         // clang-format off
       return std::to_array<std::string>({
         // @note: @es3n1n: modules that we'll use in our code
-        Loader::get_module_file_name("client"),
-        Loader::get_module_file_name("engine2"),
-        Loader::get_module_file_name("schemasystem"),
-        Loader::get_module_file_name("tier0"),
+        loader::get_module_file_name("client"),
+        loader::get_module_file_name("engine2"),
+        loader::get_module_file_name("schemasystem"),
+        loader::get_module_file_name("tier0"),
 
         #if defined(DOTA2)
         // @note: @soufiw: latest modules that gets loaded in the main menu
-        Loader::get_module_file_name("navsystem"),
+        loader::get_module_file_name("navsystem"),
         #elif defined(CS2)
-        Loader::get_module_file_name("matchmaking"),
+        loader::get_module_file_name("matchmaking"),
         #endif
 
         // modules that we'll dump (minus the ones listed above)
-        Loader::get_module_file_name("animationsystem"),
-        Loader::get_module_file_name("host"),
-        Loader::get_module_file_name("materialsystem2"),
-        Loader::get_module_file_name("meshsystem"),
-        Loader::get_module_file_name("networksystem"),
-        Loader::get_module_file_name("panorama"),
-        Loader::get_module_file_name("particles"),
-        Loader::get_module_file_name("pulse_system"),
-        IF_WINDOWS(Loader::get_module_file_name("rendersystemdx11"),)
-        Loader::get_module_file_name("resourcesystem"),
-        Loader::get_module_file_name("scenefilecache"),
-        Loader::get_module_file_name("scenesystem"),
-        Loader::get_module_file_name("server"),
-        Loader::get_module_file_name("soundsystem"),
-        Loader::get_module_file_name("vphysics2"),
-        Loader::get_module_file_name("worldrenderer")
+        loader::get_module_file_name("animationsystem"),
+        loader::get_module_file_name("host"),
+        loader::get_module_file_name("materialsystem2"),
+        loader::get_module_file_name("meshsystem"),
+        loader::get_module_file_name("networksystem"),
+        loader::get_module_file_name("panorama"),
+        loader::get_module_file_name("particles"),
+        loader::get_module_file_name("pulse_system"),
+        IF_WINDOWS(loader::get_module_file_name("rendersystemdx11"),)
+        loader::get_module_file_name("resourcesystem"),
+        loader::get_module_file_name("scenefilecache"),
+        loader::get_module_file_name("scenesystem"),
+        loader::get_module_file_name("server"),
+        loader::get_module_file_name("soundsystem"),
+        loader::get_module_file_name("vphysics2"),
+        loader::get_module_file_name("worldrenderer")
     });
         // clang-format on
     }
@@ -53,7 +53,7 @@ namespace source2_gen {
     bool Dump() try {
         // set up the allocator before anything else. we can't use allocating
         // C++ functions without it.
-        if (const auto loaded{Loader::load_module(LOADER_GET_MODULE_FILE_NAME("tier0"))}; !loaded.has_value()) {
+        if (const auto loaded{loader::load_module(LOADER_GET_MODULE_FILE_NAME("tier0"))}; !loaded.has_value()) {
             // don't use any allocating C++ functions in here.
             std::fputs("could not load tier0. is " IF_LINUX("LD_LIBRARY_PATH") IF_WINDOWS("PATH") " set?\n", stderr);
             std::fputs(loaded.error().as_string().data(), stderr);
@@ -66,7 +66,7 @@ namespace source2_gen {
 
         for (const auto& name : modules) {
             std::cout << "loading " << name << std::endl;
-            if (Loader::load_module(name) == nullptr) {
+            if (loader::load_module(name) == nullptr) {
                 // cannot use any functions that use `new` because we've
                 // overridden `new` in IMemAlloc.cpp and it relies on
                 // libraries being loaded.
@@ -86,10 +86,10 @@ namespace source2_gen {
         }
 
         for (const auto& name : modules) {
-            auto* handle = Loader::find_module_handle(name.data());
+            auto* handle = loader::find_module_handle(name.data());
             assert(handle != nullptr && "we loaded modules at startup, where did they go?");
 
-            if (const auto* pInstallSchemaBindings = Loader::find_module_symbol(handle, "InstallSchemaBindings")) {
+            if (const auto* pInstallSchemaBindings = loader::find_module_symbol(handle, "InstallSchemaBindings")) {
                 auto const InstallSchemaBindings = (std::uint8_t(*)(const char*, CSchemaSystem*))(pInstallSchemaBindings);
                 if (!InstallSchemaBindings("SchemaSystem_001", sdk::g_schema)) {
                     std::cerr << std::format("Unable to install schema bindings in {}", name) << std::endl;

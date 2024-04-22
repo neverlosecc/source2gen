@@ -11,7 +11,7 @@
 // keep in sync with get_module_file_name()
 #define LOADER_LINUX_GET_MODULE_FILE_NAME(name) "lib" name ".so"
 
-namespace Loader::Linux {
+namespace loader::linux {
     using module_handle_t = void*;
 
     class LoadModuleError {
@@ -57,7 +57,7 @@ namespace Loader::Linux {
                                     "developer made a mistake and we want to catch that.");
         return dlsym(handle, name.data());
     }
-} // namespace Loader::Linux
+} // namespace loader::Linux
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

@@ -1014,7 +1014,7 @@ private:
 
 public:
     [[nodiscard]] static CSchemaSystem* GetInstance(void) {
-        return sdk::GetInterface<CSchemaSystem>(Loader::get_module_file_name("schemasystem").c_str(), "SchemaSystem_0");
+        return sdk::GetInterface<CSchemaSystem>(loader::get_module_file_name("schemasystem").c_str(), "SchemaSystem_0");
     }
 };
 

@@ -19,10 +19,10 @@ namespace sdk {
     };
 
     inline const InterfaceReg* GetInterfaces(const char* library) {
-        const auto library_handle = Loader::find_module_handle(library);
+        const auto library_handle = loader::find_module_handle(library);
         assert(library_handle != 0);
 
-        const auto createinterface_symbol = reinterpret_cast<std::uintptr_t>(Loader::find_module_symbol(library_handle, "CreateInterface"));
+        const auto createinterface_symbol = reinterpret_cast<std::uintptr_t>(loader::find_module_symbol(library_handle, "CreateInterface"));
         assert(createinterface_symbol != 0);
 
 #if TARGET_OS == WINDOWS

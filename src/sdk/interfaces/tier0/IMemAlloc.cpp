@@ -11,7 +11,7 @@ namespace {
     // to operator new()!
     IMemAlloc* MemAllocSystemInitialize() {
         // Attempt to load tier0
-        auto tier0 = Loader::find_module_handle(LOADER_GET_MODULE_FILE_NAME("tier0"));
+        auto tier0 = loader::find_module_handle(LOADER_GET_MODULE_FILE_NAME("tier0"));
 
         assert(tier0 != nullptr && "You cannot use any allocating functions before tier0 has been loaded."
                                    "That includes std::string{} and std::format()!"
@@ -22,11 +22,11 @@ namespace {
 
         // Continuously try to get the g_pMemAlloc pointer until it's successful
         if (!g_pMemAlloc) {
-            g_pMemAlloc = *reinterpret_cast<IMemAlloc**>(Loader::find_module_symbol(tier0, "g_pMemAlloc"));
+            g_pMemAlloc = *reinterpret_cast<IMemAlloc**>(loader::find_module_symbol(tier0, "g_pMemAlloc"));
 
             // If g_pMemAlloc is not found, try initializing it
             if (!g_pMemAlloc) {
-                static const auto CMemAllocSystemInitialize = reinterpret_cast<void (*)()>(Loader::find_module_symbol(tier0, "CMemAllocSystemInitialize"));
+                static const auto CMemAllocSystemInitialize = reinterpret_cast<void (*)()>(loader::find_module_symbol(tier0, "CMemAllocSystemInitialize"));
 
                 if (CMemAllocSystemInitialize) {
                     CMemAllocSystemInitialize();
@@ -101,7 +101,7 @@ void* IMemAlloc::Calloc(std::size_t num, std::size_t nSize) {
     const auto memory = Alloc(total_size);
     if (memory) {
         static auto V_tier0_memset = reinterpret_cast<void(__cdecl*)(void*, std::int8_t, std::size_t)>(
-            Loader::find_module_symbol(Loader::find_module_handle(Loader::get_module_file_name("tier0")), "V_tier0_memset"));
+            loader::find_module_symbol(loader::find_module_handle(loader::get_module_file_name("tier0")), "V_tier0_memset"));
 
         if (V_tier0_memset != nullptr)
             V_tier0_memset(memory, 0, total_size);
