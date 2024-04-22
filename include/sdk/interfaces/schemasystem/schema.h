@@ -146,8 +146,8 @@ enum {
 #elif defined(CS2)
 
 /// 2 has return-value-optimization, 1 doesn't
-constexpr auto kSchemaSystemVersion = IF_WINDOWS(2) IF_LINUX(1);
-constexpr auto kSchemaSystem_PAD0 = IF_WINDOWS(0x190) IF_LINUX(0x1F8);
+constexpr auto kSchemaSystemVersion = platform_specific{.windows = 2, .linux = 1}.get();
+constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x190, .linux = 0x1F8}.get();
 constexpr auto kSchemaSystem_PAD1 = 0x120;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 

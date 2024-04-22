@@ -1,3 +1,5 @@
+#pragma once
+
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #define WINDOWS 0
@@ -20,6 +22,39 @@
     #define IF_WINDOWS(...)
     #define IF_LINUX(...) __VA_ARGS__
 #endif
+
+enum class platform {
+    windows,
+    linux,
+};
+
+constexpr platform current_platform =
+#if TARGET_OS == WINDOWS
+    platform::windows;
+#elif TARGET_OS == LINUX
+    platform::linux;
+#else
+    #error
+#endif
+
+template <class Value>
+struct [[nodiscard]] platform_specific {
+    Value windows;
+    Value linux;
+
+    [[nodiscard]] consteval auto get() {
+        switch (current_platform) {
+        case platform::windows:
+            return this->windows;
+        case platform::linux:
+            return this->linux;
+        }
+    }
+
+    [[nodiscard]] consteval operator Value() {
+        return this->get();
+    }
+};
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

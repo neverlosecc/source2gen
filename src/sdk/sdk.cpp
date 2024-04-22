@@ -691,8 +691,8 @@ namespace sdk {
     void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current) {
         // @note: @es3n1n: getting current scope name & formatting it
         //
-        constexpr std::string_view module_file_prefix = IF_WINDOWS("") IF_LINUX("lib");
-        constexpr std::string_view module_file_suffix = IF_WINDOWS(".dll") IF_LINUX(".so");
+        constexpr std::string_view module_file_prefix = platform_specific{.windows = "", .linux = "lib"}.get();
+        constexpr std::string_view module_file_suffix = platform_specific{.windows = ".dll", .linux = ".so"}.get();
         auto scope_name = current->BGetScopeName();
         if (scope_name.ends_with(module_file_suffix))
             scope_name = scope_name.substr(module_file_prefix.size(), scope_name.size() - (module_file_prefix.size() + module_file_suffix.size()));

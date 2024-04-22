@@ -89,8 +89,9 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
    ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang" OR
    ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     target_compile_options(source2gen PRIVATE
+      -pedantic-errors
       -Wno-address-of-packed-member
-      -Wno-implicit-exception-spec-mismatch
+      $<$<NOT:$<CXX_COMPILER_ID:GNU>>:-Wno-implicit-exception-spec-mismatch>
       -Wno-invalid-offsetof
       $<IF:$<CXX_COMPILER_ID:GNU>,-Wno-attributes,-Wno-unknown-attributes>
     )

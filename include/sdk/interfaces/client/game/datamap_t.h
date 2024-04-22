@@ -277,8 +277,8 @@ public:
 };
 
 static_assert(offsetof(typedescription_t, m_pszFieldName) == 0x08);
-static_assert(offsetof(typedescription_t, m_pDataMap) == IF_WINDOWS(0x3C) IF_LINUX(0x40));
-static_assert(sizeof(typedescription_t) == IF_WINDOWS(0x68) IF_LINUX(0x70));
+static_assert(offsetof(typedescription_t, m_pDataMap) == platform_specific{.windows = 0x3C, .linux = 0x40});
+static_assert(sizeof(typedescription_t) == platform_specific{.windows = 0x68, .linux = 0x70});
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc
