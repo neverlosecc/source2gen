@@ -10,10 +10,10 @@ An example of such SDKs could be found at [source2sdk](https://github.com/neverl
 
 ### Windows
 
-TODO: how to run on windows?
+TODO: how to run on windows? we need the user to set `PATH`
 
 ```sh
-source2gen <C:\\path\\to\\cs2>
+source2gen
 # view generated sdk
 dir .\sdk
 ```
@@ -21,10 +21,16 @@ dir .\sdk
 ### Linux
 
 ```sh
-LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
-  source2gen ~/.steam/steam/steamapps/common/cs2
+./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/"
 # view generated sdk
 ls ./sdk
+```
+
+You can also invoke source2gen directly , e.g. for debugging, by running
+
+```sh
+LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
+  source2gen
 ```
 
 Source2Gen for Linux support is currently in an alpha state. There will be
