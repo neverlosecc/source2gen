@@ -89,8 +89,8 @@ namespace source2_gen {
             auto* handle = loader::find_module_handle(name.data());
             assert(handle != nullptr && "we loaded modules at startup, where did they go?");
 
-            if (const auto* pInstallSchemaBindings = loader::find_module_symbol(handle, "InstallSchemaBindings")) {
-                auto const InstallSchemaBindings = (std::uint8_t(*)(const char*, CSchemaSystem*))(pInstallSchemaBindings);
+            if (auto* pInstallSchemaBindings = loader::find_module_symbol(handle, "InstallSchemaBindings")) {
+                auto const InstallSchemaBindings = reinterpret_cast<std::uint8_t (*)(const char*, CSchemaSystem*)>(pInstallSchemaBindings);
                 if (!InstallSchemaBindings("SchemaSystem_001", sdk::g_schema)) {
                     std::cerr << std::format("Unable to install schema bindings in {}", name) << std::endl;
                     return false;
