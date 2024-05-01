@@ -145,7 +145,8 @@ enum {
 
 #elif defined(CS2)
 
-/// 2 has return-value-optimization, 1 doesn't
+/// Some functions differ between games and platforms. At least for now, 2 has
+/// return-value-optimization, 1 doesn't.
 constexpr auto kSchemaSystemVersion = platform_specific{.windows = 2, .linux = 1}.get();
 constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x190, .linux = 0x1F8}.get();
 constexpr auto kSchemaSystem_PAD1 = 0x120;

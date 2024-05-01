@@ -10,7 +10,8 @@ An example of such SDKs could be found at [source2sdk](https://github.com/neverl
 
 ### Windows
 
-TODO: how to run on windows? we need the user to set `PATH`
+TODO: how to run on windows? we need the user to set `PATH`. Hint: Perhaps we
+can use the registry to find the game path and set `PATH` automatically.
 
 ```sh
 source2gen
