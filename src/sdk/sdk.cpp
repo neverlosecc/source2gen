@@ -99,7 +99,7 @@ namespace sdk {
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetClassInfoBinaryName(class_info),
                                      g_schema->GetClassProjectName(class_info)))
                 .comment(std::format("Alignment: {}", class_info->GetAligment()))
-                .comment(std::format("Size: {:#x}", class_info->m_nSize));
+                .comment(std::format("Size: {:#x}", class_info->m_nSizeOf));
 
             if ((class_info->m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
                 builder.comment("Has VTable");
@@ -166,7 +166,7 @@ namespace sdk {
                                      g_schema->GetEnumProjectName(enum_binding)))
                 .comment(std::format("Enumerator count: {}", enum_binding->m_nEnumeratorCount))
                 .comment(std::format("Alignment: {}", enum_binding->m_unAlignOf))
-                .comment(std::format("Size: {:#x}", enum_binding->m_unSize));
+                .comment(std::format("Size: {:#x}", enum_binding->m_unSizeOf));
 
             if (enum_binding->m_nStaticMetadataSize > 0)
                 builder.comment("");
@@ -256,7 +256,7 @@ namespace sdk {
                     if (!target_->m_pBaseClassses)
                         return nullptr;
 
-                    return target_->m_pBaseClassses->m_pPrevByClass;
+                    return target_->m_pBaseClassses->m_pClass;
                 }
 
                 void AddRefToClass(CSchemaType* type) {
@@ -296,8 +296,8 @@ namespace sdk {
                 //
                 [[nodiscard]] std::ptrdiff_t ClassSizeWithoutParent() const {
                     if (const CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
-                        return this->target_->m_nSize - class_parent->m_nSize;
-                    return this->target_->m_nSize;
+                        return this->target_->m_nSizeOf - class_parent->m_nSizeOf;
+                    return this->target_->m_nSizeOf;
                 }
             };
 
@@ -429,7 +429,7 @@ namespace sdk {
                 // @note: @es3n1n: get parent name
                 //
                 std::string parent_cls_name;
-                if (auto parent = class_info->m_pBaseClassses ? class_info->m_pBaseClassses->m_pPrevByClass : nullptr; parent)
+                if (auto parent = class_info->m_pBaseClassses ? class_info->m_pBaseClassses->m_pClass : nullptr; parent)
                     parent_cls_name = parent->m_pszName;
 
                 // @note: @es3n1n: start class
@@ -457,7 +457,7 @@ namespace sdk {
                 if (const auto first_field = class_dump.GetFirstField(); first_field)
                     first_field_offset = first_field->m_nSingleInheritanceOffset;
 
-                const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_nSize : 0;
+                const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_nSizeOf : 0;
 
                 std::ptrdiff_t expected_pad_size = first_field_offset.value_or(class_dump.ClassSizeWithoutParent());
                 if (expected_pad_size) // @note: @es3n1n: if there's a pad size we should account the parent class size
@@ -474,10 +474,10 @@ namespace sdk {
 
                 // @todo: @es3n1n: if for some mysterious reason this class describes fields
                 // of the base class we should handle it too.
-                if (class_parent && first_field_offset.has_value() && first_field_offset.value() < class_parent->m_nSize) {
+                if (class_parent && first_field_offset.has_value() && first_field_offset.value() < class_parent->m_nSizeOf) {
                     builder.comment(
-                        std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_nSize));
-                    state.collision_end_offset = class_parent->m_nSize;
+                        std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_nSizeOf));
+                    state.collision_end_offset = class_parent->m_nSizeOf;
                 }
 
                 // @note: @es3n1n: begin public members

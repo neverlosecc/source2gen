@@ -6,7 +6,6 @@
 #include <array>
 #include <fstream>
 #include <string>
-#include <string_view>
 #include <tools/loader.h>
 #include <tools/platform.h>
 
@@ -61,6 +60,9 @@ namespace source2_gen {
             std::abort();
         }
         static_cast<void>(GetMemAlloc());
+
+        std::locale::global(std::locale(""));
+        std::cout.imbue(std::locale());
 
         const auto modules = get_required_modules();
 

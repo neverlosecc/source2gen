@@ -73,7 +73,7 @@ workspace "source2gen"
 
   project "source2gen"
     location "source2gen"
-    kind "SharedLib"
+    kind "ConsoleApp"
     language "C++"
 	  buildoptions { "/bigobj" } 
 

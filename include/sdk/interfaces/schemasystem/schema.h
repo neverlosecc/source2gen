@@ -6,10 +6,8 @@
 #include <cstdint>
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <sdk/interfaces/common/CBufferString.h>
-#include <sdk/interfaces/common/CThreadSpinRWLock.h>
 #include <sdk/interfaces/common/CUtlMap.h>
 #include <sdk/interfaces/common/CUtlTSHash.h>
-#include <sdk/sdk.h>
 #include <tools/virtual.h>
 #include <vector>
 
@@ -233,7 +231,7 @@ struct CSchemaNetworkValue {
         float m_fValue;
         std::uintptr_t m_pPointer;
         CSchemaVarName m_VarValue;
-        std::array<char, 32> m_szValue;
+        std::array<char, 8> m_szValue;
     };
 };
 
@@ -267,7 +265,7 @@ public:
     SchemaEnumInfoData_t* m_pSelf; // 0x0000
     const char* m_pszName; // 0x0008
     const char* m_pszModule; // 0x0010
-    std::uint8_t m_unSize; // 0x0018
+    std::uint8_t m_unSizeOf; // 0x0018
     std::uint8_t m_unAlignOf; // 0x0019
     SchemaEnumFlags_t m_unFlags; // 0x001A
     std::int16_t m_nEnumeratorCount; // 0x001C
@@ -375,7 +373,7 @@ public:
     }
 
 public:
-    // @note: @og: wrapper around GetSizes, this one gets CSchemaClassInfo->m_nSize
+    // @note: @og: wrapper around GetSizes, this one gets CSchemaClassInfo->m_nSizeOf
     [[nodiscard]] std::optional<int> GetSize() {
         std::uint8_t align_of = 0;
         int result = 0;
@@ -412,10 +410,10 @@ public:
     EAtomicCategory m_unAtomicCategory; // 0x0019
     IF_LINUX(char _pad_0x20[0x02];)
 #endif
-} __attribute__((packed));
+} IF_LINUX(__attribute__((packed)));
 
 static_assert(offsetof(CSchemaType, m_pTypeScope) == 0x10);
-static_assert(sizeof(CSchemaType) == 0x1C);
+static_assert(sizeof(CSchemaType) == platform_specific{.windows = 0x20, .linux = 0x1C});
 
 class CSchemaType_Ptr : public CSchemaType {
 public:
@@ -439,11 +437,11 @@ class CSchemaType_Builtin : public CSchemaType {
 public:
     SchemaBuiltinType_t m_eBuiltinType;
     std::uint8_t m_unSize;
-    char _pad_0x24[0x04];
+    IF_LINUX(char _pad_0x24[0x04];)
 };
 
-static_assert(offsetof(CSchemaType_Builtin, m_eBuiltinType) == 0x1c);
-static_assert(offsetof(CSchemaType_Builtin, m_unSize) == 0x20);
+static_assert(offsetof(CSchemaType_Builtin, m_eBuiltinType) == platform_specific{.windows = 0x20, .linux = 0x1c});
+static_assert(offsetof(CSchemaType_Builtin, m_unSize) == platform_specific{.windows = 0x24, .linux = 0x20});
 static_assert(sizeof(CSchemaType_Builtin) == 0x28);
 
 class CSchemaType_DeclaredClass : public CSchemaType {
@@ -580,7 +578,7 @@ struct SchemaStaticFieldData_t {
 
 struct SchemaBaseClassInfoData_t {
     std::uint32_t m_unOffset; // 0x0000
-    CSchemaClassInfo* m_pPrevByClass; // 0x0008
+    CSchemaClassInfo* m_pClass; // 0x0008
 };
 
 using SchemaFieldMetadataOverrideSetData_t = datamap_t;
@@ -603,22 +601,28 @@ public:
     SchemaClassInfoData_t* m_pSelf; // 0x0000
     const char* m_pszName; // 0x0008
     const char* m_pszModule; // 0x0010
-    int m_nSize; // 0x0018
+
+    int m_nSizeOf; // 0x0018
+
     std::int16_t m_nFieldSize; // 0x001C
     std::int16_t m_nStaticFieldsSize; // 0x001E
     std::int16_t m_nStaticMetadataSize; // 0x0020
     std::uint8_t m_unAlignOf; // 0x0022
-    std::uint8_t m_bHasBaseClass; // 0x0023
-    std::int16_t m_nTotalClassSize; // 0x0024 // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
-    std::int16_t m_nDerivedClassSize; // 0x0026
+
+    std::int8_t m_nBaseClassSize; // 0x0023
+    std::int16_t m_nMultipleInheritanceDepth; // 0x0024 // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
+    std::int16_t m_nSingleInheritanceDepth; // 0x0026
+
     SchemaClassFieldData_t* m_pFields; // 0x0028
     SchemaStaticFieldData_t* m_pStaticFields; // 0x0030
     SchemaBaseClassInfoData_t* m_pBaseClassses; // 0x0038
     SchemaFieldMetadataOverrideSetData_t* m_pFieldMetadataOverrides; // 0x0040
     SchemaMetadataEntryData_t* m_pStaticMetadata; // 0x0048
     CSchemaSystemTypeScope* m_pTypeScope; // 0x0050
+
     CSchemaType* m_pSchemaType; // 0x0058
     SchemaClassFlags_t m_nClassFlags:32; // 0x0060
+
     std::uint32_t m_unSequence; // 0x0064 // @note: @og: idk
     void* m_pFn; // 0x0068
 
@@ -628,6 +632,7 @@ public:
         return reinterpret_cast<RetTy (*)(SchemaClassInfoFunctionIndex, Ty...)>(m_pFn)(index, std::forward<Ty>(args)...);
     }
 };
+static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68);
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
 public:
@@ -644,8 +649,8 @@ public:
     }
 
     [[nodiscard]] std::optional<CSchemaClassInfo*> GetBaseClass() const {
-        if (m_bHasBaseClass && m_pBaseClassses)
-            return m_pBaseClassses->m_pPrevByClass;
+        if (m_nBaseClassSize && m_pBaseClassses)
+            return m_pBaseClassses->m_pClass;
         return std::nullopt;
     }
 
@@ -662,9 +667,9 @@ public:
     }
 
     [[nodiscard]] std::string_view GetPrevClassName() const {
-        if (!m_pBaseClassses || !m_pBaseClassses->m_pPrevByClass)
+        if (!m_pBaseClassses || !m_pBaseClassses->m_pClass)
             return {};
-        return m_pBaseClassses->m_pPrevByClass->GetName();
+        return m_pBaseClassses->m_pClass->GetName();
     }
 
     [[nodiscard]] bool IsA(CSchemaType* pInheritance) const {
@@ -679,26 +684,23 @@ public:
     }
 
     [[nodiscard]] bool RecursiveHasVirtualTable() const {
-        return HasVirtualTable() ? true :
-                                   (m_pBaseClassses && m_pBaseClassses->m_pPrevByClass ? m_pBaseClassses->m_pPrevByClass->HasVirtualTable() : false);
+        return HasVirtualTable() ? true : (m_pBaseClassses && m_pBaseClassses->m_pClass ? m_pBaseClassses->m_pClass->HasVirtualTable() : false);
     }
 
     [[nodiscard]] bool IsInherits(const std::string_view from) const {
-        if (!m_bHasBaseClass || !m_pBaseClassses || !m_pBaseClassses->m_pPrevByClass)
+        if (!m_nBaseClassSize || !m_pBaseClassses || !m_pBaseClassses->m_pClass)
             return false;
-        if (m_pBaseClassses->m_pPrevByClass->GetName() == from)
+        if (m_pBaseClassses->m_pClass->GetName() == from)
             return true;
         return false;
     }
 
     [[nodiscard]] bool IsRecursiveInherits(const std::string_view from) const {
-        return IsInherits(from) ?
-                   true :
-                   (m_pBaseClassses && m_pBaseClassses->m_pPrevByClass ? m_pBaseClassses->m_pPrevByClass->IsRecursiveInherits(from) : false);
+        return IsInherits(from) ? true : (m_pBaseClassses && m_pBaseClassses->m_pClass ? m_pBaseClassses->m_pClass->IsRecursiveInherits(from) : false);
     }
 
     [[nodiscard]] int GetSize() const {
-        return m_nSize;
+        return m_nSizeOf;
     }
 
     [[nodiscard]] std::uint8_t GetAligment() const {

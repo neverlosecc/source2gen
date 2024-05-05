@@ -8,6 +8,8 @@
 #include <string_view>
 #include <tools/platform.h>
 
+#pragma warning(disable:4715)
+
 #if TARGET_OS == WINDOWS
     #include "loader_windows.h"
 #elif TARGET_OS == LINUX
@@ -49,7 +51,21 @@ namespace loader {
     }
 
     [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> void* {
-        return platform::find_module_symbol(handle, name);
+#if TARGET_OS == WINDOWS
+            auto sym = platform::find_module_symbol(handle, name);
+            if (sym.has_value()) {
+                return sym.value();
+            }
+
+            const auto rc = std::fputs(sym.error().as_string().data(), stderr);
+            if (rc == EOF)
+                std::perror("failed to use fputs to print error message");
+
+#elif TARGET_OS == LINUX
+            return platform::find_module_symbol(handle, name);
+#else
+#error unsupported operating system
+#endif
     }
 } // namespace Loader
 

@@ -6,6 +6,7 @@ int main(int argc, char* argv[]) {
     if (source2_gen::Dump()) {
         std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
         std::cout << kPoweredByMessage << std::endl;
+        (void)std::getchar();
     } else {
         // error was logged by Dump()
         return 1;

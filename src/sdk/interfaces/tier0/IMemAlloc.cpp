@@ -22,7 +22,7 @@ namespace {
 
         // Continuously try to get the g_pMemAlloc pointer until it's successful
         if (!g_pMemAlloc) {
-            g_pMemAlloc = *reinterpret_cast<IMemAlloc**>(loader::find_module_symbol(tier0, "g_pMemAlloc"));
+            g_pMemAlloc = *static_cast<IMemAlloc**>(loader::find_module_symbol(tier0, "g_pMemAlloc"));
 
             // If g_pMemAlloc is not found, try initializing it
             if (!g_pMemAlloc) {
@@ -36,7 +36,10 @@ namespace {
 
         if (g_pMemAlloc == nullptr) {
             // there is no way to recover, we don't have an allocator, abort
-            std::fputs("could not initialize g_pMemAlloc, source2gen does not work with this version of the game.\n", stderr);
+            const auto rc = std::fputs("could not initialize g_pMemAlloc, source2gen does not work with this version of the game.\n", stderr);
+            if (rc == EOF)
+                std::perror("failed to use fputs to print error message");
+
             std::abort();
         }
 

@@ -23,7 +23,8 @@ public:
     bool m_bTrace;
     const char* m_pDebugName;
 };
-static_assert(sizeof(CThreadMutex) == 0x30 + sizeof(ThreadId_t) + sizeof(char*));
+//static_assert(sizeof(CThreadMutex) == 0x30 + sizeof(ThreadId_t) + sizeof(char*));
+static_assert(sizeof(CThreadMutex) == 0x38);
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

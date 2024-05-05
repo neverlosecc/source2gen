@@ -4,7 +4,6 @@
 #include <cassert>
 #include <cstring>
 #include <string>
-#include <string_view>
 #include <windows.h>
 
 // keep in sync with get_module_file_name()
@@ -23,10 +22,10 @@ namespace loader::windows {
         static auto from_error(DWORD error) {
             LPSTR pBuffer = nullptr;
 
-            const auto size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error,
-                                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&pBuffer, 0, NULL);
+            const auto size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error,
+                                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&pBuffer), 0, nullptr);
 
-            auto result = LoadModuleError{pBuffer};
+            const auto result = LoadModuleError{pBuffer};
 
             LocalFree(pBuffer);
 
@@ -56,15 +55,15 @@ namespace loader::windows {
         return LoadLibraryA(name.data());
     }
 
-    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
+    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<void*, LoadModuleError> {
         assert(handle != nullptr);
-        if (auto* const handle{ GetProcAddress(handle, name.data() }) {
-            return handle;
-        } else {
-            return std::unexpected{LoadModuleError::from_error(GetLastError())};
+        if (void* const h_module = GetProcAddress(handle, name.data())) {
+            return h_module;
         }
+
+        return std::unexpected{LoadModuleError::from_error(GetLastError())};
     }
-} // namespace loader::Windows
+} // namespace loader::windows
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc
