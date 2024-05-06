@@ -47,7 +47,7 @@ namespace codegen {
     public:
         constexpr generator_t() = default;
         ~generator_t() = default;
-        constexpr self_ref operator=(self_ref v) {
+        constexpr self_ref operator=(self_ref v) const {
             return v;
         }
 
@@ -86,13 +86,13 @@ namespace codegen {
             return *this;
         }
 
-        self_ref begin_block(const std::string& text, const std::string& access_modifier = "", bool increment_tabs_count = true,
-                             bool move_cursor_to_next_line = true) {
+        self_ref begin_block(const std::string& text, const std::string& access_modifier = "", const bool increment_tabs_count = true,
+                             const bool move_cursor_to_next_line = true) {
             push_line(text, move_cursor_to_next_line);
 
             // @note: @es3n1n: we should reset tabs count if we aren't moving cursor to
             // the next line
-            auto backup_tabs_count = _tabs_count;
+            const auto backup_tabs_count = _tabs_count;
             if (!move_cursor_to_next_line)
                 _tabs_count = 0;
 
@@ -111,7 +111,7 @@ namespace codegen {
             return *this;
         }
 
-        self_ref end_block(bool decrement_tabs_count = true, bool move_cursor_to_next_line = true) {
+        self_ref end_block(const bool decrement_tabs_count = true, const bool move_cursor_to_next_line = true) {
             if (decrement_tabs_count)
                 dec_tabs_count(kTabsPerBlock);
 
@@ -122,11 +122,11 @@ namespace codegen {
             return *this;
         }
 
-        self_ref begin_class(const std::string& class_name, const std::string access_modifier = "public") {
+        self_ref begin_class(const std::string& class_name, const std::string& access_modifier = "public") {
             return begin_block(std::format("class {}", class_name), access_modifier);
         }
 
-        self_ref begin_class_with_base_type(const std::string& class_name, const std::string& base_type, const std::string access_modifier = "public") {
+        self_ref begin_class_with_base_type(const std::string& class_name, const std::string& base_type, const std::string& access_modifier = "public") {
             if (base_type.empty())
                 return begin_class(std::cref(class_name), access_modifier);
 
@@ -155,14 +155,14 @@ namespace codegen {
 
         template <typename T>
         self_ref enum_item(const std::string& name, T value) {
-            return push_line(std::vformat(sizeof(T) >= 4 ? "{} = {:#x}," : "{} = {},", std::make_format_args(name, value)));
+            return push_line(std::vformat(sizeof(T) >= 2 ? "{} = {:#x}," : "{} = {},", std::make_format_args(name, value)));
         }
 
-        self_ref begin_struct(const std::string& name, const std::string access_modifier = "public") {
+        self_ref begin_struct(const std::string& name, const std::string& access_modifier = "public") {
             return begin_block(std::format("struct {}", escape_name(name)), access_modifier);
         }
 
-        self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type, const std::string access_modifier = "public") {
+        self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type, const std::string& access_modifier = "public") {
             if (base_type.empty())
                 return begin_struct(std::cref(name), access_modifier);
 
@@ -174,16 +174,16 @@ namespace codegen {
         }
 
         // @todo: @es3n1n: add func params
-        self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name, bool increment_tabs_count = true,
-                                bool move_cursor_to_next_line = true) {
+        self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name, const bool increment_tabs_count = true,
+                                const bool move_cursor_to_next_line = true) {
             return begin_block(std::format("{}{} {}()", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
         }
 
-        self_ref end_function(bool decrement_tabs_count = true, bool move_cursor_to_next_line = true) {
+        self_ref end_function(const bool decrement_tabs_count = true, const bool move_cursor_to_next_line = true) {
             return end_block(decrement_tabs_count, move_cursor_to_next_line);
         }
 
-        self_ref return_value(const std::string& value, bool move_cursor_to_next_line = true) {
+        self_ref return_value(const std::string& value, const bool move_cursor_to_next_line = true) {
             return push_line(std::format("return {};", value), move_cursor_to_next_line);
         }
 
@@ -193,11 +193,11 @@ namespace codegen {
 
             // @note: @es3n1n: reset tabs count temporary
             //
-            auto backup_tabs_count = _tabs_count;
+            const auto backup_tabs_count = _tabs_count;
             _tabs_count = 0;
 
-            auto getter = std::format(
-                "*reinterpret_cast<{}*>(interfaces::g_schema->FindTypeScopeForModule(\"{}\")->FindDeclaredClass(\"{}\")->m_static_fields[{}]->m_instance)",
+            const auto getter = std::format(
+                R"(*reinterpret_cast<{}*>(interfaces::g_schema->FindTypeScopeForModule("{}")->FindDeclaredClass("{}")->GetStaticFields()[{}]->m_pInstance))",
                 type_name, mod_name, decl_class, index);
             return_value(getter, false);
             end_function(false, false);
@@ -265,7 +265,7 @@ namespace codegen {
         }
 
     public:
-        [[nodiscard]] std::string str() {
+        [[nodiscard]] std::string str() const {
             return _stream.str();
         }
 
@@ -279,25 +279,25 @@ namespace codegen {
             return *this;
         }
 
-        std::string escape_name(const std::string& name) {
+        static std::string escape_name(const std::string& name) {
             std::string result;
             result.resize(name.size());
 
             for (std::size_t i = 0; i < name.size(); i++)
                 result[i] =
-                    std::find(kBlacklistedCharacters.begin(), kBlacklistedCharacters.end(), name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
+                    std::ranges::find(kBlacklistedCharacters, name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
 
             return result;
         }
 
     public:
-        self_ref inc_tabs_count(std::size_t count = 1) {
+        self_ref inc_tabs_count(const std::size_t count = 1) {
             _tabs_count_backup = _tabs_count;
             _tabs_count += count;
             return *this;
         }
 
-        self_ref dec_tabs_count(std::size_t count = 1) {
+        self_ref dec_tabs_count(const std::size_t count = 1) {
             _tabs_count_backup = _tabs_count;
             if (_tabs_count)
                 _tabs_count -= count;

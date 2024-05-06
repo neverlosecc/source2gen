@@ -9,6 +9,7 @@ int main(int argc, char* argv[]) {
         (void)std::getchar();
     } else {
         // error was logged by Dump()
+        (void)std::getchar();
         return 1;
     }
 }

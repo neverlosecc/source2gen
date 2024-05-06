@@ -88,7 +88,7 @@ namespace source2_gen {
         }
 
         for (const auto& name : modules) {
-            auto* handle = loader::find_module_handle(name.data());
+            auto* handle = loader::find_module_handle(name);
             assert(handle != nullptr && "we loaded modules at startup, where did they go?");
 
             if (auto* pInstallSchemaBindings = loader::find_module_symbol(handle, "InstallSchemaBindings")) {

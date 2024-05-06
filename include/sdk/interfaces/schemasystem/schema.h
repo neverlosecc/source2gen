@@ -244,10 +244,10 @@ struct SchemaEnumeratorInfoData_t {
     const char* m_szName;
 
     union {
-        unsigned char m_Char;
-        unsigned short m_Short;
-        unsigned int m_Int;
-        unsigned long long m_Uint;
+        std::uint8_t m_uint8;
+        std::uint16_t m_uint16;
+        std::uint32_t m_uint32;
+        std::uint64_t m_uint64;
     };
 
     std::int32_t m_nMetadataSize;
