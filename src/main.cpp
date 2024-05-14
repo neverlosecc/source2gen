@@ -3,11 +3,12 @@
 #include <Include.h>
 
 int main(int argc, char* argv[]) {
-    int exit_code = 0;
+    int exit_code = 1;
 
     if (source2_gen::Dump()) {
         std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
         std::cout << kPoweredByMessage << std::endl;
+        exit_code = 0;
     }
 
     /// Errors would be logged in the `source2_gen::Dump` itself
