@@ -51,7 +51,7 @@ struct [[nodiscard]] platform_specific {
         }
     }
 
-    [[nodiscard]] consteval operator Value() {
+    /* implicit */ [[nodiscard]] consteval operator Value() {
         return this->get();
     }
 };

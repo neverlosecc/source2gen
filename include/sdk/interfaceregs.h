@@ -8,7 +8,6 @@
 #include <tools/loader.h>
 
 namespace sdk {
-    using CreateInterfaceFn = void* (*)(const char* pName, int* pReturnCode);
     using InstantiateInterfaceFn = void* (*)();
 
     class InterfaceReg {
@@ -20,7 +19,7 @@ namespace sdk {
 
     inline const InterfaceReg* GetInterfaces(const char* library) {
         const auto library_handle = loader::find_module_handle(library);
-        assert(library_handle != 0);
+        assert(library_handle != nullptr);
 
         const auto createinterface_symbol = loader::find_module_symbol<uintptr_t>(library_handle, "CreateInterface").value_or(0);
         assert(createinterface_symbol != 0);

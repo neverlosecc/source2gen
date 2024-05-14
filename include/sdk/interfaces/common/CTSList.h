@@ -57,7 +57,7 @@ union TSLIST_HEAD_ALIGN TSLHead_t {
 
 class TSLIST_HEAD_ALIGN CTSListBase {
 public:
-    int Count() {
+    [[nodiscard]] int Count() const {
         return m_Head.value.Depth;
     }
 

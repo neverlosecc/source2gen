@@ -2,7 +2,6 @@
 // See end of file for extended copyright information.
 #include <cassert>
 #include <cstring>
-#include <Include.h>
 #include <sdk/interfaces/tier0/IMemAlloc.h>
 #include <tools/loader.h>
 
@@ -43,7 +42,7 @@ namespace {
 
         return *g_ppMemAlloc;
     }
-}; // namespace
+} // namespace
 
 bool ValueIsPowerOfTwo(const std::size_t value) // don't clash with mathlib definition
 {
@@ -198,10 +197,10 @@ void operator delete[](void* p, std::align_val_t al) noexcept {
 
 void operator delete(void* p, std::size_t n, std::align_val_t al) noexcept {
     GetMemAlloc()->FreeAligned(p);
-};
+}
 void operator delete[](void* p, std::size_t n, std::align_val_t al) noexcept {
     GetMemAlloc()->FreeAligned(p);
-};
+}
 void operator delete(void* p, std::align_val_t al, const std::nothrow_t&) noexcept {
     GetMemAlloc()->FreeAligned(p);
 }

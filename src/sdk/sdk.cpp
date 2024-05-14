@@ -12,7 +12,7 @@ namespace {
     using namespace std::string_view_literals;
 
     constexpr std::string_view kOutDirName = "sdk"sv;
-    constinit std::array include_paths = {"<cstdint>"sv, "\"!GlobalTypes.hpp\""sv};
+    constinit std::array include_paths = {"<cstdint>"sv, R"("!GlobalTypes.hpp")"sv};
 
     constexpr uint32_t kMaxReferencesForClassEmbed = 2;
     constexpr std::size_t kMinFieldCountForClassEmbed = 2;
@@ -70,12 +70,8 @@ namespace {
     };
 
     constinit std::array var_name_string_class_metadata_entries = {
-        FNV32("MNetworkVarNames"),
-        FNV32("MNetworkOverride"),
-        FNV32("MNetworkVarTypeOverride"),
-        FNV32("MPulseCellOutflowHookInfo"),
-        FNV32("MScriptDescription"),
-        FNV32("MParticleDomainTag"),
+        FNV32("MNetworkVarNames"),          FNV32("MNetworkOverride"),   FNV32("MNetworkVarTypeOverride"),
+        FNV32("MPulseCellOutflowHookInfo"), FNV32("MScriptDescription"), FNV32("MParticleDomainTag"),
     };
 
     constinit std::array integer_metadata_entries = {
@@ -215,7 +211,7 @@ namespace sdk {
             for (auto schema_enum_binding : enums.GetElements()) {
                 // @note: @es3n1n: get type name by align size
                 //
-                const auto get_type_name = [schema_enum_binding]() [[msvc::forceinline]] {
+                const auto get_type_name = [schema_enum_binding]() -> std::string {
                     std::string type_storage;
 
                     switch (schema_enum_binding->m_unAlignOf) {
@@ -292,9 +288,9 @@ namespace sdk {
 
         void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
             struct class_t {
-                CSchemaClassInfo* target_;
+                CSchemaClassInfo* target_{};
                 std::set<CSchemaClassInfo*> refs_;
-                uint32_t used_count_;
+                uint32_t used_count_{};
                 std::list<std::pair<std::string, ptrdiff_t>> cached_fields_;
 
                 struct cached_datamap_t {

@@ -14,7 +14,7 @@ constexpr auto kThreadSpinMutex = 1;
 
 class CThreadSpinMutexV1 {
 public:
-    CThreadSpinMutexV1(const char* pDebugName = NULL): m_ownerID(0), m_depth(0), m_pszDebugName(pDebugName) { }
+    explicit CThreadSpinMutexV1(const char* pDebugName = nullptr): m_ownerID(0), m_depth(0), m_pszDebugName(pDebugName) { }
 
 private:
     volatile ThreadId_t m_ownerID;
@@ -24,7 +24,7 @@ private:
 
 class CThreadSpinMutexV2 {
 public:
-    CThreadSpinMutexV2([[maybe_unused]] const char* pDebugName = NULL): m_ownerID(0), m_depth(0) { }
+    explicit CThreadSpinMutexV2([[maybe_unused]] const char* pDebugName = nullptr): m_ownerID(0), m_depth(0) { }
 
 private:
     volatile ThreadId_t m_ownerID;

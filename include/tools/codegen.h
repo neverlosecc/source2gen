@@ -47,8 +47,17 @@ namespace codegen {
     public:
         constexpr generator_t() = default;
         ~generator_t() = default;
-        constexpr self_ref operator=(self_ref v) const {
-            return v;
+        generator_t& operator=(const generator_t& v) {
+            if (this != &v) {
+                this->_stream = std::stringstream(v._stream.str());
+                /// \todo @es3n1n: Such stats counters should be moved to their own structure
+                this->_tabs_count = v._tabs_count;
+                this->_tabs_count_backup = v._tabs_count_backup;
+                this->_unions_count = v._unions_count;
+                this->_pads_count = v._pads_count;
+                this->_forward_decls = v._forward_decls;
+            }
+            return *this;
         }
 
     public:

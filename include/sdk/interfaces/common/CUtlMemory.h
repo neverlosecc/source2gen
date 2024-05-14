@@ -52,7 +52,7 @@ template <class T, class I = int>
 class CUtlMemory {
 public:
     // constructor, destructor
-    CUtlMemory(int nGrowSize = 0, int nInitSize = 0);
+    explicit CUtlMemory(int nGrowSize = 0, int nInitAllocationCount = 0);
     CUtlMemory(T* pMemory, int numElements);
     CUtlMemory(const T* pMemory, int numElements);
     ~CUtlMemory();
@@ -62,7 +62,7 @@ public:
 
     class Iterator_t {
     public:
-        Iterator_t(I i): index(i) { }
+        explicit Iterator_t(I i): index(i) { }
 
         I index;
 
@@ -113,20 +113,20 @@ public:
 
     void SetExternalBuffer(T* pMemory, int numElements);
     void SetExternalBuffer(const T* pMemory, int numElements);
-    void AssumeMemory(T* pMemory, int nSize);
+    void AssumeMemory(T* pMemory, int numElements);
     T* Detach();
     void* DetachMemory();
 
     void Swap(CUtlMemory<T, I>& mem);
     void ConvertToGrowableMemory(int nGrowSize);
-    int NumAllocated() const;
-    int Count() const;
+    [[nodiscard]] int NumAllocated() const;
+    [[nodiscard]] int Count() const;
     void Grow(int num = 1);
     void EnsureCapacity(int num);
     void Purge();
     void Purge(int numElements);
-    bool IsExternallyAllocated() const;
-    bool IsReadOnly() const;
+    [[nodiscard]] bool IsExternallyAllocated() const;
+    [[nodiscard]] bool IsReadOnly() const;
     void SetGrowSize(int size);
 
 protected:
@@ -254,15 +254,16 @@ void CUtlMemory<T, I>::AssumeMemory(T* pMemory, int numElements) {
     // Blow away any existing allocated memory
     Purge();
 
-    // Simply take the pointer but don't mark us as external
+    // Take the pointer but don't mark us as external
     m_pMemory = pMemory;
     m_nAllocationCount = numElements;
 }
 
 template <class T, class I>
 void* CUtlMemory<T, I>::DetachMemory() {
-    if (IsExternallyAllocated())
-        return NULL;
+    if (IsExternallyAllocated()) {
+        return nullptr;
+    }
 
     void* pMemory = m_pMemory;
     m_pMemory = 0;
@@ -485,7 +486,7 @@ void CUtlMemory<T, I>::Purge(int numElements) {
         return;
     }
 
-    // If we have zero elements, simply do a purge:
+    // If we have zero elements, do a purge:
     if (numElements == 0) {
         Purge();
         return;

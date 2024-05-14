@@ -168,8 +168,8 @@ enum class fieldtype_t : uint8_t {
 //  using a single memcpy operation
 struct datarun_t {
     datarun_t(): m_nStartFlatField(0), m_nEndFlatField(0), m_nLength(0) {
-        for (int i = 0; i < TD_OFFSET_COUNT; ++i) {
-            m_nStartOffset[i] = 0;
+        for (int & i : m_nStartOffset) {
+            i = 0;
 #ifdef _X360
             // These are the offsets of the next run, for priming the L1 cache
             m_nPrefetchOffset[i] = 0;
@@ -182,7 +182,7 @@ struct datarun_t {
     int m_nEndFlatField;
 
     // Offsets for run in the packed/unpacked data (I think the run starts need to be properly aligned)
-    int m_nStartOffset[TD_OFFSET_COUNT];
+    int m_nStartOffset[TD_OFFSET_COUNT]{};
 #ifdef _X360
     // These are the offsets of the next run, for priming the L1 cache
     int m_nPrefetchOffset[TD_OFFSET_COUNT];
@@ -197,8 +197,8 @@ public:
 
 struct flattenedoffsets_t {
     CUtlVector<typedescription_t> m_Flattened;
-    int m_nPackedSize; // Contiguous memory to pack all of these together for TD_OFFSET_PACKED
-    int m_nPackedStartOffset;
+    int m_nPackedSize{}; // Contiguous memory to pack all of these together for TD_OFFSET_PACKED
+    int m_nPackedStartOffset{};
 };
 
 struct datamapinfo_t {
@@ -225,14 +225,14 @@ public:
 
 class typedescription_t {
 public:
-    std::string_view GetFieldName() {
+    [[nodiscard]] std::string GetFieldName() const {
         if (m_pszFieldName)
             return {m_pszFieldName};
 
         return {};
     }
 
-    std::string_view GetExternalFieldName() {
+    [[nodiscard]] std::string GetExternalFieldName() const {
         if (m_pszExternalName)
             return {m_pszExternalName};
 

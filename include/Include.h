@@ -31,7 +31,6 @@ namespace source2_gen {
     bool Dump();
 } // namespace source2_gen
 
-constexpr std::string_view kConsoleTitleMessage = {"source2gen :: github.com/neverlosecc/source2gen"};
 constexpr std::string_view kPoweredByMessage = {"Powered by github.com/neverlosecc/source2gen"};
 constexpr std::string_view kCreatedBySource2genMessage = {"Created using source2gen - github.com/neverlosecc/source2gen"};
 

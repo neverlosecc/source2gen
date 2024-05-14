@@ -26,7 +26,7 @@ constexpr auto kUtlTsHashVersion = 1;
 // the insertions are moved into a lock-free list
 //
 // Elements are never individually removed; clears must occur at a time
-// where we and guaranteed no queries are occurring
+// when we and guaranteed no queries are occurring
 //
 using UtlTsHashHandleT = std::uint64_t;
 
@@ -91,7 +91,7 @@ class CUtlTSHashUseKeyHashMethod {
 public:
     static int Hash(const KEYTYPE& key, int nBucketMask) {
         std::uint32_t nHash = key.HashValue();
-        return (nHash & nBucketMask);
+        return static_cast<int>(nHash & nBucketMask);
     }
 
     static bool Compare(const KEYTYPE& lhs, const KEYTYPE& rhs) {
@@ -103,7 +103,7 @@ template <class T, class Keytype = std::uint64_t, int BucketCount = 256, class H
 class CUtlTSHashV1 {
 public:
     // Invalid handle.
-    static UtlTsHashHandleT InvalidHandle(void) {
+    static UtlTsHashHandleT InvalidHandle() {
         return static_cast<UtlTsHashHandleT>(0);
     }
 
@@ -117,7 +117,7 @@ public:
     }
 
     // Returns elements in the table
-    std::vector<T> GetElements(void);
+    std::vector<T> GetElements();
 
 public:
     // Templatized for memory tracking purposes
@@ -174,7 +174,7 @@ public:
 
 // @note: @og: notice this is hacky-way to obtain elements from CUtlTSHash but its works, so why not
 template <class T, class Keytype, int BucketCount, class HashFuncs>
-std::vector<T> CUtlTSHashV1<T, Keytype, BucketCount, HashFuncs>::GetElements(void) {
+std::vector<T> CUtlTSHashV1<T, Keytype, BucketCount, HashFuncs>::GetElements() {
     std::vector<T> list;
 
     const int n_count = PeakAlloc();
@@ -200,7 +200,7 @@ template <class T, class Keytype = std::uint64_t, int BucketCount = 256, class H
 class CUtlTSHashV2 {
 public:
     // Invalid handle.
-    static UtlTsHashHandleT InvalidHandle(void) {
+    static UtlTsHashHandleT InvalidHandle() {
         return static_cast<UtlTsHashHandleT>(0);
     }
 
@@ -254,7 +254,7 @@ public:
 
     CUtlMemoryPoolBase m_EntryMemory;
     std::array<HashBucket_t, BucketCount> m_aBuckets;
-    bool m_bNeedsCommit;
+    bool m_bNeedsCommit{};
     CInterlockedInt m_ContentionCheck;
 };
 

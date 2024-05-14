@@ -17,12 +17,12 @@ public:
     CInterlockedIntT(): m_value(0) {
         static_assert(sizeof(T) == sizeof(std::int32_t));
     }
-    CInterlockedIntT(T value): m_value(value) { }
+    explicit CInterlockedIntT(T value): m_value(value) { }
 
-    T operator()(void) const {
+    T operator()() const {
         return m_value;
     }
-    operator T() const {
+    /* implicit */ operator T() const {
         return m_value;
     }
 

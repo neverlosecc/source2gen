@@ -344,7 +344,7 @@ constexpr auto kSchemaBuiltinTypeCount = static_cast<std::size_t>(SchemaBuiltinT
 
 class CSchemaType {
 public:
-    [[nodiscard]] bool IsValid(void) {
+    [[nodiscard]] bool IsValid() {
         return Virtual::Get<bool (*)(void*)>(this, 0)(this);
     }
 
@@ -383,7 +383,7 @@ public:
     // @todo: @og: find out to what class pointer points.
     [[nodiscard]] CSchemaType* GetRefClass();
 
-    [[nodiscard]] ETypeCategory GetTypeCategory() {
+    [[nodiscard]] ETypeCategory GetTypeCategory() const {
 #if defined(CS2) || defined(DOTA2)
         return m_unTypeCategory;
 #else
@@ -391,7 +391,7 @@ public:
 #endif
     }
 
-    [[nodiscard]] EAtomicCategory GetAtomicCategory() {
+    [[nodiscard]] EAtomicCategory GetAtomicCategory() const {
 #if defined(CS2) || defined(DOTA2)
         return m_unAtomicCategory;
 #else
@@ -628,7 +628,7 @@ public:
 
 public:
     template <typename RetTy = void*, typename... Ty>
-    RetTy CallFunction(SchemaClassInfoFunctionIndex index, Ty... args) const {
+    [[nodiscard]] RetTy CallFunction(SchemaClassInfoFunctionIndex index, Ty... args) const {
         return reinterpret_cast<RetTy (*)(SchemaClassInfoFunctionIndex, Ty...)>(m_pFn)(index, std::forward<Ty>(args)...);
     }
 };
@@ -684,7 +684,7 @@ public:
     }
 
     [[nodiscard]] bool RecursiveHasVirtualTable() const {
-        return HasVirtualTable() ? true : (m_pBaseClassses && m_pBaseClassses->m_pClass ? m_pBaseClassses->m_pClass->HasVirtualTable() : false);
+        return HasVirtualTable() || (m_pBaseClassses && m_pBaseClassses->m_pClass && m_pBaseClassses->m_pClass->HasVirtualTable());
     }
 
     [[nodiscard]] bool IsInherits(const std::string_view from) const {
@@ -696,7 +696,7 @@ public:
     }
 
     [[nodiscard]] bool IsRecursiveInherits(const std::string_view from) const {
-        return IsInherits(from) ? true : (m_pBaseClassses && m_pBaseClassses->m_pClass ? m_pBaseClassses->m_pClass->IsRecursiveInherits(from) : false);
+        return IsInherits(from) || (m_pBaseClassses && m_pBaseClassses->m_pClass && m_pBaseClassses->m_pClass->IsRecursiveInherits(from));
     }
 
     [[nodiscard]] int GetSize() const {
@@ -909,7 +909,7 @@ enum SchemaTypeScope_t : std::uint8_t {
 
 class CSchemaSystem {
 public:
-    [[nodiscard]] CSchemaSystemTypeScope* GlobalTypeScope(void) {
+    [[nodiscard]] CSchemaSystemTypeScope* GlobalTypeScope() {
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*)>(this, 11)(this);
     }
 
@@ -1002,7 +1002,7 @@ public:
         return m_nRedundant;
     }
 
-    [[nodiscard]] std::int32_t GetIgnoredBytes() const {
+    [[nodiscard]] std::size_t GetIgnoredBytes() const {
         return m_nIgnoredBytes;
     }
 
@@ -1016,7 +1016,7 @@ private:
     std::size_t m_nIgnoredBytes = 0; // 0x02CC
 
 public:
-    [[nodiscard]] static CSchemaSystem* GetInstance(void) {
+    [[nodiscard]] static CSchemaSystem* GetInstance() {
         return sdk::GetInterface<CSchemaSystem>(loader::get_module_file_name("schemasystem").c_str(), "SchemaSystem_0");
     }
 };

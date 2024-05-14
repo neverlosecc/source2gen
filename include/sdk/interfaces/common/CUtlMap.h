@@ -33,9 +33,9 @@ public:
     // Left at growSize = 0, the memory will first allocate 1 element and double in size
     // at each increment.
     // LessFunc_t is required, but may be set after the constructor using SetLessFunc() below
-    CUtlMap(int growSize = 0, int initSize = 0, LessFunc_t lessfunc = 0): m_Tree(growSize, initSize, CKeyLess(lessfunc)) { }
+    explicit CUtlMap(int growSize = 0, int initSize = 0, LessFunc_t lessfunc = 0): m_Tree(growSize, initSize, CKeyLess(lessfunc)) { }
 
-    CUtlMap(LessFunc_t lessfunc): m_Tree(CKeyLess(lessfunc)) { }
+    explicit CUtlMap(LessFunc_t lessfunc): m_Tree(CKeyLess(lessfunc)) { }
 
     void EnsureCapacity(int num) {
         m_Tree.EnsureCapacity(num);
@@ -62,22 +62,22 @@ public:
     }
 
     // Num elements
-    unsigned int Count() const {
+    [[nodiscard]] unsigned int Count() const {
         return m_Tree.Count();
     }
 
     // Max "size" of the vector
-    IndexType_t MaxElement() const {
+    [[nodiscard]] IndexType_t MaxElement() const {
         return m_Tree.MaxElement();
     }
 
     // Checks if a node is valid and in the map
-    bool IsValidIndex(IndexType_t i) const {
+    [[nodiscard]] bool IsValidIndex(IndexType_t i) const {
         return m_Tree.IsValidIndex(i);
     }
 
     // Checks if the map as a whole is valid
-    bool IsValid() const {
+    [[nodiscard]] bool IsValid() const {
         return m_Tree.IsValid();
     }
 
@@ -122,7 +122,7 @@ public:
     }
 
     struct Node_t {
-        Node_t() { }
+        Node_t() = default;
 
         Node_t(const Node_t& from): key(from.key), elem(from.elem) { }
 
@@ -132,7 +132,7 @@ public:
 
     class CKeyLess {
     public:
-        CKeyLess(LessFunc_t lessFunc): m_LessFunc(lessFunc) { }
+        explicit CKeyLess(LessFunc_t lessFunc): m_LessFunc(lessFunc) { }
 
         bool operator!() const {
             return !m_LessFunc;
