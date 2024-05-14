@@ -5,7 +5,8 @@
 #include <cassert>
 #include <cstdint>
 #include <string_view>
-#include <tools/loader.h>
+
+#include <tools/loader/loader.h>
 
 namespace sdk {
     using InstantiateInterfaceFn = void* (*)();

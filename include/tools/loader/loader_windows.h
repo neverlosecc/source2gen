@@ -6,40 +6,27 @@
 #include <string>
 #include <windows.h>
 
+#include "loader_shared.h"
+
 // keep in sync with get_module_file_name()
 #define LOADER_WINDOWS_GET_MODULE_FILE_NAME(name) name ".dll"
 
 namespace loader::windows {
     using module_handle_t = HMODULE;
 
-    class LoadModuleError {
-    public:
-        /// @return Lifetime bound to this @ref LoadModuleError
-        [[nodiscard]] auto as_string() const -> std::string_view {
-            return this->m_errorMessage;
-        }
-
-        static auto from_error(DWORD error) {
+    namespace detail {
+        inline LoadModuleError win32_error(DWORD error = GetLastError()) {
             LPSTR pBuffer = nullptr;
 
             const auto size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error,
                                              MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&pBuffer), 0, nullptr);
 
-            const auto result = LoadModuleError{pBuffer};
+            const auto result = LoadModuleError::from_string(pBuffer);
 
             LocalFree(pBuffer);
             return result;
         }
-
-    private:
-        // we can't use allocating C++ functions (std::string) in here, see doc
-        // of LoadModuleError in loader.h.
-        char m_errorMessage[512]{};
-
-        explicit LoadModuleError(std::string_view str) {
-            std::strncpy(this->m_errorMessage, str.data(), std::min(std::size(m_errorMessage), std::size(str)));
-        }
-    };
+    } // namespace detail
 
     // keep in sync with LOADER_WINDOWS_GET_MODULE_FILE_NAME
     [[nodiscard]] inline auto get_module_file_name(std::string name) -> std::string {
@@ -53,7 +40,7 @@ namespace loader::windows {
     [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
         auto result = LoadLibraryA(name.data());
         if (result == reinterpret_cast<HINSTANCE>(0)) {
-            return std::unexpected(LoadModuleError::from_error(GetLastError()));
+            return std::unexpected(detail::win32_error());
         }
 
         return result;
@@ -65,7 +52,7 @@ namespace loader::windows {
             return h_module;
         }
 
-        return std::unexpected{LoadModuleError::from_error(GetLastError())};
+        return std::unexpected(detail::win32_error());
     }
 } // namespace loader::windows
 

@@ -3,7 +3,7 @@
 #pragma once
 
 #include <string>
-#include <tools/loader.h>
+#include <tools/loader/loader.h>
 
 namespace util {
     inline std::string PrettifyNum(int num) {

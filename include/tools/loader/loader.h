@@ -3,13 +3,14 @@
 
 #pragma once
 
+#include "tools/platform.h"
 #include <expected>
 #include <string>
 #include <string_view>
-#include <tools/platform.h>
 
 #pragma warning(disable:4715)
 
+#include "loader_shared.h"
 #if TARGET_OS == WINDOWS
     #include "loader_windows.h"
 #elif TARGET_OS == LINUX
@@ -35,8 +36,6 @@ namespace loader {
 #endif
 
     using module_handle_t = platform::module_handle_t;
-    /// Guaranteed not to use allocating C++ functions
-    using LoadModuleError = platform::LoadModuleError;
 
     [[nodiscard]] inline auto get_module_file_name(std::string name) -> std::string {
         return platform::get_module_file_name(std::move(name));

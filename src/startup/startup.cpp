@@ -6,7 +6,7 @@
 #include <array>
 #include <fstream>
 #include <string>
-#include <tools/loader.h>
+#include <tools/loader/loader.h>
 #include <tools/platform.h>
 
 namespace {
