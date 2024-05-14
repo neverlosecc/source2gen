@@ -22,7 +22,7 @@ namespace sdk {
         const auto library_handle = loader::find_module_handle(library);
         assert(library_handle != 0);
 
-        const auto createinterface_symbol = reinterpret_cast<std::uintptr_t>(loader::find_module_symbol(library_handle, "CreateInterface"));
+        const auto createinterface_symbol = loader::find_module_symbol<uintptr_t>(library_handle, "CreateInterface").value_or(0);
         assert(createinterface_symbol != 0);
 
         const auto interface_list = [=] {

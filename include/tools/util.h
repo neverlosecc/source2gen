@@ -7,11 +7,11 @@
 
 namespace util {
     inline std::string PrettifyNum(int num) {
-        static const auto fn = reinterpret_cast<const char* (*)(int)>(
-            loader::find_module_symbol(loader::find_module_handle(loader::get_module_file_name("tier0")), "V_PrettifyNum"));
+        static const auto fn =
+            loader::find_module_symbol<const char* (*)(int)>(loader::find_module_handle(loader::get_module_file_name("tier0")), "V_PrettifyNum");
 
-        if (fn) {
-            std::string_view res = fn(num);
+        if (fn.has_value()) {
+            std::string_view res = (*fn)(num);
             if (!res.empty()) {
                 return res.data();
             }

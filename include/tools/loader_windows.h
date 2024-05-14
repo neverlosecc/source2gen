@@ -28,7 +28,6 @@ namespace loader::windows {
             const auto result = LoadModuleError{pBuffer};
 
             LocalFree(pBuffer);
-
             return result;
         }
 
@@ -37,7 +36,7 @@ namespace loader::windows {
         // of LoadModuleError in loader.h.
         char m_errorMessage[512]{};
 
-        LoadModuleError(std::string_view str) {
+        explicit LoadModuleError(std::string_view str) {
             std::strncpy(this->m_errorMessage, str.data(), std::min(std::size(m_errorMessage), std::size(str)));
         }
     };
@@ -51,13 +50,18 @@ namespace loader::windows {
         return GetModuleHandleA(name.data());
     }
 
-    [[nodiscard]] inline auto load_module(std::string_view name) -> module_handle_t {
-        return LoadLibraryA(name.data());
+    [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
+        auto result = LoadLibraryA(name.data());
+        if (result == reinterpret_cast<HINSTANCE>(0)) {
+            return std::unexpected(LoadModuleError::from_error(GetLastError()));
+        }
+
+        return result;
     }
 
     [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<void*, LoadModuleError> {
         assert(handle != nullptr);
-        if (void* const h_module = GetProcAddress(handle, name.data())) {
+        if (auto const h_module = GetProcAddress(handle, name.data())) {
             return h_module;
         }
 

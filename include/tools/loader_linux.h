@@ -30,7 +30,7 @@ namespace loader::linux {
         // of LoadModuleError in loader.h.
         char m_errorMessage[512]{};
 
-        LoadModuleError(std::string_view str) {
+        explicit LoadModuleError(std::string_view str) {
             std::strncpy(this->m_errorMessage, str.data(), std::min(std::size(m_errorMessage), std::size(str)));
         }
     };
@@ -45,19 +45,22 @@ namespace loader::linux {
     }
 
     [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
-        if (auto* const handle{dlopen(name.data(), RTLD_LAZY)}) {
+        if (auto* const handle = dlopen(name.data(), RTLD_LAZY)) {
             return handle;
-        } else {
-            return std::unexpected{LoadModuleError::from_string(dlerror())};
         }
+        return std::unexpected(LoadModuleError::from_string(dlerror()));
     }
 
-    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> module_handle_t {
+    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
         assert(handle != nullptr && "If you need RTLD_DEFAULT, write a new function to avoid magic values. Most of the time when handle=nullptr, a "
                                     "developer made a mistake and we want to catch that.");
-        return dlsym(handle, name.data());
+        auto* const result = dlsym(handle, name.data());
+        if (result == nullptr) {
+            return std::unexpected(LoadModuleError::from_string(dlerror()));
+        }
+        return result;
     }
-} // namespace loader::Linux
+} // namespace loader::linux
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

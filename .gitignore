@@ -1032,3 +1032,6 @@ bin/
 
 # VSCode Settings
 .vscode/settings.json
+
+# CLion
+.idea/**

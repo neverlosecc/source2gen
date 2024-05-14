@@ -15,27 +15,25 @@ namespace {
 
         assert(tier0 != nullptr && "You cannot use any allocating functions before tier0 has been loaded."
                                    "That includes std::string{} and std::format()!"
-                                   "We're overriding operator new() and friends and depend on tier0."
+                                   "We're overriding operator new() and depend on tier0."
                                    "Run a backtrace in your debugger to see where an allocation attempt was made, then adjust that code.");
 
-        IMemAlloc* g_pMemAlloc = nullptr;
-
         // Continuously try to get the g_pMemAlloc pointer until it's successful
-        if (!g_pMemAlloc) {
-            g_pMemAlloc = *static_cast<IMemAlloc**>(loader::find_module_symbol(tier0, "g_pMemAlloc"));
+        auto g_ppMemAlloc_wrap = loader::find_module_symbol<IMemAlloc**>(tier0, "g_pMemAlloc");
+        assert(g_ppMemAlloc_wrap.has_value());
+        auto g_ppMemAlloc = *g_ppMemAlloc_wrap;
 
-            // If g_pMemAlloc is not found, try initializing it
-            if (!g_pMemAlloc) {
-                static const auto CMemAllocSystemInitialize = reinterpret_cast<void (*)()>(loader::find_module_symbol(tier0, "CMemAllocSystemInitialize"));
+        // If g_pMemAlloc is not found, try initializing it
+        if (*g_ppMemAlloc == nullptr) {
+            static const auto CMemAllocSystemInitialize = loader::find_module_symbol<void (*)()>(tier0, "CMemAllocSystemInitialize");
 
-                if (CMemAllocSystemInitialize) {
-                    CMemAllocSystemInitialize();
-                }
+            if (CMemAllocSystemInitialize.has_value()) {
+                (*CMemAllocSystemInitialize)();
             }
         }
 
-        if (g_pMemAlloc == nullptr) {
-            // there is no way to recover, we don't have an allocator, abort
+        if (*g_ppMemAlloc == nullptr) {
+            // there is no way to recover; we don't have an allocator, abort
             const auto rc = std::fputs("could not initialize g_pMemAlloc, source2gen does not work with this version of the game.\n", stderr);
             if (rc == EOF)
                 std::perror("failed to use fputs to print error message");
@@ -43,7 +41,7 @@ namespace {
             std::abort();
         }
 
-        return g_pMemAlloc;
+        return *g_ppMemAlloc;
     }
 }; // namespace
 
@@ -103,11 +101,11 @@ void* IMemAlloc::Calloc(std::size_t num, std::size_t nSize) {
     const auto total_size = num * nSize;
     const auto memory = Alloc(total_size);
     if (memory) {
-        static auto V_tier0_memset = reinterpret_cast<void(__cdecl*)(void*, std::int8_t, std::size_t)>(
-            loader::find_module_symbol(loader::find_module_handle(loader::get_module_file_name("tier0")), "V_tier0_memset"));
+        static auto V_tier0_memset = loader::find_module_symbol<void(__cdecl*)(void*, std::int8_t, std::size_t)>(
+            loader::find_module_handle(loader::get_module_file_name("tier0")), "V_tier0_memset");
 
-        if (V_tier0_memset != nullptr)
-            V_tier0_memset(memory, 0, total_size);
+        if (V_tier0_memset.has_value())
+            (*V_tier0_memset)(memory, 0, total_size);
     }
     return memory;
 }

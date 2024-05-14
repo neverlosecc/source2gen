@@ -50,24 +50,27 @@ namespace loader {
         return platform::load_module(name);
     }
 
-    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> void* {
+    template <typename Ty = void*>
+    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<Ty, LoadModuleError> {
 #if TARGET_OS == WINDOWS
-            auto sym = platform::find_module_symbol(handle, name);
-            if (sym.has_value()) {
-                return sym.value();
-            }
+        auto sym = platform::find_module_symbol(handle, name);
+        if (sym.has_value()) {
+            return reinterpret_cast<Ty>(sym.value());
+        }
 
-            const auto rc = std::fputs(sym.error().as_string().data(), stderr);
-            if (rc == EOF)
-                std::perror("failed to use fputs to print error message");
-
+        return std::unexpected(sym.error());
 #elif TARGET_OS == LINUX
-            return platform::find_module_symbol(handle, name);
+        auto result = platform::find_module_symbol(handle, name);
+        if (result.has_value()) {
+            return reinterpret_cast<Ty>(result.value());
+        }
+
+        return std::unexpected(result.error());
 #else
-#error unsupported operating system
+    #error unsupported operating system
 #endif
     }
-} // namespace Loader
+} // namespace loader
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

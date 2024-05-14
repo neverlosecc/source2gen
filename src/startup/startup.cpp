@@ -12,38 +12,38 @@
 namespace {
     [[nodiscard]] auto get_required_modules() {
         // clang-format off
-      return std::to_array<std::string>({
-        // @note: @es3n1n: modules that we'll use in our code
-        loader::get_module_file_name("client"),
-        loader::get_module_file_name("engine2"),
-        loader::get_module_file_name("schemasystem"),
-        loader::get_module_file_name("tier0"),
+        return std::to_array<std::string>({
+            // @note: @es3n1n: modules that we'll use in our code
+            loader::get_module_file_name("client"),
+            loader::get_module_file_name("engine2"),
+            loader::get_module_file_name("schemasystem"),
+            loader::get_module_file_name("tier0"),
 
-        #if defined(DOTA2)
-        // @note: @soufiw: latest modules that gets loaded in the main menu
-        loader::get_module_file_name("navsystem"),
-        #elif defined(CS2)
-        loader::get_module_file_name("matchmaking"),
-        #endif
+#if defined(DOTA2)
+            // @note: @soufiw: latest modules that gets loaded in the main menu
+            loader::get_module_file_name("navsystem"),
+#elif defined(CS2)
+            loader::get_module_file_name("matchmaking"),
+#endif
 
-        // modules that we'll dump (minus the ones listed above)
-        loader::get_module_file_name("animationsystem"),
-        loader::get_module_file_name("host"),
-        loader::get_module_file_name("materialsystem2"),
-        loader::get_module_file_name("meshsystem"),
-        loader::get_module_file_name("networksystem"),
-        loader::get_module_file_name("panorama"),
-        loader::get_module_file_name("particles"),
-        loader::get_module_file_name("pulse_system"),
-        IF_WINDOWS(loader::get_module_file_name("rendersystemdx11"),)
-        loader::get_module_file_name("resourcesystem"),
-        loader::get_module_file_name("scenefilecache"),
-        loader::get_module_file_name("scenesystem"),
-        loader::get_module_file_name("server"),
-        loader::get_module_file_name("soundsystem"),
-        loader::get_module_file_name("vphysics2"),
-        loader::get_module_file_name("worldrenderer")
-    });
+            // modules that we'll dump (minus the ones listed above)
+            loader::get_module_file_name("animationsystem"),
+            loader::get_module_file_name("host"),
+            loader::get_module_file_name("materialsystem2"),
+            loader::get_module_file_name("meshsystem"),
+            loader::get_module_file_name("networksystem"),
+            loader::get_module_file_name("panorama"),
+            loader::get_module_file_name("particles"),
+            loader::get_module_file_name("pulse_system"),
+            IF_WINDOWS(loader::get_module_file_name("rendersystemdx11"),)
+            loader::get_module_file_name("resourcesystem"),
+            loader::get_module_file_name("scenefilecache"),
+            loader::get_module_file_name("scenesystem"),
+            loader::get_module_file_name("server"),
+            loader::get_module_file_name("soundsystem"),
+            loader::get_module_file_name("vphysics2"),
+            loader::get_module_file_name("worldrenderer"),
+        });
         // clang-format on
     }
 } // namespace
@@ -52,9 +52,10 @@ namespace source2_gen {
     bool Dump() try {
         // set up the allocator before anything else. we can't use allocating
         // C++ functions without it.
-        if (const auto loaded{loader::load_module(LOADER_GET_MODULE_FILE_NAME("tier0"))}; !loaded.has_value()) {
+        const auto loaded = loader::load_module(LOADER_GET_MODULE_FILE_NAME("tier0"));
+        if (!loaded.has_value()) {
             // don't use any allocating C++ functions in here.
-            std::fputs("could not load tier0. is " IF_LINUX("LD_LIBRARY_PATH") IF_WINDOWS("PATH") " set?\n", stderr);
+            std::fputs("Could not load tier0. Is " IF_LINUX("LD_LIBRARY_PATH") IF_WINDOWS("PATH") " set?\n", stderr);
             std::fputs(loaded.error().as_string().data(), stderr);
             std::fputc('\n', stderr);
             std::abort();
@@ -67,14 +68,18 @@ namespace source2_gen {
         const auto modules = get_required_modules();
 
         for (const auto& name : modules) {
-            std::cout << "loading " << name << std::endl;
-            if (loader::load_module(name) == nullptr) {
-                // cannot use any functions that use `new` because we've
-                // overridden `new` in IMemAlloc.cpp and it relies on
-                // libraries being loaded.
-                std::cerr << std::format("Unable to load module {}, is {} set?", name, IF_WINDOWS("PATH") IF_LINUX("LD_LIBRARY_PATH")) << std::endl;
-                return false;
+            std::cout << std::format("{}: Loading {}", __FUNCTION__, name) << std::endl;
+
+            if (loader::load_module(name).has_value()) {
+                continue;
             }
+
+            // cannot use any functions that use `new` because we've
+            // overridden `new` in IMemAlloc.cpp and it relies on
+            // libraries being loaded.
+            std::cerr << std::format("{}: Unable to load module {}, is {} set?", __FUNCTION__, name, IF_WINDOWS("PATH") IF_LINUX("LD_LIBRARY_PATH"))
+                      << std::endl;
+            return false;
         }
 
         std::cout << std::format("{}: Starting", __FUNCTION__) << std::endl;
@@ -83,7 +88,7 @@ namespace source2_gen {
         //
         sdk::g_schema = CSchemaSystem::GetInstance();
         if (!sdk::g_schema) {
-            std::cerr << "Unable to obtain Schema interface" << std::endl;
+            std::cerr << std::format("{}: Unable to obtain Schema interface", __FUNCTION__) << std::endl;
             return false;
         }
 
@@ -91,19 +96,21 @@ namespace source2_gen {
             auto* handle = loader::find_module_handle(name);
             assert(handle != nullptr && "we loaded modules at startup, where did they go?");
 
-            if (auto* pInstallSchemaBindings = loader::find_module_symbol(handle, "InstallSchemaBindings")) {
-                auto const InstallSchemaBindings = reinterpret_cast<std::uint8_t (*)(const char*, CSchemaSystem*)>(pInstallSchemaBindings);
-                if (!InstallSchemaBindings("SchemaSystem_001", sdk::g_schema)) {
-                    std::cerr << std::format("Unable to install schema bindings in {}", name) << std::endl;
-                    return false;
+            using InstallSchemaBindingsTy = std::uint8_t (*)(const char*, CSchemaSystem*);
+            if (auto InstallSchemaBindings = loader::find_module_symbol<InstallSchemaBindingsTy>(handle, "InstallSchemaBindings");
+                InstallSchemaBindings.has_value()) {
+                if ((*InstallSchemaBindings)("SchemaSystem_001", sdk::g_schema)) {
+                    continue;
                 }
-            } else {
-                std::cout << std::format("No schemas in {}", name) << std::endl;
+
+                std::cerr << std::format("{}: Unable to install schema bindings in {}", __FUNCTION__, name) << std::endl;
+                return false;
             }
+
+            std::cout << std::format("{}: No schemas in {}", __FUNCTION__, name) << std::endl;
         }
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk
-
         const auto type_scopes = sdk::g_schema->GetTypeScopes();
         for (auto i = 0; i < type_scopes.Count(); ++i)
             sdk::GenerateTypeScopeSdk(type_scopes.m_pElements[i]);
