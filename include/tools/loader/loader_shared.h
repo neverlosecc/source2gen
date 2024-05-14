@@ -2,7 +2,6 @@
 #include <string>
 
 namespace loader {
-    
     class LoadModuleError {
     public:
         /// @return Lifetime bound to this @ref LoadModuleError
