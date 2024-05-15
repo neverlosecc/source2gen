@@ -17,7 +17,6 @@ namespace {
                                    "We're overriding operator new() and depend on tier0."
                                    "Run a backtrace in your debugger to see where an allocation attempt was made, then adjust that code.");
 
-        // Continuously try to get the g_pMemAlloc pointer until it's successful
         auto g_ppMemAlloc_wrap = loader::find_module_symbol<IMemAlloc**>(tier0, "g_pMemAlloc");
         assert(g_ppMemAlloc_wrap.has_value());
         auto g_ppMemAlloc = *g_ppMemAlloc_wrap;

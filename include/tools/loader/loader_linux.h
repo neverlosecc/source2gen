@@ -32,14 +32,15 @@ namespace loader::linux {
         return std::unexpected(LoadModuleError::from_string(dlerror()));
     }
 
-    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
+    template <typename Ty>
+    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<Ty, LoadModuleError> {
         assert(handle != nullptr && "If you need RTLD_DEFAULT, write a new function to avoid magic values. Most of the time when handle=nullptr, a "
                                     "developer made a mistake and we want to catch that.");
         auto* const result = dlsym(handle, name.data());
         if (result == nullptr) {
             return std::unexpected(LoadModuleError::from_string(dlerror()));
         }
-        return result;
+        return reinterpret_cast<Ty>(result);
     }
 } // namespace loader::linux
 

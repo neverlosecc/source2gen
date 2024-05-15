@@ -46,10 +46,11 @@ namespace loader::windows {
         return result;
     }
 
-    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<void*, LoadModuleError> {
+    template <typename Ty>
+    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<Ty, LoadModuleError> {
         assert(handle != nullptr);
         if (auto const h_module = GetProcAddress(handle, name.data())) {
-            return h_module;
+            return reinterpret_cast<Ty>(h_module);
         }
 
         return std::unexpected(detail::win32_error());
