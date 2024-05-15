@@ -12,7 +12,10 @@ int main(int argc, char* argv[]) {
     }
 
     /// Errors would be logged in the `source2_gen::Dump` itself
+    /// We don't want to call getch on linux as the program would be started within a terminal anyway.
+#if TARGET_OS == WINDOWS
     (void)std::getchar();
+#endif
     return exit_code;
 }
 
