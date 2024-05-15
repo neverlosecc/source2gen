@@ -25,20 +25,20 @@ namespace loader::linux {
         return dlopen(name.data(), RTLD_LAZY | RTLD_NOLOAD);
     }
 
-    [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
+    [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, ModuleLookupError> {
         if (auto* const handle = dlopen(name.data(), RTLD_LAZY)) {
             return handle;
         }
-        return std::unexpected(LoadModuleError::from_string(dlerror()));
+        return std::unexpected(ModuleLookupError::from_string(dlerror()));
     }
 
     template <typename Ty>
-    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<Ty, LoadModuleError> {
+    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<Ty, ModuleLookupError> {
         assert(handle != nullptr && "If you need RTLD_DEFAULT, write a new function to avoid magic values. Most of the time when handle=nullptr, a "
                                     "developer made a mistake and we want to catch that.");
         auto* const result = dlsym(handle, name.data());
         if (result == nullptr) {
-            return std::unexpected(LoadModuleError::from_string(dlerror()));
+            return std::unexpected(ModuleLookupError::from_string(dlerror()));
         }
         return reinterpret_cast<Ty>(result);
     }

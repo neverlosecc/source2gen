@@ -18,28 +18,31 @@ namespace {
                                    "Run a backtrace in your debugger to see where an allocation attempt was made, then adjust that code.");
 
         auto g_ppMemAlloc_wrap = loader::find_module_symbol<IMemAlloc**>(tier0, "g_pMemAlloc");
-        assert(g_ppMemAlloc_wrap.has_value());
-        auto g_ppMemAlloc = *g_ppMemAlloc_wrap;
 
-        // If g_pMemAlloc is not found, try initializing it
-        if (*g_ppMemAlloc == nullptr) {
-            static const auto CMemAllocSystemInitialize = loader::find_module_symbol<void (*)()>(tier0, "CMemAllocSystemInitialize");
+        if (g_ppMemAlloc_wrap.has_value()) {
+            auto g_ppMemAlloc = *g_ppMemAlloc_wrap;
 
-            if (CMemAllocSystemInitialize.has_value()) {
-                (*CMemAllocSystemInitialize)();
+            // If g_pMemAlloc is not found, try initializing it
+            if (*g_ppMemAlloc == nullptr) {
+                static const auto CMemAllocSystemInitialize = loader::find_module_symbol<void (*)()>(tier0, "CMemAllocSystemInitialize");
+
+                if (CMemAllocSystemInitialize.has_value()) {
+                    (*CMemAllocSystemInitialize)();
+                }
+            }
+
+            if (*g_ppMemAlloc != nullptr) {
+                return *g_ppMemAlloc;
             }
         }
 
-        if (*g_ppMemAlloc == nullptr) {
-            // there is no way to recover; we don't have an allocator, abort
-            const auto rc = std::fputs("could not initialize g_pMemAlloc, source2gen does not work with this version of the game.\n", stderr);
-            if (rc == EOF)
-                std::perror("failed to use fputs to print error message");
-
-            std::abort();
+        // there is no way to recover; we don't have an allocator, abort
+        const auto rc = std::fputs("could not initialize g_pMemAlloc, source2gen does not work with this version of the game.\n", stderr);
+        if (rc == EOF) {
+            std::perror("failed to use fputs to print error message");
         }
 
-        return *g_ppMemAlloc;
+        std::abort();
     }
 } // namespace
 

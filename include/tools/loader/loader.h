@@ -45,12 +45,12 @@ namespace loader {
         return platform::find_module_handle(name);
     }
 
-    [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
+    [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, ModuleLookupError> {
         return platform::load_module(name);
     }
 
     template <typename Ty = module_handle_t>
-    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<Ty, LoadModuleError> {
+    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<Ty, ModuleLookupError> {
         return platform::find_module_symbol<Ty>(handle, name);
     }
 } // namespace loader

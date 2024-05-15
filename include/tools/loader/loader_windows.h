@@ -15,13 +15,13 @@ namespace loader::windows {
     using module_handle_t = HMODULE;
 
     namespace detail {
-        inline LoadModuleError win32_error(DWORD error = GetLastError()) {
+        inline ModuleLookupError win32_error(DWORD error = GetLastError()) {
             LPSTR pBuffer = nullptr;
 
             const auto size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error,
                                              MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&pBuffer), 0, nullptr);
 
-            const auto result = LoadModuleError::from_string(pBuffer);
+            const auto result = ModuleLookupError::from_string(pBuffer);
 
             LocalFree(pBuffer);
             return result;
@@ -37,7 +37,7 @@ namespace loader::windows {
         return GetModuleHandleA(name.data());
     }
 
-    [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, LoadModuleError> {
+    [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, ModuleLookupError> {
         auto result = LoadLibraryA(name.data());
         if (result == reinterpret_cast<HINSTANCE>(0)) {
             return std::unexpected(detail::win32_error());
@@ -47,7 +47,7 @@ namespace loader::windows {
     }
 
     template <typename Ty>
-    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<Ty, LoadModuleError> {
+    [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<Ty, ModuleLookupError> {
         assert(handle != nullptr);
         if (auto const h_module = GetProcAddress(handle, name.data())) {
             return reinterpret_cast<Ty>(h_module);

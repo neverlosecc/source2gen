@@ -19,29 +19,33 @@ namespace sdk {
     };
 
     inline const InterfaceReg* GetInterfaces(const char* library) {
-        const auto library_handle = loader::find_module_handle(library);
-        assert(library_handle != nullptr);
+        auto* const library_handle = loader::find_module_handle(library);
+        assert(library_handle != nullptr &&
+               "Tried to call GetInterfaces() on a library that is not loaded. Is the library listed in get_required_modules()?");
 
-        const auto createinterface_symbol = loader::find_module_symbol<uintptr_t>(library_handle, "CreateInterface").value_or(0);
-        assert(createinterface_symbol != 0);
+        const auto maybe_createinterface_symbol = loader::find_module_symbol<uintptr_t>(library_handle, "CreateInterface");
 
-        const auto interface_list = [=] {
-            if constexpr (current_platform == platform::windows) {
-                return createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 3) + 7;
-            } else if constexpr (current_platform == platform::linux) {
-                const auto createinterface_impl = createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 1) + 5;
-                const auto createinterface_mov = createinterface_impl + 0x10;
+        return maybe_createinterface_symbol
+            .transform([](auto createinterface_symbol) {
+                const auto interface_list = [=] {
+                    if constexpr (current_platform == platform::windows) {
+                        return createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 3) + 7;
+                    } else if constexpr (current_platform == platform::linux) {
+                        const auto createinterface_impl = createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 1) + 5;
+                        const auto createinterface_mov = createinterface_impl + 0x10;
 
-                return createinterface_mov + *reinterpret_cast<int32_t*>(createinterface_mov + 3) + 7;
-            }
-        }();
+                        return createinterface_mov + *reinterpret_cast<int32_t*>(createinterface_mov + 3) + 7;
+                    }
+                }();
 
-        return *reinterpret_cast<InterfaceReg**>(interface_list);
+                return *reinterpret_cast<InterfaceReg**>(interface_list);
+            })
+            .value_or(nullptr);
     }
 
     template <typename T = void*>
     T* GetInterface(const char* library, const char* partial_version) {
-        for (const InterfaceReg* current = GetInterfaces(library); current; current = current->m_next_) {
+        for (const InterfaceReg* current = GetInterfaces(library); current != nullptr; current = current->m_next_) {
             if (std::string_view(current->m_name_).find(partial_version) != std::string_view::npos)
                 return reinterpret_cast<T*>(current->m_create_fn_());
         }
