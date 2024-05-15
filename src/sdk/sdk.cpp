@@ -463,7 +463,7 @@ namespace sdk {
                 if (!type_name.empty() && !mods.empty())
                     return {type_name, mods};
 
-                return {type->m_pszName, {}};
+                return {std::string{type->m_pszName}, {}};
             };
 
             for (auto& class_dump : classes_to_dump) {

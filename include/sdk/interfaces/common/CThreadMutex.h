@@ -2,6 +2,7 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include "tools/platform.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -23,8 +24,8 @@ public:
     bool m_bTrace;
     const char* m_pDebugName;
 };
-//static_assert(sizeof(CThreadMutex) == 0x30 + sizeof(ThreadId_t) + sizeof(char*));
-static_assert(sizeof(CThreadMutex) == 0x38);
+// static_assert(sizeof(CThreadMutex) == 0x30 + sizeof(ThreadId_t) + sizeof(char*));
+static_assert(sizeof(CThreadMutex) == platform_specific{.windows = 0x38, .linux = 0x40});
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

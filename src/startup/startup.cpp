@@ -43,7 +43,7 @@ namespace {
             loader::get_module_file_name("soundsystem"),
             loader::get_module_file_name("vphysics2"),
             loader::get_module_file_name("worldrenderer"),
-            loader::get_module_file_name("assetpreview"),
+            IF_WINDOWS(loader::get_module_file_name("assetpreview"),)
         });
         // clang-format on
     }
