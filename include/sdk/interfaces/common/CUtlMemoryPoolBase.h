@@ -4,7 +4,7 @@
 
 #include <type_traits>
 
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
 constexpr auto kUtlMemoryPoolBaseVersion = 2;
 #else
 constexpr auto kUtlMemoryPoolBaseVersion = 1;

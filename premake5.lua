@@ -11,7 +11,8 @@ newoption {
      { "UNDERLORDS", "Dota Underlords" },
      { "DESKJOB", "Aperture Desk Job" },
      { "HL_ALYX", "Half-Life: Alyx" },
-     { "THE_LAB_ROBOT_REPAIR", "Portal: Aperture Robot Repair" }
+     { "THE_LAB_ROBOT_REPAIR", "Portal: Aperture Robot Repair" },
+     { "DEADLOCK", "Deadlock (Citadel)" }
   },
   default = "CS2"
 }

@@ -112,7 +112,7 @@ enum {
     #error unimplemented
 #elif defined(THE_LAB_ROBOT_REPAIR)
     #error unimplemented
-#elif defined(DOTA2)
+#elif defined(DOTA2) || defined(DEADLOCK)
 
 constexpr auto kSchemaSystemVersion = 2;
 constexpr auto kSchemaSystem_PAD0 = 0x188;
@@ -172,7 +172,7 @@ using CSchemaClassBinding = CSchemaClassInfo;
 // @note: @og: now CSchemaEnumBinding is the same class\structure as CSchemaEnumInfoData\SchemaEnumInfoData_t
 using CSchemaEnumBinding = CSchemaEnumInfo;
 
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
 enum SchemaClassFlags_t {
     SCHEMA_CF1_HAS_VIRTUAL_MEMBERS = (1 << 0),
     SCHEMA_CF1_IS_ABSTRACT = (1 << 1),
@@ -373,7 +373,7 @@ public:
     [[nodiscard]] CSchemaType* GetRefClass();
 
     [[nodiscard]] ETypeCategory GetTypeCategory() {
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
         return m_unTypeCategory;
 #else
         return Virtual::Get<ETypeCategory (*)(CSchemaType*)>(this, 0)(this);
@@ -381,7 +381,7 @@ public:
     }
 
     [[nodiscard]] EAtomicCategory GetAtomicCategory() {
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
         return m_unAtomicCategory;
 #else
         return Virtual::Get<EAtomicCategory (*)(CSchemaType*)>(this, 1)(this);
@@ -394,7 +394,7 @@ public:
 
     CSchemaSystemTypeScope* m_pTypeScope; // 0x0010
 
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
     ETypeCategory m_unTypeCategory; // 0x0018
     EAtomicCategory m_unAtomicCategory; // 0x0019
 #endif
@@ -725,7 +725,7 @@ class CSchemaPtrMap {
 public:
     CUtlMap<K, V> m_Map;
 
-#if !defined(DOTA2)
+#if !defined(DOTA2) || !defined(DEADLOCK)
     CThreadFastMutex m_Mutex;
 #endif
 };
@@ -868,7 +868,7 @@ private:
     CSchemaPtrMap<TypeAndCountInfo_t, CSchemaType_FixedArray*> m_FixedArrays; // 0x0558
     CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields; // 0x0588
 
-#if !defined(DOTA2) && !defined(CS2)
+#if !defined(DOTA2) && !defined(CS2) && !defined(DEADLOCK)
     CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 
