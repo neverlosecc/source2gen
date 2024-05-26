@@ -5,7 +5,7 @@
 #include "CThreadMutex.h"
 #include <type_traits>
 
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
 constexpr auto kThreadSpinMutex = 2;
 #else
 constexpr auto kThreadSpinMutex = 1;

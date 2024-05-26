@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <type_traits>
 
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
 constexpr auto kUtlTsHashVersion = 2;
 #else
 constexpr auto kUtlTsHashVersion = 1;
@@ -166,7 +166,7 @@ public:
     CUtlMemoryPoolBase m_EntryMemory;
     std::array<HashBucket_t, BucketCount> m_aBuckets;
 
-#if defined(DOTA2)
+#if defined(DOTA2) || defined(DEADLOCK)
     bool m_bNeedsCommit;
     CInterlockedInt m_ContentionCheck;
 #endif
@@ -308,7 +308,7 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int
     /// @note: @og: basically, its hacky-way to obtain first-time commited information to memory
 #if defined(CS2_OLD)
     n_count = PeakAlloc();
-#elif defined(DOTA2) || defined(CS2)
+#elif defined(DOTA2) || defined(CS2) || defined(DEADLOCK)
     n_count = PeakAlloc() - BlocksAllocated();
 #endif
     std::vector<T> unAllocatedList;
@@ -329,7 +329,7 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int
 
 #if defined(CS2_OLD)
     return unAllocatedList.size() > AllocatedList.size() ? unAllocatedList : AllocatedList;
-#elif defined(DOTA2) || defined(CS2)
+#elif defined(DOTA2) || defined(CS2) || defined(DEADLOCK)
     return merge_without_duplicates(AllocatedList, unAllocatedList, ptr_compare<T>);
 #endif
 }
