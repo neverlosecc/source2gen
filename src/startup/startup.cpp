@@ -18,7 +18,7 @@ namespace {
         "schemasystem.dll"sv,
         "tier0.dll"sv,
 
-        #if defined(DOTA2)
+        #if defined(DOTA2) || defined(DEADLOCK)
         // @note: @soufiw: latest modules that gets loaded in the main menu
         "navsystem.dll"sv,
         #elif defined(CS2)

@@ -27,7 +27,7 @@ git clone --recurse-submodules https://github.com/neverlosecc/source2gen.git
 
 Before building the project in Visual Studio, you will need to update the game definition. 
 The default definition is `CS2`. \
-Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`. 
+Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`, `DEADLOCK`. 
 
 or
 
@@ -44,6 +44,7 @@ You can use premake5 options and specify which game you want to dump:
      SBOX             S&BOX
      THE_LAB_ROBOT_REPAIR Portal: Aperture Robot Repair
      UNDERLORDS       Dota Underlords
+     DEADLOCK         Deadlock (Previously known as citadel)
 ```
 
 ### Building the project

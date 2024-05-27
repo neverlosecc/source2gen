@@ -11,7 +11,8 @@ newoption {
      { "UNDERLORDS", "Dota Underlords" },
      { "DESKJOB", "Aperture Desk Job" },
      { "HL_ALYX", "Half-Life: Alyx" },
-     { "THE_LAB_ROBOT_REPAIR", "Portal: Aperture Robot Repair" }
+     { "THE_LAB_ROBOT_REPAIR", "Portal: Aperture Robot Repair" },
+     { "DEADLOCK", "Deadlock (Citadel)" }
   },
   default = "CS2"
 }
@@ -146,3 +147,6 @@ workspace "source2gen"
 
     filter { "options:game=THE_LAB_ROBOT_REPAIR" }
       defines { "THE_LAB_ROBOT_REPAIR" }
+
+    filter { "options:game=DEADLOCK" }
+      defines { "DEADLOCK" }
