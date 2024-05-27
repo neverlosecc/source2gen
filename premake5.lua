@@ -147,3 +147,6 @@ workspace "source2gen"
 
     filter { "options:game=THE_LAB_ROBOT_REPAIR" }
       defines { "THE_LAB_ROBOT_REPAIR" }
+
+    filter { "options:game=DEADLOCK" }
+      defines { "DEADLOCK" }
