@@ -725,7 +725,7 @@ class CSchemaPtrMap {
 public:
     CUtlMap<K, V> m_Map;
 
-#if !defined(DOTA2) || !defined(DEADLOCK)
+#if !defined(DOTA2) && !defined(DEADLOCK)
     CThreadFastMutex m_Mutex;
 #endif
 };
