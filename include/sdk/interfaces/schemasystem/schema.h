@@ -112,7 +112,7 @@ enum {
     #error unimplemented
 #elif defined(THE_LAB_ROBOT_REPAIR)
     #error unimplemented
-#elif defined(DOTA2)
+#elif defined(DOTA2) || defined(CS2)
 
 constexpr auto kSchemaSystemVersion = 2;
 constexpr auto kSchemaSystem_PAD0 = 0x188;
@@ -132,7 +132,7 @@ enum {
     kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
 };
 
-#elif defined(CS2)
+#elif defined(CS2_OLD)
 
 constexpr auto kSchemaSystemVersion = 2;
 constexpr auto kSchemaSystem_PAD0 = 0x190;
@@ -725,7 +725,7 @@ class CSchemaPtrMap {
 public:
     CUtlMap<K, V> m_Map;
 
-#if !defined(DOTA2)
+#if !defined(DOTA2) && !defined(CS2)
     CThreadFastMutex m_Mutex;
 #endif
 };
@@ -851,13 +851,13 @@ private:
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT; // 0x03A8
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_CollectionOfT*> m_AtomicsCollectionOfT; // 0x03D8
 
-#if defined(CS2)
+#if defined(CS2_OLD)
     CSchemaPtrMap<AtomicTypeInfo_TF_t, CSchemaType_Atomic_TF*> m_AtomicsTF; // 0x0408
 #endif
 
     CSchemaPtrMap<AtomicTypeInfo_TT_t, CSchemaType_Atomic_TT*> m_AtomicsTT; // 0x0438
 
-#if defined(CS2)
+#if defined(CS2_OLD)
     CSchemaPtrMap<AtomicTypeInfo_TTF_t, CSchemaType_Atomic_TTF*> m_AtomicsTTF; // 0x0468
 #endif
 

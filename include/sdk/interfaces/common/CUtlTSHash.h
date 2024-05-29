@@ -299,9 +299,9 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int
     }
 
     /// @note: @og: basically, its hacky-way to obtain first-time commited information to memory
-#if defined(CS2)
+#if defined(CS2_OLD)
     n_count = PeakAlloc();
-#elif defined(DOTA2)
+#elif defined(DOTA2) || defined(CS2)
     n_count = PeakAlloc() - BlocksAllocated();
 #endif
     std::vector<T> unAllocatedList;
@@ -320,9 +320,9 @@ std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::GetElements(int
         }
     }
 
-#if defined(CS2)
+#if defined(CS2_OLD)
     return unAllocatedList.size() > AllocatedList.size() ? unAllocatedList : AllocatedList;
-#elif defined(DOTA2)
+#elif defined(DOTA2) || defined(CS2)
     return merge_without_duplicates(AllocatedList, unAllocatedList, ptr_compare<T>);
 #endif
 }
