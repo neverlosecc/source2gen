@@ -1,6 +1,15 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+
+#include <array>
+#include <cstdint>
+#include <sdk/interfaces/client/game/datamap_t.h>
+#include <sdk/interfaces/common/CBufferString.h>
+#include <sdk/interfaces/common/CUtlMap.h>
+#include <sdk/interfaces/common/CUtlTSHash.h>
+#include <tools/virtual.h>
+#include <vector>
 
 #if defined(SBOX)
 // untested might be wrong
@@ -134,8 +143,10 @@ enum {
 
 #elif defined(CS2_OLD)
 
-constexpr auto kSchemaSystemVersion = 2;
-constexpr auto kSchemaSystem_PAD0 = 0x190;
+/// Some functions differ between games and platforms. At least for now, 2 has
+/// return-value-optimization, 1 doesn't.
+constexpr auto kSchemaSystemVersion = platform_specific{.windows = 2, .linux = 1}.get();
+constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x190, .linux = 0x1F8}.get();
 constexpr auto kSchemaSystem_PAD1 = 0x120;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
@@ -220,7 +231,7 @@ struct CSchemaNetworkValue {
         float m_fValue;
         std::uintptr_t m_pPointer;
         CSchemaVarName m_VarValue;
-        std::array<char, 32> m_szValue;
+        std::array<char, 8> m_szValue;
     };
 };
 
@@ -233,10 +244,10 @@ struct SchemaEnumeratorInfoData_t {
     const char* m_szName;
 
     union {
-        unsigned char m_Char;
-        unsigned short m_Short;
-        unsigned int m_Int;
-        unsigned long long m_Uint;
+        std::uint8_t m_uint8;
+        std::uint16_t m_uint16;
+        std::uint32_t m_uint32;
+        std::uint64_t m_uint64;
     };
 
     std::int32_t m_nMetadataSize;
@@ -254,7 +265,7 @@ public:
     SchemaEnumInfoData_t* m_pSelf; // 0x0000
     const char* m_pszName; // 0x0008
     const char* m_pszModule; // 0x0010
-    std::uint8_t m_unSize; // 0x0018
+    std::uint8_t m_unSizeOf; // 0x0018
     std::uint8_t m_unAlignOf; // 0x0019
     SchemaEnumFlags_t m_unFlags; // 0x001A
     std::int16_t m_nEnumeratorCount; // 0x001C
@@ -333,7 +344,7 @@ constexpr auto kSchemaBuiltinTypeCount = static_cast<std::size_t>(SchemaBuiltinT
 
 class CSchemaType {
 public:
-    [[nodiscard]] bool IsValid(void) {
+    [[nodiscard]] bool IsValid() {
         return Virtual::Get<bool (*)(void*)>(this, 0)(this);
     }
 
@@ -362,7 +373,7 @@ public:
     }
 
 public:
-    // @note: @og: wrapper around GetSizes, this one gets CSchemaClassInfo->m_nSize
+    // @note: @og: wrapper around GetSizes, this one gets CSchemaClassInfo->m_nSizeOf
     [[nodiscard]] std::optional<int> GetSize() {
         std::uint8_t align_of = 0;
         int result = 0;
@@ -372,7 +383,7 @@ public:
     // @todo: @og: find out to what class pointer points.
     [[nodiscard]] CSchemaType* GetRefClass();
 
-    [[nodiscard]] ETypeCategory GetTypeCategory() {
+    [[nodiscard]] ETypeCategory GetTypeCategory() const {
 #if defined(CS2) || defined(DOTA2)
         return m_unTypeCategory;
 #else
@@ -380,7 +391,7 @@ public:
 #endif
     }
 
-    [[nodiscard]] EAtomicCategory GetAtomicCategory() {
+    [[nodiscard]] EAtomicCategory GetAtomicCategory() const {
 #if defined(CS2) || defined(DOTA2)
         return m_unAtomicCategory;
 #else
@@ -397,8 +408,12 @@ public:
 #if defined(CS2) || defined(DOTA2)
     ETypeCategory m_unTypeCategory; // 0x0018
     EAtomicCategory m_unAtomicCategory; // 0x0019
+    IF_LINUX(char _pad_0x20[0x02];)
 #endif
-};
+} IF_LINUX(__attribute__((packed)));
+
+static_assert(offsetof(CSchemaType, m_pTypeScope) == 0x10);
+static_assert(sizeof(CSchemaType) == platform_specific{.windows = 0x20, .linux = 0x1C});
 
 class CSchemaType_Ptr : public CSchemaType {
 public:
@@ -422,7 +437,12 @@ class CSchemaType_Builtin : public CSchemaType {
 public:
     SchemaBuiltinType_t m_eBuiltinType;
     std::uint8_t m_unSize;
+    IF_LINUX(char _pad_0x24[0x04];)
 };
+
+static_assert(offsetof(CSchemaType_Builtin, m_eBuiltinType) == platform_specific{.windows = 0x20, .linux = 0x1c});
+static_assert(offsetof(CSchemaType_Builtin, m_unSize) == platform_specific{.windows = 0x24, .linux = 0x20});
+static_assert(sizeof(CSchemaType_Builtin) == 0x28);
 
 class CSchemaType_DeclaredClass : public CSchemaType {
 public:
@@ -558,7 +578,7 @@ struct SchemaStaticFieldData_t {
 
 struct SchemaBaseClassInfoData_t {
     std::uint32_t m_unOffset; // 0x0000
-    CSchemaClassInfo* m_pPrevByClass; // 0x0008
+    CSchemaClassInfo* m_pClass; // 0x0008
 };
 
 using SchemaFieldMetadataOverrideSetData_t = datamap_t;
@@ -581,31 +601,38 @@ public:
     SchemaClassInfoData_t* m_pSelf; // 0x0000
     const char* m_pszName; // 0x0008
     const char* m_pszModule; // 0x0010
-    int m_nSize; // 0x0018
+
+    int m_nSizeOf; // 0x0018
+
     std::int16_t m_nFieldSize; // 0x001C
     std::int16_t m_nStaticFieldsSize; // 0x001E
     std::int16_t m_nStaticMetadataSize; // 0x0020
     std::uint8_t m_unAlignOf; // 0x0022
-    std::uint8_t m_bHasBaseClass; // 0x0023
-    std::int16_t m_nTotalClassSize; // 0x0024 // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
-    std::int16_t m_nDerivedClassSize; // 0x0026
+
+    std::int8_t m_nBaseClassSize; // 0x0023
+    std::int16_t m_nMultipleInheritanceDepth; // 0x0024 // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
+    std::int16_t m_nSingleInheritanceDepth; // 0x0026
+
     SchemaClassFieldData_t* m_pFields; // 0x0028
     SchemaStaticFieldData_t* m_pStaticFields; // 0x0030
     SchemaBaseClassInfoData_t* m_pBaseClassses; // 0x0038
     SchemaFieldMetadataOverrideSetData_t* m_pFieldMetadataOverrides; // 0x0040
     SchemaMetadataEntryData_t* m_pStaticMetadata; // 0x0048
     CSchemaSystemTypeScope* m_pTypeScope; // 0x0050
+
     CSchemaType* m_pSchemaType; // 0x0058
-    SchemaClassFlags_t m_nClassFlags:8; // 0x0060
+    SchemaClassFlags_t m_nClassFlags:32; // 0x0060
+
     std::uint32_t m_unSequence; // 0x0064 // @note: @og: idk
     void* m_pFn; // 0x0068
 
 public:
     template <typename RetTy = void*, typename... Ty>
-    RetTy CallFunction(SchemaClassInfoFunctionIndex index, Ty... args) const {
+    [[nodiscard]] RetTy CallFunction(SchemaClassInfoFunctionIndex index, Ty... args) const {
         return reinterpret_cast<RetTy (*)(SchemaClassInfoFunctionIndex, Ty...)>(m_pFn)(index, std::forward<Ty>(args)...);
     }
 };
+static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68);
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
 public:
@@ -622,8 +649,8 @@ public:
     }
 
     [[nodiscard]] std::optional<CSchemaClassInfo*> GetBaseClass() const {
-        if (m_bHasBaseClass && m_pBaseClassses)
-            return m_pBaseClassses->m_pPrevByClass;
+        if (m_nBaseClassSize && m_pBaseClassses)
+            return m_pBaseClassses->m_pClass;
         return std::nullopt;
     }
 
@@ -640,9 +667,9 @@ public:
     }
 
     [[nodiscard]] std::string_view GetPrevClassName() const {
-        if (!m_pBaseClassses || !m_pBaseClassses->m_pPrevByClass)
+        if (!m_pBaseClassses || !m_pBaseClassses->m_pClass)
             return {};
-        return m_pBaseClassses->m_pPrevByClass->GetName();
+        return m_pBaseClassses->m_pClass->GetName();
     }
 
     [[nodiscard]] bool IsA(CSchemaType* pInheritance) const {
@@ -657,26 +684,23 @@ public:
     }
 
     [[nodiscard]] bool RecursiveHasVirtualTable() const {
-        return HasVirtualTable() ? true :
-                                   (m_pBaseClassses && m_pBaseClassses->m_pPrevByClass ? m_pBaseClassses->m_pPrevByClass->HasVirtualTable() : false);
+        return HasVirtualTable() || (m_pBaseClassses && m_pBaseClassses->m_pClass && m_pBaseClassses->m_pClass->HasVirtualTable());
     }
 
     [[nodiscard]] bool IsInherits(const std::string_view from) const {
-        if (!m_bHasBaseClass || !m_pBaseClassses || !m_pBaseClassses->m_pPrevByClass)
+        if (!m_nBaseClassSize || !m_pBaseClassses || !m_pBaseClassses->m_pClass)
             return false;
-        if (m_pBaseClassses->m_pPrevByClass->GetName() == from)
+        if (m_pBaseClassses->m_pClass->GetName() == from)
             return true;
         return false;
     }
 
     [[nodiscard]] bool IsRecursiveInherits(const std::string_view from) const {
-        return IsInherits(from) ?
-                   true :
-                   (m_pBaseClassses && m_pBaseClassses->m_pPrevByClass ? m_pBaseClassses->m_pPrevByClass->IsRecursiveInherits(from) : false);
+        return IsInherits(from) || (m_pBaseClassses && m_pBaseClassses->m_pClass && m_pBaseClassses->m_pClass->IsRecursiveInherits(from));
     }
 
     [[nodiscard]] int GetSize() const {
-        return m_nSize;
+        return m_nSizeOf;
     }
 
     [[nodiscard]] std::uint8_t GetAligment() const {
@@ -845,6 +869,7 @@ private:
     std::array<char, 256> m_szName = {}; // 0x0008
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
     bool m_bBuiltinTypesInitialized = false; // 0x0110
+    IF_LINUX(char _pad_0x114[0x04];)
     std::array<CSchemaType_Builtin, kSchemaBuiltinTypeCount> m_BuiltinTypes = {}; // 0x0118
     CSchemaPtrMap<CSchemaType*, CSchemaType_Ptr*> m_Ptrs; // 0x0348
     CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
@@ -884,7 +909,7 @@ enum SchemaTypeScope_t : std::uint8_t {
 
 class CSchemaSystem {
 public:
-    [[nodiscard]] CSchemaSystemTypeScope* GlobalTypeScope(void) {
+    [[nodiscard]] CSchemaSystemTypeScope* GlobalTypeScope() {
         return Virtual::Get<CSchemaSystemTypeScope*(__thiscall*)(void*)>(this, 11)(this);
     }
 
@@ -952,16 +977,12 @@ public:
         return Virtual::Get<CSchemaClassBinding*(__thiscall*)(void*, CSchemaClassBinding**)>(this, kSchemaSystem_ValidateClasses)(this, ppBinding);
     }
 
-    [[nodiscard]] bool IsSchemaSystemReady() {
-        return Virtual::Get<bool(__thiscall*)(void*)>(this, 26)(this);
-    }
-
-    [[nodiscard]] void PrintSchemaStats() {
+    void PrintSchemaStats() {
         Virtual::Get<void(__thiscall*)(void*)>(this, 30)(this);
     }
 
     // @note: @og: there 2 options, "enum" or "class"
-    [[nodiscard]] void PrintSchemaMetaStats(const char* pszOptions) {
+    void PrintSchemaMetaStats(const char* pszOptions) {
         Virtual::Get<void(__thiscall*)(void*, const char*)>(this, 31)(this, pszOptions);
     }
 
@@ -981,7 +1002,7 @@ public:
         return m_nRedundant;
     }
 
-    [[nodiscard]] std::int32_t GetIgnoredBytes() const {
+    [[nodiscard]] std::size_t GetIgnoredBytes() const {
         return m_nIgnoredBytes;
     }
 
@@ -995,13 +1016,13 @@ private:
     std::size_t m_nIgnoredBytes = 0; // 0x02CC
 
 public:
-    [[nodiscard]] static CSchemaSystem* GetInstance(void) {
-        return sdk::GetInterface<CSchemaSystem>("schemasystem.dll", "SchemaSystem_0");
+    [[nodiscard]] static CSchemaSystem* GetInstance() {
+        return sdk::GetInterface<CSchemaSystem>(loader::get_module_file_name("schemasystem").c_str(), "SchemaSystem_0");
     }
 };
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

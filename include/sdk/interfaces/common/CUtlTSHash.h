@@ -1,6 +1,10 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include "sdk/interfaces/common/CThreadSpinMutex.h"
+#include "sdk/interfaces/common/CUtlMemory.h"
+#include "sdk/interfaces/common/CUtlMemoryPoolBase.h"
+#include <cstdint>
 #include <type_traits>
 
 #if defined(CS2) || defined(DOTA2)
@@ -22,7 +26,7 @@ constexpr auto kUtlTsHashVersion = 1;
 // the insertions are moved into a lock-free list
 //
 // Elements are never individually removed; clears must occur at a time
-// where we and guaranteed no queries are occurring
+// when we and guaranteed no queries are occurring
 //
 using UtlTsHashHandleT = std::uint64_t;
 
@@ -87,7 +91,7 @@ class CUtlTSHashUseKeyHashMethod {
 public:
     static int Hash(const KEYTYPE& key, int nBucketMask) {
         std::uint32_t nHash = key.HashValue();
-        return (nHash & nBucketMask);
+        return static_cast<int>(nHash & nBucketMask);
     }
 
     static bool Compare(const KEYTYPE& lhs, const KEYTYPE& rhs) {
@@ -99,7 +103,7 @@ template <class T, class Keytype = std::uint64_t, int BucketCount = 256, class H
 class CUtlTSHashV1 {
 public:
     // Invalid handle.
-    static UtlTsHashHandleT InvalidHandle(void) {
+    static UtlTsHashHandleT InvalidHandle() {
         return static_cast<UtlTsHashHandleT>(0);
     }
 
@@ -113,7 +117,7 @@ public:
     }
 
     // Returns elements in the table
-    std::vector<T> GetElements(void);
+    std::vector<T> GetElements();
 
 public:
     // Templatized for memory tracking purposes
@@ -170,7 +174,7 @@ public:
 
 // @note: @og: notice this is hacky-way to obtain elements from CUtlTSHash but its works, so why not
 template <class T, class Keytype, int BucketCount, class HashFuncs>
-std::vector<T> CUtlTSHashV1<T, Keytype, BucketCount, HashFuncs>::GetElements(void) {
+std::vector<T> CUtlTSHashV1<T, Keytype, BucketCount, HashFuncs>::GetElements() {
     std::vector<T> list;
 
     const int n_count = PeakAlloc();
@@ -196,7 +200,7 @@ template <class T, class Keytype = std::uint64_t, int BucketCount = 256, class H
 class CUtlTSHashV2 {
 public:
     // Invalid handle.
-    static UtlTsHashHandleT InvalidHandle(void) {
+    static UtlTsHashHandleT InvalidHandle() {
         return static_cast<UtlTsHashHandleT>(0);
     }
 
@@ -250,7 +254,7 @@ public:
 
     CUtlMemoryPoolBase m_EntryMemory;
     std::array<HashBucket_t, BucketCount> m_aBuckets;
-    bool m_bNeedsCommit;
+    bool m_bNeedsCommit{};
     CInterlockedInt m_ContentionCheck;
 };
 
@@ -331,7 +335,7 @@ template <class Ty>
 using CUtlTSHash = std::conditional_t<kUtlTsHashVersion == 1, CUtlTSHashV1<Ty>, CUtlTSHashV2<Ty>>;
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

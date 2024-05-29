@@ -1,10 +1,15 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include <cstdint>
 #include <emmintrin.h>
 
 // decls for aligning data
-#define DECL_ALIGN(x) __declspec(align(x))
+#if TARGET_OS == WINDOWS
+    #define DECL_ALIGN(x) __declspec(align(x))
+#else
+    #define DECL_ALIGN(x)
+#endif
 
 #ifdef _WIN64
 constexpr auto TSLIST_HEAD_ALIGNMENT = 16;
@@ -19,7 +24,7 @@ constexpr auto TSLIST_NODE_ALIGNMENT = 8;
     #define TSLIST_NODE_ALIGN DECL_ALIGN(TSLIST_NODE_ALIGNMENT)
     #define TSLIST_HEAD_ALIGN_POST
     #define TSLIST_NODE_ALIGN_POST
-#elif defined(GNUC)
+#elif defined(__GNUC__)
     #define TSLIST_HEAD_ALIGN
     #define TSLIST_NODE_ALIGN
     #define TSLIST_HEAD_ALIGN_POST DECL_ALIGN(TSLIST_HEAD_ALIGNMENT)
@@ -52,7 +57,7 @@ union TSLIST_HEAD_ALIGN TSLHead_t {
 
 class TSLIST_HEAD_ALIGN CTSListBase {
 public:
-    int Count() {
+    [[nodiscard]] int Count() const {
         return m_Head.value.Depth;
     }
 
@@ -61,7 +66,7 @@ public:
 } TSLIST_HEAD_ALIGN_POST;
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
