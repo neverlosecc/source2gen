@@ -7,7 +7,8 @@
 #include <string>
 #include <type_traits>
 
-#include "tools/fnv.h"
+#include "fnv.h"
+#include "string_helpers.h"
 
 namespace codegen {
     constexpr char kTabSym = '\t';
@@ -28,6 +29,13 @@ namespace codegen {
         {256, "uint256_t"},
         {512, "uint512_t"},
     });
+    // clang-format on
+
+    // clang-format off
+    inline std::initializer_list<std::pair<std::string, std::string>> kTypeNameReplaceRules = {
+        {"< ", "<"},
+        {" >", ">"},
+    };
     // clang-format on
 
     inline std::string guess_bitfield_type(const std::size_t bits_count) {
@@ -213,7 +221,11 @@ namespace codegen {
         }
 
         self_ref prop(const std::string& type_name, const std::string& name, bool move_cursor_to_next_line = true) {
-            const auto line = move_cursor_to_next_line ? std::format("{} {};", type_name, name) : std::format("{} {}; ", type_name, name);
+            auto type_name_fixed = type_name;
+            for (auto [search, replace] : kTypeNameReplaceRules) {
+                replace_all(type_name_fixed, search, replace);
+            }
+            const auto line = move_cursor_to_next_line ? std::format("{} {};", type_name_fixed, name) : std::format("{} {}; ", type_name_fixed, name);
             return push_line(line, move_cursor_to_next_line);
         }
 
