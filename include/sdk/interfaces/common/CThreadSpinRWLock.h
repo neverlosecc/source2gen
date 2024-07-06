@@ -1,35 +1,20 @@
 // Copyright (C) 2023 neverlosecc
 // See end of file for extended copyright information.
-
 #pragma once
 
-#if defined(CS2) || defined(DOTA2)
-constexpr auto kThreadSpinMutex = 2;
-#else
-constexpr auto kThreadSpinMutex = 1;
-#endif
-
-class CThreadSpinMutexV1 {
+class CThreadSpinRWLock {
 public:
-    CThreadSpinMutexV1(const char* pDebugName = NULL): m_ownerID(0), m_depth(0), m_pszDebugName(pDebugName) { }
+    struct LockInfo_t {
+        std::uint32_t m_writerId;
+        std::int32_t m_nReaders;
+    };
 
-private:
-    volatile ThreadId_t m_ownerID;
-    int m_depth;
+public:
+    void* m_pThreadSpin;
+    LockInfo_t m_lockInfo;
     const char* m_pszDebugName;
 };
-
-class CThreadSpinMutexV2 {
-public:
-    CThreadSpinMutexV2([[maybe_unused]] const char* pDebugName = NULL): m_ownerID(0), m_depth(0) { }
-
-private:
-    volatile ThreadId_t m_ownerID;
-    int m_depth;
-};
-
-using CThreadSpinMutex = std::conditional_t<kThreadSpinMutex == 1, CThreadSpinMutexV1, CThreadSpinMutexV2>;
-using CThreadFastMutex = CThreadSpinMutex;
+static_assert(sizeof(CThreadSpinRWLock) == 0x18);
 
 // source2gen - Source2 games SDK generator
 // Copyright 2023 neverlosecc
