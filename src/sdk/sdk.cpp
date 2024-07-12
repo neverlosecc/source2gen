@@ -729,7 +729,7 @@ namespace sdk {
             .comment(std::format("Binary: {}", current->GetScopeName()))
             .comment(std::format("Classes count: {}", StringifyUtlTsHashCount(current_classes)))
             .comment(std::format("Enums count: {}", StringifyUtlTsHashCount(current_enums)))
-            .comment(kCreatedBySource2genMessage.data())
+            .comment(kCreatedBySource2genMessage)
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();
 

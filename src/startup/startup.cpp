@@ -82,7 +82,7 @@ namespace source2_gen {
 
     void main(HMODULE module) {
         auto console = std::make_unique<DebugConsole>();
-        console->start(kConsoleTitleMessage.data());
+        console->start(kConsoleTitleMessage);
 
         std::jthread setup_thread(&Setup);
 
