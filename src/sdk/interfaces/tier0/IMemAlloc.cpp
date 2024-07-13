@@ -149,73 +149,73 @@ IMemAlloc* GetMemAlloc() {
 // void *realloc(void *p, std::size_t newsize) { return GetMemAlloc()->Realloc(p, newsize); }
 // void  free(void *p) { GetMemAlloc()->Free(p); }
 
-void operator delete(void* p) noexcept {
-    GetMemAlloc()->Free(p);
-}
-void operator delete[](void* p) noexcept {
-    GetMemAlloc()->Free(p);
-}
+// void operator delete(void* p) noexcept {
+//     GetMemAlloc()->Free(p);
+// }
+// void operator delete[](void* p) noexcept {
+//     GetMemAlloc()->Free(p);
+// }
 
-void* operator new(std::size_t n) noexcept(false) {
-    return GetMemAlloc()->Alloc(n);
-}
-void* operator new[](std::size_t n) noexcept(false) {
-    return GetMemAlloc()->Alloc(n);
-}
-void* operator new(std::size_t n, std::align_val_t align) noexcept(false) {
-    return GetMemAlloc()->AllocAligned(n, static_cast<std::size_t>(align));
-}
-void* operator new[](std::size_t n, std::align_val_t align) noexcept(false) {
-    return GetMemAlloc()->AllocAligned(n, static_cast<std::size_t>(align));
-}
+// void* operator new(std::size_t n) noexcept(false) {
+//     return GetMemAlloc()->Alloc(n);
+// }
+// void* operator new[](std::size_t n) noexcept(false) {
+//     return GetMemAlloc()->Alloc(n);
+// }
+// void* operator new(std::size_t n, std::align_val_t align) noexcept(false) {
+//     return GetMemAlloc()->AllocAligned(n, static_cast<std::size_t>(align));
+// }
+// void* operator new[](std::size_t n, std::align_val_t align) noexcept(false) {
+//     return GetMemAlloc()->AllocAligned(n, static_cast<std::size_t>(align));
+// }
 
-void* operator new(std::size_t count, const std::nothrow_t& tag) noexcept {
-    return GetMemAlloc()->Alloc(count);
-}
-void* operator new[](std::size_t count, const std::nothrow_t& tag) noexcept {
-    return GetMemAlloc()->Alloc(count);
-}
-void* operator new(std::size_t count, std::align_val_t al, const std::nothrow_t&) noexcept {
-    return GetMemAlloc()->AllocAligned(count, static_cast<std::size_t>(al));
-}
-void* operator new[](std::size_t count, std::align_val_t al, const std::nothrow_t&) noexcept {
-    return GetMemAlloc()->AllocAligned(count, static_cast<std::size_t>(al));
-}
+// void* operator new(std::size_t count, const std::nothrow_t& tag) noexcept {
+//     return GetMemAlloc()->Alloc(count);
+// }
+// void* operator new[](std::size_t count, const std::nothrow_t& tag) noexcept {
+//     return GetMemAlloc()->Alloc(count);
+// }
+// void* operator new(std::size_t count, std::align_val_t al, const std::nothrow_t&) noexcept {
+//     return GetMemAlloc()->AllocAligned(count, static_cast<std::size_t>(al));
+// }
+// void* operator new[](std::size_t count, std::align_val_t al, const std::nothrow_t&) noexcept {
+//     return GetMemAlloc()->AllocAligned(count, static_cast<std::size_t>(al));
+// }
 
-void* operator new(size_t size, [[maybe_unused]] int block_use, [[maybe_unused]] const char* file_name, [[maybe_unused]] int line_number) {
-    return GetMemAlloc()->Alloc(size);
-}
+// void* operator new(size_t size, [[maybe_unused]] int block_use, [[maybe_unused]] const char* file_name, [[maybe_unused]] int line_number) {
+//     return GetMemAlloc()->Alloc(size);
+// }
 
-void* operator new[](size_t size, [[maybe_unused]] int block_use, [[maybe_unused]] const char* file_name, [[maybe_unused]] int line_number) {
-    return GetMemAlloc()->Alloc(size);
-}
+// void* operator new[](size_t size, [[maybe_unused]] int block_use, [[maybe_unused]] const char* file_name, [[maybe_unused]] int line_number) {
+//     return GetMemAlloc()->Alloc(size);
+// }
 
-void operator delete(void* p, std::align_val_t al) noexcept {
-    GetMemAlloc()->FreeAligned(p);
-}
-void operator delete[](void* p, std::align_val_t al) noexcept {
-    GetMemAlloc()->FreeAligned(p);
-}
+// void operator delete(void* p, std::align_val_t al) noexcept {
+//     GetMemAlloc()->FreeAligned(p);
+// }
+// void operator delete[](void* p, std::align_val_t al) noexcept {
+//     GetMemAlloc()->FreeAligned(p);
+// }
 
-void operator delete(void* p, std::size_t n, std::align_val_t al) noexcept {
-    GetMemAlloc()->FreeAligned(p);
-}
-void operator delete[](void* p, std::size_t n, std::align_val_t al) noexcept {
-    GetMemAlloc()->FreeAligned(p);
-}
-void operator delete(void* p, std::align_val_t al, const std::nothrow_t&) noexcept {
-    GetMemAlloc()->FreeAligned(p);
-}
-void operator delete[](void* p, std::align_val_t al, const std::nothrow_t&) noexcept {
-    GetMemAlloc()->FreeAligned(p);
-}
+// void operator delete(void* p, std::size_t n, std::align_val_t al) noexcept {
+//     GetMemAlloc()->FreeAligned(p);
+// }
+// void operator delete[](void* p, std::size_t n, std::align_val_t al) noexcept {
+//     GetMemAlloc()->FreeAligned(p);
+// }
+// void operator delete(void* p, std::align_val_t al, const std::nothrow_t&) noexcept {
+//     GetMemAlloc()->FreeAligned(p);
+// }
+// void operator delete[](void* p, std::align_val_t al, const std::nothrow_t&) noexcept {
+//     GetMemAlloc()->FreeAligned(p);
+// }
 
-void operator delete(void* p, std::size_t n) noexcept {
-    GetMemAlloc()->Free(p);
-}
-void operator delete[](void* p, std::size_t n) noexcept {
-    GetMemAlloc()->Free(p);
-}
+// void operator delete(void* p, std::size_t n) noexcept {
+//     GetMemAlloc()->Free(p);
+// }
+// void operator delete[](void* p, std::size_t n) noexcept {
+//     GetMemAlloc()->Free(p);
+// }
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

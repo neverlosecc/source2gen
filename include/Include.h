@@ -25,10 +25,12 @@ using namespace std::this_thread;
 #include "tools/util.h"
 #pragma endregion Tools
 
+#include "options.hpp"
+
 namespace source2_gen {
     /// Logs errors. Calls @ref std::abort() on fatal errors.
     /// @return true on success
-    bool Dump();
+    bool Dump(Options options);
 } // namespace source2_gen
 
 constexpr std::string_view kPoweredByMessage = {"Powered by github.com/neverlosecc/source2gen"};

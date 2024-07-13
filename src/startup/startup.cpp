@@ -3,6 +3,7 @@
 #include <Include.h>
 #include <sdk/sdk.h>
 
+#include "options.hpp"
 #include <array>
 #include <fstream>
 #include <string>
@@ -50,7 +51,7 @@ namespace {
 } // namespace
 
 namespace source2_gen {
-    bool Dump() try {
+    bool Dump(Options const options) try {
         // set up the allocator before anything else. we can't use allocating
         // C++ functions without it.
         const auto loaded = loader::load_module(LOADER_GET_MODULE_FILE_NAME("tier0"));

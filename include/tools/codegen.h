@@ -69,18 +69,6 @@ namespace codegen {
             return push_line(std::format("#include {}", item));
         }
 
-        self_ref disable_warnings(const std::string& codes) {
-            return push_warning().pragma(std::format("warning(disable: {})", codes));
-        }
-
-        self_ref push_warning() {
-            return pragma("warning(push)");
-        }
-
-        self_ref pop_warning() {
-            return pragma("warning(pop)");
-        }
-
         self_ref next_line() {
             return push_line("");
         }
@@ -91,42 +79,6 @@ namespace codegen {
             dec_tabs_count(1);
             push_line(std::format("{}:", modifier));
             restore_tabs_count();
-
-            return *this;
-        }
-
-        self_ref begin_block(const std::string& text, const std::string& access_modifier = "", const bool increment_tabs_count = true,
-                             const bool move_cursor_to_next_line = true) {
-            push_line(text, move_cursor_to_next_line);
-
-            // @note: @es3n1n: we should reset tabs count if we aren't moving cursor to
-            // the next line
-            const auto backup_tabs_count = _tabs_count;
-            if (!move_cursor_to_next_line)
-                _tabs_count = 0;
-
-            push_line("{", move_cursor_to_next_line);
-
-            if (!access_modifier.empty())
-                push_line(std::format("{}:", access_modifier), move_cursor_to_next_line);
-
-            // @note: @es3n1n: restore tabs count
-            if (!move_cursor_to_next_line)
-                _tabs_count = backup_tabs_count;
-
-            if (increment_tabs_count)
-                inc_tabs_count(kTabsPerBlock);
-
-            return *this;
-        }
-
-        self_ref end_block(const bool decrement_tabs_count = true, const bool move_cursor_to_next_line = true) {
-            if (decrement_tabs_count)
-                dec_tabs_count(kTabsPerBlock);
-
-            push_line("};");
-            if (move_cursor_to_next_line)
-                next_line();
 
             return *this;
         }
@@ -143,6 +95,21 @@ namespace codegen {
         }
 
         self_ref end_class() {
+            return end_block();
+        }
+
+        self_ref begin_struct(const std::string& name, const std::string& access_modifier = "public") {
+            return begin_block(std::format("struct {}", escape_name(name)), access_modifier);
+        }
+
+        self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type, const std::string& access_modifier = "public") {
+            if (base_type.empty())
+                return begin_struct(std::cref(name), access_modifier);
+
+            return begin_block(std::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
+        }
+
+        self_ref end_struct() {
             return end_block();
         }
 
@@ -167,24 +134,9 @@ namespace codegen {
             return push_line(std::vformat(sizeof(T) >= 2 ? "{} = {:#x}," : "{} = {},", std::make_format_args(name, value)));
         }
 
-        self_ref begin_struct(const std::string& name, const std::string& access_modifier = "public") {
-            return begin_block(std::format("struct {}", escape_name(name)), access_modifier);
-        }
-
-        self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type, const std::string& access_modifier = "public") {
-            if (base_type.empty())
-                return begin_struct(std::cref(name), access_modifier);
-
-            return begin_block(std::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
-        }
-
-        self_ref end_struct() {
-            return end_block();
-        }
-
         // @todo: @es3n1n: add func params
-        self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name, const bool increment_tabs_count = true,
-                                const bool move_cursor_to_next_line = true) {
+        self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name,
+                                const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) {
             return begin_block(std::format("{}{} {}()", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
         }
 
@@ -253,17 +205,6 @@ namespace codegen {
             return prop(type_name, bitfield_size ? std::format("{}: {}", pad_name, bitfield_size) : pad_name, move_cursor_to_next_line);
         }
 
-        self_ref begin_union(std::string name = "") {
-            if (name.empty())
-                name = std::format("_union_{}", _unions_count++);
-            return begin_block(std::format("union {}", name));
-        }
-
-        self_ref end_union(const bool move_cursor_to_next_line = true) {
-            dec_tabs_count(1);
-            return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
-        }
-
         self_ref begin_bitfield_block() {
             return begin_struct("", "");
         }
@@ -279,6 +220,42 @@ namespace codegen {
         }
 
     private:
+        self_ref begin_block(const std::string& text, const std::string& access_modifier = "", const bool increment_tabs_count = true,
+                             const bool move_cursor_to_next_line = true) {
+            push_line(text, move_cursor_to_next_line);
+
+            // @note: @es3n1n: we should reset tabs count if we aren't moving cursor to
+            // the next line
+            const auto backup_tabs_count = _tabs_count;
+            if (!move_cursor_to_next_line)
+                _tabs_count = 0;
+
+            push_line("{", move_cursor_to_next_line);
+
+            if (!access_modifier.empty())
+                push_line(std::format("{}:", access_modifier), move_cursor_to_next_line);
+
+            // @note: @es3n1n: restore tabs count
+            if (!move_cursor_to_next_line)
+                _tabs_count = backup_tabs_count;
+
+            if (increment_tabs_count)
+                inc_tabs_count(kTabsPerBlock);
+
+            return *this;
+        }
+
+        self_ref end_block(const bool decrement_tabs_count = true, const bool move_cursor_to_next_line = true) {
+            if (decrement_tabs_count)
+                dec_tabs_count(kTabsPerBlock);
+
+            push_line("};");
+            if (move_cursor_to_next_line)
+                next_line();
+
+            return *this;
+        }
+
         self_ref push_line(const std::string& line, bool move_cursor_to_next_line = true) {
             for (std::size_t i = 0; i < _tabs_count; i++)
                 _stream << kTabSym;
@@ -293,8 +270,7 @@ namespace codegen {
             result.resize(name.size());
 
             for (std::size_t i = 0; i < name.size(); i++)
-                result[i] =
-                    std::ranges::find(kBlacklistedCharacters, name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
+                result[i] = std::ranges::find(kBlacklistedCharacters, name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
 
             return result;
         }

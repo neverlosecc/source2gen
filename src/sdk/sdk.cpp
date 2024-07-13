@@ -721,7 +721,11 @@ namespace sdk {
                 if (!class_info->m_nFieldSize && !class_info->m_nStaticMetadataSize)
                     builder.comment("No schema binary for binding");
 
-                builder.end_block();
+                if (is_struct) {
+                    builder.end_struct();
+                } else {
+                    builder.end_class();
+                }
             }
         }
 
