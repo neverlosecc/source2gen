@@ -1,64 +1,117 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #include <Include.h>
 #include <sdk/sdk.h>
 
-#include "tools/console/console.h"
-
-#include <thread>
+#include <array>
+#include <fstream>
+#include <string>
+#include <tools/loader/loader.h>
+#include <tools/platform.h>
 
 namespace {
-    using namespace std::string_view_literals;
+    [[nodiscard]] auto get_required_modules() {
+        // clang-format off
+        return std::to_array<std::string>({
+            // @note: @es3n1n: modules that we'll use in our code
+            loader::get_module_file_name("client"),
+            loader::get_module_file_name("engine2"),
+            loader::get_module_file_name("schemasystem"),
+            loader::get_module_file_name("tier0"),
 
-    // clang-format off
-    constexpr std::array kRequiredGameModules = {
-        // @note: @es3n1n: modules that we'll use in our code
-        "client.dll"sv,
-        "engine2.dll"sv,
-        "schemasystem.dll"sv,
-        "tier0.dll"sv,
+#if defined(DOTA2)
+            // @note: @soufiw: latest modules that gets loaded in the main menu
+            loader::get_module_file_name("navsystem"),
+#elif defined(CS2)
+            loader::get_module_file_name("matchmaking"),
+#endif
 
-        #if defined(DOTA2)
-        // @note: @soufiw: latest modules that gets loaded in the main menu
-        "navsystem.dll"sv,
-        #elif defined(CS2)
-        "matchmaking.dll"sv,
-        #endif
-    };
-    // clang-format on
-
-    std::atomic_bool is_finished = false;
+            // modules that we'll dump (minus the ones listed above)
+            loader::get_module_file_name("animationsystem"),
+            loader::get_module_file_name("host"),
+            loader::get_module_file_name("materialsystem2"),
+            loader::get_module_file_name("meshsystem"),
+            loader::get_module_file_name("networksystem"),
+            loader::get_module_file_name("panorama"),
+            loader::get_module_file_name("particles"),
+            loader::get_module_file_name("pulse_system"),
+            IF_WINDOWS(loader::get_module_file_name("rendersystemdx11"),)
+            loader::get_module_file_name("resourcesystem"),
+            loader::get_module_file_name("scenefilecache"),
+            loader::get_module_file_name("scenesystem"),
+            loader::get_module_file_name("server"),
+            loader::get_module_file_name("soundsystem"),
+            loader::get_module_file_name("vphysics2"),
+            loader::get_module_file_name("worldrenderer"),
+            IF_WINDOWS(loader::get_module_file_name("assetpreview"),)
+        });
+        // clang-format on
+    }
 } // namespace
 
 namespace source2_gen {
-    void Setup() try {
-        // @note: @es3n1n: Waiting for game init
-        //
-        const auto required_modules_present = []() -> bool {
-            bool result = true;
+    bool Dump() try {
+        // set up the allocator before anything else. we can't use allocating
+        // C++ functions without it.
+        const auto loaded = loader::load_module(LOADER_GET_MODULE_FILE_NAME("tier0"));
+        if (!loaded.has_value()) {
+            // don't use any allocating C++ functions in here.
+            std::fputs("Could not load tier0. Is " IF_LINUX("LD_LIBRARY_PATH") IF_WINDOWS("PATH") " set?\n", stderr);
+            std::fputs(loaded.error().as_string().data(), stderr);
+            std::fputc('\n', stderr);
+            std::abort();
+        }
+        static_cast<void>(GetMemAlloc());
 
-            for (auto& name : kRequiredGameModules)
-                result &= static_cast<bool>(GetModuleHandleA(name.data()));
+        std::locale::global(std::locale(""));
+        std::cout.imbue(std::locale());
 
-            return result;
-        };
+        const auto modules = get_required_modules();
 
-        while (!required_modules_present())
-            sleep_for(std::chrono::seconds(5));
+        for (const auto& name : modules) {
+            std::cout << std::format("{}: Loading {}", __FUNCTION__, name) << std::endl;
+
+            if (loader::load_module(name).has_value()) {
+                continue;
+            }
+
+            // cannot use any functions that use `new` because we've
+            // overridden `new` in IMemAlloc.cpp and it relies on
+            // libraries being loaded.
+            std::cerr << std::format("{}: Unable to load module {}, is {} set?", __FUNCTION__, name, IF_WINDOWS("PATH") IF_LINUX("LD_LIBRARY_PATH"))
+                      << std::endl;
+            return false;
+        }
 
         std::cout << std::format("{}: Starting", __FUNCTION__) << std::endl;
 
         // @note: @es3n1n: Capture interfaces
         //
         sdk::g_schema = CSchemaSystem::GetInstance();
-        if (!sdk::g_schema)
-            throw std::runtime_error(std::format("Unable to obtain Schema interface"));
+        if (!sdk::g_schema) {
+            std::cerr << std::format("{}: Unable to obtain Schema interface", __FUNCTION__) << std::endl;
+            return false;
+        }
 
-        while (!sdk::g_schema->IsSchemaSystemReady())
-            sleep_for(std::chrono::seconds(5));
+        for (const auto& name : modules) {
+            auto* handle = loader::find_module_handle(name);
+            assert(handle != nullptr && "we loaded modules at startup, where did they go?");
+
+            using InstallSchemaBindingsTy = std::uint8_t (*)(const char*, CSchemaSystem*);
+            if (auto InstallSchemaBindings = loader::find_module_symbol<InstallSchemaBindingsTy>(handle, "InstallSchemaBindings");
+                InstallSchemaBindings.has_value()) {
+                if ((*InstallSchemaBindings)("SchemaSystem_001", sdk::g_schema)) {
+                    continue;
+                }
+
+                std::cerr << std::format("{}: Unable to install schema bindings in {}", __FUNCTION__, name) << std::endl;
+                return false;
+            }
+
+            std::cout << std::format("{}: No schemas in {}", __FUNCTION__, name) << std::endl;
+        }
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk
-        //
         const auto type_scopes = sdk::g_schema->GetTypeScopes();
         for (auto i = 0; i < type_scopes.Count(); ++i)
             sdk::GenerateTypeScopeSdk(type_scopes.m_pElements[i]);
@@ -72,37 +125,15 @@ namespace source2_gen {
                                  util::PrettifyNum(sdk::g_schema->GetIgnored()), util::PrettifyNum(sdk::g_schema->GetIgnoredBytes()))
                   << std::endl;
 
-        // @note: @es3n1n: We are done here
-        //
-        is_finished = true;
-    } catch (std::runtime_error& err) {
+        return true;
+    } catch (const std::runtime_error& err) {
         std::cout << std::format("{} :: ERROR :: {}", __FUNCTION__, err.what()) << std::endl;
-        is_finished = true;
-    }
-
-    void main(HMODULE module) {
-        auto console = std::make_unique<DebugConsole>();
-        console->start(kConsoleTitleMessage.data());
-
-        std::jthread setup_thread(&Setup);
-
-        while (!is_finished) {
-            console->update();
-            sleep_for(std::chrono::milliseconds(1));
-        }
-
-        std::cout << std::format("Successfuly dumped Source 2 SDK, now you can safely close this console.") << std::endl;
-        std::cout << kPoweredByMessage << std::endl;
-
-        console->stop();
-        console.reset();
-
-        FreeLibrary(module);
+        return false;
     }
 } // namespace source2_gen
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

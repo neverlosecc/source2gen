@@ -1,9 +1,12 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 
 #pragma once
 
-template <size_t MAX_SIZE, bool AllowHeapAllocation>
+#include <cstddef>
+#include <cstring>
+
+template <std::size_t MAX_SIZE, bool AllowHeapAllocation>
 class CBufferStringGrowable;
 
 /*
@@ -36,7 +39,7 @@ class CBufferStringGrowable;
 class CBufferString {
 protected:
     // You shouldn't be initializing this class, use CBufferStringGrowable instead.
-    CBufferString() { }
+    CBufferString() = default;
 
 public:
     enum EAllocationOption_t {
@@ -57,13 +60,13 @@ public:
     };
 
     // Casts to CBufferStringGrowable. Very dirty solution until someone figures out the sane one.
-    template <size_t MAX_SIZE = 8, bool AllowHeapAllocation = true, typename T = CBufferStringGrowable<MAX_SIZE, AllowHeapAllocation>>
+    template <std::size_t MAX_SIZE = 8, bool AllowHeapAllocation = true, typename T = CBufferStringGrowable<MAX_SIZE, AllowHeapAllocation>>
     T* ToGrowable() {
         return (T*)this;
     }
 };
 
-template <size_t MAX_SIZE, bool AllowHeapAllocation = true>
+template <std::size_t MAX_SIZE, bool AllowHeapAllocation = true>
 class CBufferStringGrowable : public CBufferString {
     friend class CBufferString;
 
@@ -94,19 +97,19 @@ public:
         return *this;
     }
 
-    inline int GetAllocatedNumber() const {
+    [[nodiscard]] inline int GetAllocatedNumber() const {
         return m_nAllocated & LENGTH_MASK;
     }
 
-    inline int GetTotalNumber() const {
+    [[nodiscard]] inline int GetTotalNumber() const {
         return m_nTotalCount & LENGTH_MASK;
     }
 
-    inline bool IsStackAllocated() const {
+    [[nodiscard]] inline bool IsStackAllocated() const {
         return (m_nAllocated & STACK_ALLOCATION_MARKER) != 0;
     }
 
-    inline bool IsHeapAllocated() const {
+    [[nodiscard]] inline bool IsHeapAllocated() const {
         return (m_nTotalCount & HEAP_ALLOCATION_MARKER) != 0;
     }
 
@@ -115,7 +118,7 @@ public:
                (GetAllocatedNumber() != 0 && pData >= Get() && pData < (Get() + GetAllocatedNumber()));
     }
 
-    inline const char* Get() const {
+    [[nodiscard]] inline const char* Get() const {
         if (IsStackAllocated()) {
             return m_Memory.m_szString;
         } else if (GetAllocatedNumber() != 0) {
@@ -146,7 +149,7 @@ private:
 };
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

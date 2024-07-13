@@ -1,4 +1,4 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 #include <sdk/interfaces/tier0/IMemAlloc.h>
@@ -69,7 +69,7 @@ template <typename T>
 void CUtlVector<T>::GrowVector(int num) {
     m_Size += num;
     if (m_pElements)
-        m_pElements = (T*)GetMemAlloc()->ReAlloc(m_pElements, m_Size * sizeof(T));
+        m_pElements = (T*)GetMemAlloc()->Realloc(m_pElements, m_Size * sizeof(T));
     else
         m_pElements = (T*)GetMemAlloc()->Alloc(m_Size * sizeof(T));
 }
@@ -202,7 +202,7 @@ int CUtlVector<T>::GetOffset(const T& src) const {
 }
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

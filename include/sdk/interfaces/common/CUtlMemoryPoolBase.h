@@ -1,7 +1,12 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 
+#include <cstdint>
+#include <sdk/interfaces/common/CInterlockedInt.h>
+#include <sdk/interfaces/common/CThreadMutex.h>
+#include <sdk/interfaces/common/CTSList.h>
+#include <tools/platform.h>
 #include <type_traits>
 
 #if defined(CS2) || defined(DOTA2)
@@ -9,7 +14,6 @@ constexpr auto kUtlMemoryPoolBaseVersion = 2;
 #else
 constexpr auto kUtlMemoryPoolBaseVersion = 1;
 #endif
-
 
 // Ways the memory pool can grow when it needs to make a new blob.
 enum class MemoryPoolGrowType_t : std::int32_t {
@@ -39,26 +43,26 @@ public:
         char m_Padding[3]; // to int align the struct
     };
 
-    int m_BlockSize;
-    int m_BlocksPerBlob;
+    int m_BlockSize{};
+    int m_BlocksPerBlob{};
 
-    MemoryPoolGrowType_t m_GrowMode;
+    MemoryPoolGrowType_t m_GrowMode{};
 
-    CInterlockedInt m_BlocksAllocated;
-    CInterlockedInt m_PeakAlloc;
+    CInterlockedInt m_BlocksAllocated{};
+    CInterlockedInt m_PeakAlloc{};
 
-    std::uint16_t m_nAlignment;
-    std::uint16_t m_NumBlobs;
+    std::uint16_t m_nAlignment{};
+    std::uint16_t m_NumBlobs{};
 
-    FreeList_t** m_ppTailOfFreeList;
-    FreeList_t* m_pHeadOfFreeList;
+    FreeList_t** m_ppTailOfFreeList{};
+    FreeList_t* m_pHeadOfFreeList{};
 
-    CBlob** m_ppBlobTail;
-    CBlob* m_pBlobHead;
+    CBlob** m_ppBlobTail{};
+    CBlob* m_pBlobHead{};
 
-    MemAllocAttribute_t m_AllocAttribute;
+    MemAllocAttribute_t m_AllocAttribute{};
 
-    bool m_Unk1;
+    bool m_Unk1{};
 };
 static_assert(sizeof(CUtlMemoryPoolBaseV1) == 0x40);
 
@@ -76,32 +80,32 @@ public:
         char m_Padding[3]; // to int align the struct
     };
 
-    int m_BlockSize;
-    int m_BlocksPerBlob;
+    int m_BlockSize{};
+    int m_BlocksPerBlob{};
 
-    MemoryPoolGrowType_t m_GrowMode;
+    MemoryPoolGrowType_t m_GrowMode{};
 
-    CInterlockedInt m_BlocksAllocated;
-    CInterlockedInt m_PeakAlloc;
-    std::uint16_t m_nAlignment;
-    std::uint16_t m_NumBlobs;
+    CInterlockedInt m_BlocksAllocated{};
+    CInterlockedInt m_PeakAlloc{};
+    std::uint16_t m_nAlignment{};
+    std::uint16_t m_NumBlobs{};
 
-    CTSListBase m_FreeBlocks;
+    CTSListBase m_FreeBlocks{};
 
-    MemAllocAttribute_t m_AllocAttribute;
+    MemAllocAttribute_t m_AllocAttribute{};
 
-    CThreadMutex m_Mutex;
+    CThreadMutex m_Mutex{};
 
-    CBlob* m_pBlobHead;
+    CBlob* m_pBlobHead{};
 
-    int m_TotalSize; // m_BlocksPerBlob * (m_NumBlobs + 1) + (m_nAligment + 14)
+    int m_TotalSize{}; // m_BlocksPerBlob * (m_NumBlobs + 1) + (m_nAligment + 14)
 };
-static_assert(sizeof(CUtlMemoryPoolBaseV2) == 0x80);
+static_assert(sizeof(CUtlMemoryPoolBaseV2) == platform_specific{.windows = 0x80, .linux = 0x90});
 
 using CUtlMemoryPoolBase = std::conditional_t<kUtlMemoryPoolBaseVersion == 1, CUtlMemoryPoolBaseV1, CUtlMemoryPoolBaseV2>;
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

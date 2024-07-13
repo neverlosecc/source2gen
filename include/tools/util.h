@@ -1,13 +1,17 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 
+#include <string>
+#include <tools/loader/loader.h>
+
 namespace util {
     inline std::string PrettifyNum(int num) {
-        static const auto fn = reinterpret_cast<const char* (*)(int)>(GetProcAddress(GetModuleHandleA("tier0.dll"), "V_PrettifyNum"));
+        static const auto fn =
+            loader::find_module_symbol<const char* (*)(int)>(loader::find_module_handle(loader::get_module_file_name("tier0")), "V_PrettifyNum");
 
-        if (fn) {
-            std::string_view res = fn(num);
+        if (fn.has_value()) {
+            std::string_view res = (*fn)(num);
             if (!res.empty()) {
                 return res.data();
             }
@@ -18,7 +22,7 @@ namespace util {
 } // namespace util
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

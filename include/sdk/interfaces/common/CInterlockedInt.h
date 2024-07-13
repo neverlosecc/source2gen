@@ -1,4 +1,4 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 
@@ -17,12 +17,12 @@ public:
     CInterlockedIntT(): m_value(0) {
         static_assert(sizeof(T) == sizeof(std::int32_t));
     }
-    CInterlockedIntT(T value): m_value(value) { }
+    explicit CInterlockedIntT(T value): m_value(value) { }
 
-    T operator()(void) const {
+    T operator()() const {
         return m_value;
     }
-    operator T() const {
+    /* implicit */ operator T() const {
         return m_value;
     }
 
@@ -48,7 +48,7 @@ using CInterlockedInt = CInterlockedIntT<int>;
 using CInterlockedUInt = CInterlockedIntT<unsigned>;
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

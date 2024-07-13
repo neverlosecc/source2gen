@@ -1,25 +1,26 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #include <Include.h>
 
-namespace {
-    void OnProcessAttach(const HMODULE h_module) {
-        std::thread([h_module]() -> void { source2_gen::main(h_module); }).detach();
-    }
-} // namespace
+int main(int argc, char* argv[]) {
+    int exit_code = 1;
 
-BOOL APIENTRY DllMain(const HMODULE module, const DWORD reason, LPVOID reserved [[maybe_unused]]) {
-    switch (reason) {
-    case DLL_PROCESS_ATTACH:
-        OnProcessAttach(module);
-        break;
+    if (source2_gen::Dump()) {
+        std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
+        std::cout << kPoweredByMessage << std::endl;
+        exit_code = 0;
     }
 
-    return TRUE;
+    /// Errors would be logged in the `source2_gen::Dump` itself
+    /// We don't want to call getch on linux as the program would be started within a terminal anyway.
+#if TARGET_OS == WINDOWS
+    (void)std::getchar();
+#endif
+    return exit_code;
 }
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

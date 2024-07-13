@@ -1,4 +1,4 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 #include "CUtlMemory.h"
@@ -55,14 +55,14 @@ public:
     }
 
     // Num elements
-    unsigned int Count() const {
+    [[nodiscard]] unsigned int Count() const {
         return (unsigned int)m_NumElements;
     }
 
     // Max "size" of the vector
     // it's not generally safe to iterate from index 0 to MaxElement()-1
     // it IS safe to do so when using CUtlMemory as the allocator,
-    // but we should really remove patterns using this anyways, for safety and generality
+    // but we should really remove patterns using this anyway, for safety and generality
     I MaxElement() const {
         return (I)m_Elements.NumAllocated();
     }
@@ -106,7 +106,7 @@ public:
     }
 
     // Checks if the tree as a whole is valid
-    bool IsValid() const {
+    [[nodiscard]] bool IsValid() const {
         if (!Count())
             return true;
 
@@ -137,7 +137,7 @@ public:
         return std::max(depthright, depthleft) + 1;
     }
 
-    int Depth() const {
+    [[nodiscard]] int Depth() const {
         return Depth(Root());
     }
 
@@ -248,7 +248,7 @@ public:
 
     I LastPreorder() const {
         I i = m_Root;
-        while (1) {
+        while (true) {
             while (RightChild(i) != InvalidIndex())
                 i = RightChild(i);
 
@@ -349,7 +349,7 @@ inline void CUtlRBTree<T, I, L, M>::EnsureCapacity(int num) {
 }
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

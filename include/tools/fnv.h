@@ -1,4 +1,4 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 #include <cstdint>
@@ -52,16 +52,6 @@ namespace detail {
             return cur_hash;
         }
 
-        static auto __forceinline hash_runtime_data(const void* data, const size_t sz) -> hash {
-            const auto bytes = static_cast<const uint8_t*>(data);
-
-            auto result = hash_init();
-            for (auto i = 0ull; i != sz; ++i)
-                result = hash_byte(result, bytes[i]);
-
-            return result;
-        }
-
         static auto __forceinline hash_runtime(const char* str) -> hash {
             auto result = hash_init();
             do
@@ -70,50 +60,14 @@ namespace detail {
 
             return result;
         }
-
-        static auto __forceinline hash_runtime(const wchar_t* str) -> hash {
-            auto result = hash_init();
-            do
-                result = hash_byte(result, static_cast<char>(*str++));
-            while (*str != L'\0');
-
-            return result;
-        }
-
-        static auto __forceinline hash_runtime(const char* str, size_t sz) -> hash {
-            auto end = str + sz;
-            auto result = hash_init();
-
-            do
-                result = hash_byte(result, *str++);
-            while (str != end);
-
-            return result;
-        }
-
-        static auto __forceinline hash_runtime(const wchar_t* str, size_t sz) -> hash {
-            auto end = str + sz;
-            auto result = hash_init();
-
-            do
-                result = hash_byte(result, static_cast<char>(*str++));
-            while (str != end);
-
-            return result;
-        }
     };
 } // namespace detail
 
 using fnv32 = ::detail::FnvHash<32>;
-using fnv64 = ::detail::FnvHash<64>;
-using fnv = ::detail::FnvHash<sizeof(void*) * 8>;
-
-#define FNV(str) (std::integral_constant<fnv::hash, fnv::hash_constexpr(str)>::value)
 #define FNV32(str) (std::integral_constant<fnv32::hash, fnv32::hash_constexpr(str)>::value)
-#define FNV64(str) (std::integral_constant<fnv64::hash, fnv64::hash_constexpr(str)>::value)
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
