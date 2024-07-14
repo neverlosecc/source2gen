@@ -145,7 +145,7 @@ namespace {
 
 namespace sdk {
     namespace {
-        void PrintClassInfo(codegen::generator_cpp_t::self_ref builder, CSchemaClassBinding* class_info) {
+        void PrintClassInfo(codegen::IGenerator::self_ref builder, CSchemaClassBinding* class_info) {
             builder
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetClassInfoBinaryName(class_info),
                                      g_schema->GetClassProjectName(class_info)))
@@ -193,7 +193,7 @@ namespace sdk {
             }
         }
 
-        void PrintEnumInfo(codegen::generator_cpp_t::self_ref builder, CSchemaEnumBinding* enum_binding) {
+        void PrintEnumInfo(codegen::IGenerator::self_ref builder, CSchemaEnumBinding* enum_binding) {
             builder
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetEnumBinaryName(enum_binding),
                                      g_schema->GetEnumProjectName(enum_binding)))
@@ -209,7 +209,7 @@ namespace sdk {
             }
         }
 
-        void AssembleEnums(codegen::generator_cpp_t::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
+        void AssembleEnums(codegen::IGenerator::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
             for (auto schema_enum_binding : enums.GetElements()) {
                 // @note: @es3n1n: get type name by align size
                 //
@@ -288,7 +288,7 @@ namespace sdk {
             }
         }
 
-        void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_cpp_t::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
+        void AssembleClasses(CSchemaSystemTypeScope* current, codegen::IGenerator::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
             struct class_t {
                 CSchemaClassInfo* target_{};
                 std::set<CSchemaClassInfo*> refs_;

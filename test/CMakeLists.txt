@@ -3,6 +3,7 @@ project(${CMAKE_PROJECT_NAME}-test)
 find_package(GTest REQUIRED)
 
 add_executable(${PROJECT_NAME}
+  "src/codegen/test.c.cpp"
   "src/codegen/test.cpp.cpp"
 )
 

@@ -94,7 +94,7 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
       -pedantic-errors
       -Wno-address-of-packed-member
       $<$<NOT:$<CXX_COMPILER_ID:GNU>>:-Wno-implicit-exception-spec-mismatch>
-      -Wno-invalid-offsetof
+      -Wno-invalid-offGLIBCXX_3.4.33setof
       $<IF:$<CXX_COMPILER_ID:GNU>,-Wno-attributes,-Wno-unknown-attributes>
     )
 
@@ -112,6 +112,7 @@ target_compile_definitions(lib${PROJECT_NAME} PUBLIC
     "NOMINMAX"
     "WIN32_LEAN_AND_MEAN"
     "_WIN32_WINNT=0x601"
+    "__cpp_lib_expected" # Because clangd-18 + GLIBCXX_3.4.33 doesn't know std::expected. This is a hack to make the language server work.
 )
 
 add_executable(${PROJECT_NAME} "src/main.cpp")
