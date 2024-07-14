@@ -921,10 +921,11 @@ gradle-app.setting
 # gradle/wrapper/gradle-wrapper.properties
 
 ##### CMake
-CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
+CMakeLists.txt.user
 CMakeScripts
+CMakeUserPresets.json
 Testing
 Makefile
 cmake_install.cmake
