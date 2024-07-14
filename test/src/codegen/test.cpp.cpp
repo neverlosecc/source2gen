@@ -1,8 +1,9 @@
-#include "tools/codegen.h"
+#include "tools/codegen/codegen.h"
+#include "tools/codegen/cpp.h"
 #include <gtest/gtest.h>
 
 TEST(CodeGen, Simple) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.pragma("once");
     builder.include("<cstdint>");
@@ -19,7 +20,7 @@ TEST(CodeGen, Simple) {
 }
 
 TEST(CodeGen, Class) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.begin_class("Test", "public");
     builder.access_modifier("private");
@@ -34,7 +35,7 @@ TEST(CodeGen, Class) {
 }
 
 TEST(CodeGen, ClassWithBase) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.begin_class_with_base_type("Player", "Entity", "public");
 
@@ -44,7 +45,7 @@ TEST(CodeGen, ClassWithBase) {
 }
 
 TEST(CodeGen, ClassContents) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.begin_class("Test", "public");
     builder.static_field_getter("int", "power", "tier0", "Game", 19);
@@ -65,7 +66,7 @@ TEST(CodeGen, ClassContents) {
 }
 
 TEST(CodeGen, Struct) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.begin_struct("Test", "public");
     builder.end_struct();
@@ -78,7 +79,7 @@ TEST(CodeGen, Struct) {
 }
 
 TEST(CodeGen, StructWithBase) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.begin_struct_with_base_type("Player", "Entity", "public");
 
@@ -88,7 +89,7 @@ TEST(CodeGen, StructWithBase) {
 }
 
 TEST(CodeGen, StructWithContents) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.begin_struct("Test", "public");
     builder.struct_padding(0x100, 0x200, true, false, 0);
@@ -105,7 +106,7 @@ TEST(CodeGen, StructWithContents) {
 }
 
 TEST(CodeGen, Namespace) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.begin_namespace("sourcesdk");
     builder.end_namespace();
@@ -117,7 +118,7 @@ TEST(CodeGen, Namespace) {
 }
 
 TEST(CodeGen, Enum) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.begin_enum_class("Choice");
     builder.enum_item("Chocolate", 7);
@@ -133,7 +134,7 @@ TEST(CodeGen, Enum) {
 }
 
 TEST(CodeGen, Function) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.begin_function("static ", "int", "jump", true, true);
     builder.return_value("1234", true);
@@ -147,7 +148,7 @@ TEST(CodeGen, Function) {
 }
 
 TEST(CodeGen, BitfieldBlock) {
-    auto builder = codegen::get();
+    auto builder = codegen::generator_cpp_t{};
 
     builder.begin_bitfield_block();
     builder.end_bitfield_block(true);

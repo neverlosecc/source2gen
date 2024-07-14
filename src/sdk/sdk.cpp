@@ -3,6 +3,8 @@
 
 // ReSharper disable CppClangTidyClangDiagnosticLanguageExtensionToken
 #include "sdk/sdk.h"
+#include "tools/codegen/codegen.h"
+#include "tools/codegen/cpp.h"
 #include <filesystem>
 #include <list>
 #include <set>
@@ -143,7 +145,7 @@ namespace {
 
 namespace sdk {
     namespace {
-        void PrintClassInfo(codegen::generator_t::self_ref builder, CSchemaClassBinding* class_info) {
+        void PrintClassInfo(codegen::generator_cpp_t::self_ref builder, CSchemaClassBinding* class_info) {
             builder
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetClassInfoBinaryName(class_info),
                                      g_schema->GetClassProjectName(class_info)))
@@ -191,7 +193,7 @@ namespace sdk {
             }
         }
 
-        void PrintEnumInfo(codegen::generator_t::self_ref builder, CSchemaEnumBinding* enum_binding) {
+        void PrintEnumInfo(codegen::generator_cpp_t::self_ref builder, CSchemaEnumBinding* enum_binding) {
             builder
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetEnumBinaryName(enum_binding),
                                      g_schema->GetEnumProjectName(enum_binding)))
@@ -207,7 +209,7 @@ namespace sdk {
             }
         }
 
-        void AssembleEnums(codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
+        void AssembleEnums(codegen::generator_cpp_t::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
             for (auto schema_enum_binding : enums.GetElements()) {
                 // @note: @es3n1n: get type name by align size
                 //
@@ -286,7 +288,7 @@ namespace sdk {
             }
         }
 
-        void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
+        void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_cpp_t::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
             struct class_t {
                 CSchemaClassInfo* target_{};
                 std::set<CSchemaClassInfo*> refs_;
@@ -761,7 +763,8 @@ namespace sdk {
 
         // @note: @es3n1n: init codegen
         //
-        auto builder = codegen::get();
+        auto generator = std::make_unique<codegen::generator_cpp_t>();
+        auto& builder = *generator;
         builder.pragma("once");
 
         // @note: @es3n1n: include files

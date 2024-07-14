@@ -1,59 +1,18 @@
-// Copyright (C) 2024 neverlosecc
-// See end of file for extended copyright information.
 #pragma once
-#include <cstdint>
-#include <set>
-#include <sstream>
-#include <string>
-#include <type_traits>
 
-#include "tools/fnv.h"
+#include "codegen.h"
 
 namespace codegen {
-    constexpr char kTabSym = '\t';
-    constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many \t characters shall we place per each block
-    constexpr std::array kBlacklistedCharacters = {':', ';', '\\', '/'};
-
-    // @note: @es3n1n: a list of possible integral types for bitfields (would be used in `guess_bitfield_type`)
-    //
-    // clang-format off
-    constexpr auto kBitfieldIntegralTypes = std::to_array<std::pair<std::size_t, std::string_view>>({
-        {8, "uint8_t"},
-        {16, "uint16_t"},
-        {32, "uint32_t"},
-        {64, "uint64_t"},
-
-        // @todo: @es3n1n: define uint128_t/uint256_t/... as custom structs in the very beginning of the file
-        {128, "uint128_t"},
-        {256, "uint256_t"},
-        {512, "uint512_t"},
-    });
-    // clang-format on
-
-    inline std::string guess_bitfield_type(const std::size_t bits_count) {
-        for (auto p : kBitfieldIntegralTypes) {
-            if (bits_count > p.first)
-                continue;
-
-            return p.second.data();
-        }
-
-        throw std::runtime_error(std::format("{} : Unable to guess bitfield type with size {}", __FUNCTION__, bits_count));
-    }
-
-    struct generator_t {
-        using self_ref = std::add_lvalue_reference_t<generator_t>;
-
+    struct generator_cpp_t : public IGenerator {
     public:
-        constexpr generator_t() = default;
-        ~generator_t() = default;
-        generator_t& operator=(const generator_t& v) {
+        constexpr generator_cpp_t() = default;
+        ~generator_cpp_t() = default;
+        generator_cpp_t& operator=(const generator_cpp_t& v) {
             if (this != &v) {
                 this->_stream = std::stringstream(v._stream.str());
                 /// \todo @es3n1n: Such stats counters should be moved to their own structure
                 this->_tabs_count = v._tabs_count;
                 this->_tabs_count_backup = v._tabs_count_backup;
-                this->_unions_count = v._unions_count;
                 this->_pads_count = v._pads_count;
                 this->_forward_decls = v._forward_decls;
             }
@@ -61,21 +20,21 @@ namespace codegen {
         }
 
     public:
-        self_ref pragma(const std::string& val) {
+        self_ref pragma(const std::string& val) override {
             return push_line(std::format("#pragma {}", val));
         }
 
-        self_ref include(const std::string& item) {
+        self_ref include(const std::string& item) override {
             return push_line(std::format("#include {}", item));
         }
 
-        self_ref next_line() {
+        self_ref next_line() override {
             return push_line("");
         }
 
         // @todo: @es3n1n: `self_ref prev_line()`
 
-        self_ref access_modifier(const std::string& modifier) {
+        self_ref access_modifier(const std::string& modifier) override {
             dec_tabs_count(1);
             push_line(std::format("{}:", modifier));
             restore_tabs_count();
@@ -83,73 +42,75 @@ namespace codegen {
             return *this;
         }
 
-        self_ref begin_class(const std::string& class_name, const std::string& access_modifier = "public") {
+        self_ref begin_class(const std::string& class_name, const std::string& access_modifier = "public") override {
             return begin_block(std::format("class {}", class_name), access_modifier);
         }
 
-        self_ref begin_class_with_base_type(const std::string& class_name, const std::string& base_type, const std::string& access_modifier = "public") {
+        self_ref begin_class_with_base_type(const std::string& class_name, const std::string& base_type,
+                                            const std::string& access_modifier = "public") override {
             if (base_type.empty())
                 return begin_class(std::cref(class_name), access_modifier);
 
             return begin_block(std::format("class {} : public {}", class_name, base_type), access_modifier);
         }
 
-        self_ref end_class() {
+        self_ref end_class() override {
             return end_block();
         }
 
-        self_ref begin_struct(const std::string& name, const std::string& access_modifier = "public") {
+        self_ref begin_struct(const std::string& name, const std::string& access_modifier = "public") override {
             return begin_block(std::format("struct {}", escape_name(name)), access_modifier);
         }
 
-        self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type, const std::string& access_modifier = "public") {
+        self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type,
+                                             const std::string& access_modifier = "public") override {
             if (base_type.empty())
                 return begin_struct(std::cref(name), access_modifier);
 
             return begin_block(std::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
         }
 
-        self_ref end_struct() {
+        self_ref end_struct() override {
             return end_block();
         }
 
-        self_ref begin_namespace(const std::string& namespace_name) {
+        self_ref begin_namespace(const std::string& namespace_name) override {
             return begin_block(std::format("namespace {}", namespace_name));
         }
 
-        self_ref end_namespace() {
+        self_ref end_namespace() override {
             return end_block();
         }
 
-        self_ref begin_enum_class(const std::string& enum_name, const std::string& base_typename = "") {
+        self_ref begin_enum_class(const std::string& enum_name, const std::string& base_typename = "") override {
             return begin_block(std::format("enum class {}{}", escape_name(enum_name), base_typename.empty() ? base_typename : (" : " + base_typename)));
         }
 
-        self_ref end_enum_class() {
+        self_ref end_enum_class() override {
             return end_block();
         }
 
-        template <typename T>
-        self_ref enum_item(const std::string& name, T value) {
-            return push_line(std::vformat(sizeof(T) >= 2 ? "{} = {:#x}," : "{} = {},", std::make_format_args(name, value)));
+        self_ref enum_item(const std::string& name, std::int64_t value) override {
+            // TOOD: outdated size checks
+            return push_line(std::vformat(sizeof(std::int64_t) >= 2 ? "{} = {:#x}," : "{} = {},", std::make_format_args(name, value)));
         }
 
         // @todo: @es3n1n: add func params
         self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name,
-                                const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) {
+                                const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) override {
             return begin_block(std::format("{}{} {}()", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
         }
 
-        self_ref end_function(const bool decrement_tabs_count = true, const bool move_cursor_to_next_line = true) {
+        self_ref end_function(const bool decrement_tabs_count = true, const bool move_cursor_to_next_line = true) override {
             return end_block(decrement_tabs_count, move_cursor_to_next_line);
         }
 
-        self_ref return_value(const std::string& value, const bool move_cursor_to_next_line = true) {
+        self_ref return_value(const std::string& value, const bool move_cursor_to_next_line = true) override {
             return push_line(std::format("return {};", value), move_cursor_to_next_line);
         }
 
         self_ref static_field_getter(const std::string& type_name, const std::string& prop_name, const std::string& mod_name,
-                                     const std::string& decl_class, const std::size_t index) {
+                                     const std::string& decl_class, const std::size_t index) override {
             begin_function("static ", type_name, std::format("&Get_{}", prop_name), false, false);
 
             // @note: @es3n1n: reset tabs count temporary
@@ -169,16 +130,16 @@ namespace codegen {
             return *this;
         }
 
-        self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) {
+        self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) override {
             return push_line(std::format("// {}", text), move_cursor_to_next_line);
         }
 
-        self_ref prop(const std::string& type_name, const std::string& name, bool move_cursor_to_next_line = true) {
+        self_ref prop(const std::string& type_name, const std::string& name, bool move_cursor_to_next_line = true) override {
             const auto line = move_cursor_to_next_line ? std::format("{} {};", type_name, name) : std::format("{} {}; ", type_name, name);
             return push_line(line, move_cursor_to_next_line);
         }
 
-        self_ref forward_declaration(const std::string& text) {
+        self_ref forward_declaration(const std::string& text) override {
             // @note: @es3n1n: forward decl only once
             const auto fwd_decl_hash = fnv32::hash_runtime(text.data());
             if (_forward_decls.contains(fwd_decl_hash))
@@ -192,7 +153,7 @@ namespace codegen {
         }
 
         self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
-                                const bool is_private_field = false, const std::size_t bitfield_size = 0ull) {
+                                const bool is_private_field = false, const std::size_t bitfield_size = 0ull) override {
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
             std::string type_name = bitfield_size ? guess_bitfield_type(bitfield_size) : "uint8_t";
             if (is_private_field)
@@ -205,13 +166,24 @@ namespace codegen {
             return prop(type_name, bitfield_size ? std::format("{}: {}", pad_name, bitfield_size) : pad_name, move_cursor_to_next_line);
         }
 
-        self_ref begin_bitfield_block() {
+        self_ref begin_bitfield_block() override {
             return begin_struct("", "");
         }
 
-        self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) {
+        self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) override {
             dec_tabs_count(1);
             return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
+        }
+
+        self_ref restore_tabs_count() override {
+            _tabs_count = _tabs_count_backup;
+            return *this;
+        }
+
+        self_ref reset_tabs_count() override {
+            _tabs_count_backup = _tabs_count;
+            _tabs_count = 0;
+            return *this;
         }
 
     public:
@@ -275,7 +247,6 @@ namespace codegen {
             return result;
         }
 
-    public:
         self_ref inc_tabs_count(const std::size_t count = 1) {
             _tabs_count_backup = _tabs_count;
             _tabs_count += count;
@@ -289,42 +260,10 @@ namespace codegen {
             return *this;
         }
 
-        self_ref restore_tabs_count() {
-            _tabs_count = _tabs_count_backup;
-            return *this;
-        }
-
-        self_ref reset_tabs_count() {
-            _tabs_count_backup = _tabs_count;
-            _tabs_count = 0;
-            return *this;
-        }
-
     private:
         std::stringstream _stream = {};
         std::size_t _tabs_count = 0, _tabs_count_backup = 0;
-        std::size_t _unions_count = 0;
         std::size_t _pads_count = 0;
         std::set<fnv32::hash> _forward_decls = {};
     };
-
-    inline generator_t get() {
-        return generator_t{};
-    }
 } // namespace codegen
-
-// source2gen - Source2 games SDK generator
-// Copyright 2024 neverlosecc
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
