@@ -27,6 +27,16 @@ namespace codegen {
             return c_family::get_uint(bits_count);
         }
 
+        std::optional<std::string> find_built_in(std::string_view source_name) override {
+            const auto found = std::ranges::find(c_family::kNumericTypes, source_name, &decltype(c_family::kNumericTypes)::value_type::first);
+
+            if (found != c_family::kNumericTypes.end()) {
+                return std::string{found->second};
+            } else {
+                return std::nullopt;
+            }
+        }
+
         self_ref pragma(const std::string& val) override {
             return push_line(std::format("#pragma {}", val));
         }

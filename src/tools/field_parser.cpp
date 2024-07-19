@@ -12,20 +12,6 @@ namespace field_parser {
             constexpr std::string_view kBitfieldTypePrefix = "bitfield:"sv;
 
             // clang-format off
-            constexpr auto kTypeNameToCpp = std::to_array<std::pair<std::string_view, std::string_view>>({
-                {"float32"sv, "float"sv}, 
-                {"float64"sv, "double"sv},
-    
-                {"int8"sv, "int8_t"sv},   
-                {"int16"sv, "int16_t"sv},   
-                {"int32"sv, "int32_t"sv},   
-                {"int64"sv, "int64_t"sv},
-    
-                {"uint8"sv, "uint8_t"sv}, 
-                {"uint16"sv, "uint16_t"sv}, 
-                {"uint32"sv, "uint32_t"sv}, 
-                {"uint64"sv, "uint64_t"sv}
-            });
 
             constexpr auto kDatamapToCpp = std::to_array<std::pair<fieldtype_t, std::string_view>>({
                 {fieldtype_t::FIELD_FLOAT32, "float"sv},
@@ -105,17 +91,13 @@ namespace field_parser {
         // the bitfield/array parsing and the type would be already set if item is a bitfield
         // or array
         //
-        void parse_type(field_info_t& result, const std::string& type_name) {
-            if (result.m_type.empty())
-                result.m_type = type_name;
-
-            // @note: @es3n1n: applying kTypeNameToCpp rules
-            for (auto& rule : kTypeNameToCpp) {
-                if (result.m_type != rule.first)
-                    continue;
-
-                result.m_type = rule.second;
-                break;
+        void parse_type(codegen::IGenerator& generator, field_info_t& result, const std::string& type_name) {
+            if (const auto found = generator.find_built_in(type_name); found.has_value()) {
+                result.m_type = found.value();
+            } else {
+                if (result.m_type.empty()) {
+                    result.m_type = type_name;
+                }
             }
         }
 
@@ -143,7 +125,7 @@ namespace field_parser {
         std::copy(array_sizes.begin(), array_sizes.end(), std::back_inserter(result.m_array_sizes));
 
         detail::parse_bitfield(result, type_name);
-        detail::parse_type(result, type_name);
+        detail::parse_type(generator, result, type_name);
 
         return result;
     }

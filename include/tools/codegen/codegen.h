@@ -28,6 +28,24 @@ namespace codegen {
          */
         virtual std::string get_uint(std::size_t bits_count) = 0;
 
+        /**
+         * Maps the following Source2 type names to the fully qualified type name in the target language.
+         *
+         * - float32
+         * - float64
+         * - int8
+         * - int16
+         * - int32
+         * - int64
+         * - uint8
+         * - uint16
+         * - uint32
+         * - uint64
+         *
+         * @return @ref std::nullopt if @p source_name is not listed above
+         */
+        virtual std::optional<std::string> find_built_in(std::string_view source_name) = 0;
+
         virtual self_ref pragma(const std::string& val) = 0;
 
         virtual self_ref include(const std::string& item) = 0;

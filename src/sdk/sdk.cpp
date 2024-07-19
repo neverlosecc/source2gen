@@ -459,7 +459,7 @@ namespace sdk {
             auto get_type = [&](CSchemaType* type) -> std::pair<std::string, std::vector<std::size_t>> {
                 auto [type_name, mods] = parse_array(type);
 
-                assert((!type_name.empty() && !mods.empty()) || (type_name.empty() && mods.empty()));
+                assert(type_name.empty() == mods.empty());
 
                 if (!type_name.empty() && !mods.empty())
                     return {type_name, mods};

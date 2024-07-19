@@ -17,15 +17,34 @@ namespace codegen::c_family {
     //
     constexpr auto kBitfieldIntegralTypes = std::to_array<std::pair<std::size_t, std::string_view>>({
         // clang-format off
-    {8, "uint8_t"},
-    {16, "uint16_t"},
-    {32, "uint32_t"},
-    {64, "uint64_t"},
+        {8, "uint8_t"},
+        {16, "uint16_t"},
+        {32, "uint32_t"},
+        {64, "uint64_t"},
 
-    // @todo: @es3n1n: define uint128_t/uint256_t/... as custom structs in the very beginning of the file
-    {128, "uint128_t"},
-    {256, "uint256_t"},
-    {512, "uint512_t"},
+        // @todo: @es3n1n: define uint128_t/uint256_t/... as custom structs in the very beginning of the file
+        {128, "uint128_t"},
+        {256, "uint256_t"},
+        {512, "uint512_t"},
+        // clang-format on
+    });
+
+    /// Without a namespace qualifier.
+    /// Key is a @ref CSchemaType::m_pszName.
+    constexpr auto kNumericTypes = std::to_array<std::pair<std::string_view, std::string_view>>({
+        // clang-format off
+        {"float32", "float"},
+        {"float64", "double"},
+
+        {"int8", "int8_t"},
+        {"int16", "int16_t"},
+        {"int32", "int32_t"},
+        {"int64", "int64_t"},
+
+        {"uint8", "uint8_t"},
+        {"uint16", "uint16_t"},
+        {"uint32", "uint32_t"},
+        {"uint64", "uint64_t"}
         // clang-format on
     });
 

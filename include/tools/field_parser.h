@@ -17,7 +17,7 @@ namespace field_parser {
         fieldtype_t m_field_type = static_cast<fieldtype_t>(24); // var type
         std::string m_name; // var name
 
-        // array sizes, for example {13, 37} for multi demensional array "[13][37]"
+        // array sizes, for example {13, 37} for multi dimensional array "[13][37]"
         std::vector<std::size_t> m_array_sizes = {};
 
         std::size_t m_bitfield_size = 0ull; // bitfield size, set to 0 if var isn't a bitfield
