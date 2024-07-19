@@ -2,8 +2,11 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include "tools/codegen/codegen.h"
+#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 enum class fieldtype_t : uint8_t;
 
@@ -65,7 +68,7 @@ namespace field_parser {
         }
     };
 
-    field_info_t parse(const std::string& type_name, const std::string& name, const std::vector<std::size_t>& array_sizes);
+    field_info_t parse(codegen::IGenerator& generator, const std::string& type_name, const std::string& name, const std::vector<std::size_t>& array_sizes);
     field_info_t parse(const fieldtype_t& type_name, const std::string& name, const std::size_t& array_sizes = 1);
 } // namespace field_parser
 

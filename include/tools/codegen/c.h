@@ -1,5 +1,6 @@
 #pragma once
 
+#include "c_family.h"
 #include "codegen.h"
 #include <cassert>
 #include <list>
@@ -22,6 +23,10 @@ namespace codegen {
         }
 
     public:
+        std::string get_uint(std::size_t bits_count) override {
+            return c_family::get_uint(bits_count);
+        }
+
         self_ref pragma(const std::string& val) override {
             return push_line(std::format("#pragma {}", val));
         }
@@ -64,9 +69,13 @@ namespace codegen {
                                              const std::string& access_modifier = "public") override {
             if (base_type.empty())
                 return begin_struct(std::cref(name), access_modifier);
+            else {
+                assert(!_current_class_or_enum.has_value() && "nested types are not supported");
+                _current_class_or_enum = name;
+            }
 
             begin_block(std::format("struct {}", escape_name(name)));
-            return prop(base_type, "base");
+            return prop(Prop{.type_name = base_type, .name = "base"});
         }
 
         self_ref end_struct() override {
@@ -125,8 +134,8 @@ namespace codegen {
         self_ref enum_item(const std::string& name, std::int64_t value) override {
             assert(_current_class_or_enum.has_value() && "called enum_item() without calling begin_enum_class()");
             // TOOD: outdated size checks
-            return push_line(std::vformat(sizeof(std::int64_t) >= 2 ? "{}_{} = {:#x}," : "{}_{} = {},",
-                                          std::make_format_args(_current_class_or_enum.value(), name, value)));
+            return push_line(
+                std::format(sizeof(std::int64_t) >= 2 ? "{}_{} = {:#x}," : "{}_{} = {},", escape_name(_current_class_or_enum.value()), name, value));
         }
 
         // @todo: @es3n1n: add func params
@@ -154,8 +163,10 @@ namespace codegen {
             return push_line(std::format("// {}", text), move_cursor_to_next_line);
         }
 
-        self_ref prop(const std::string& type_name, const std::string& name, bool move_cursor_to_next_line = true) override {
-            const auto line = move_cursor_to_next_line ? std::format("{} {};", type_name, name) : std::format("{} {}; ", type_name, name);
+        self_ref prop(Prop prop, bool move_cursor_to_next_line = true) override {
+            const auto line =
+                std::format("{} {}{};{}", escape_name(prop.type_name), escape_name(prop.name),
+                            prop.bitfield_size.has_value() ? std::format(": {}", prop.bitfield_size.value()) : "", move_cursor_to_next_line ? "" : " ");
             return push_line(line, move_cursor_to_next_line);
         }
 
@@ -175,7 +186,7 @@ namespace codegen {
         self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
                                 const bool is_private_field = false, const std::size_t bitfield_size = 0ull) override {
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
-            std::string type_name = bitfield_size ? guess_bitfield_type(bitfield_size) : "uint8_t";
+            std::string type_name = bitfield_size ? c_family::guess_bitfield_type(bitfield_size) : "uint8_t";
             if (is_private_field)
                 type_name = "[[maybe_unused]] " + type_name;
 
@@ -183,11 +194,13 @@ namespace codegen {
             if (!bitfield_size)
                 pad_name = pad_name + std::format("[{:#x}]", padding_size);
 
-            return prop(type_name, bitfield_size ? std::format("{}: {}", pad_name, bitfield_size) : pad_name, move_cursor_to_next_line);
+            return prop(
+                Prop{.type_name = type_name, .name = pad_name, .bitfield_size = (bitfield_size == 0) ? std::nullopt : std::make_optional(bitfield_size)},
+                move_cursor_to_next_line);
         }
 
         self_ref begin_bitfield_block() override {
-            return begin_struct("", "");
+            return begin_block(std::format("struct ", ""));
         }
 
         self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) override {
@@ -207,7 +220,7 @@ namespace codegen {
         }
 
     public:
-        [[nodiscard]] std::string str() const {
+        [[nodiscard]] std::string str() const override {
             return _stream.str();
         }
 
@@ -258,7 +271,7 @@ namespace codegen {
             result.resize(name.size());
 
             for (std::size_t i = 0; i < name.size(); i++)
-                result[i] = std::ranges::find(kBlacklistedCharacters, name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
+                result[i] = std::ranges::find(c_family::kBlacklistedCharacters, name[i]) == std::end(c_family::kBlacklistedCharacters) ? name[i] : '_';
 
             return result;
         }

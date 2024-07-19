@@ -2,6 +2,7 @@
 // See end of file for extended copyright information.
 #include <Include.h>
 #include <sdk/interfaces/client/game/datamap_t.h>
+#include <tools/codegen/c_family.h> // TODO: should not be here, move to detail and remove include
 
 namespace field_parser {
     namespace detail {
@@ -97,7 +98,7 @@ namespace field_parser {
 
             // @note: @es3n1n: saving parsed value
             result.m_bitfield_size = bitfield_size;
-            result.m_type = codegen::guess_bitfield_type(bitfield_size);
+            result.m_type = codegen::c_family::guess_bitfield_type(bitfield_size);
         }
 
         // @note: @es3n1n: we are assuming that this function would be executed right after
@@ -134,7 +135,8 @@ namespace field_parser {
         }
     } // namespace detail
 
-    field_info_t parse(const std::string& type_name, const std::string& name, const std::vector<std::size_t>& array_sizes) {
+    field_info_t parse(codegen::IGenerator& generator, const std::string& type_name, const std::string& name,
+                       const std::vector<std::size_t>& array_sizes) {
         field_info_t result = {};
         result.m_name = name;
 

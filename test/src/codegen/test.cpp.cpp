@@ -49,20 +49,19 @@ TEST(CodeGenCpp, ClassContents) {
 
     builder.begin_class("Test", "public");
     builder.static_field_getter("int", "power", "tier0", "Game", 19);
-    builder.prop("int", "up");
+    builder.prop(codegen::Prop{.type_name = "int", .name = "up"});
     builder.end_class();
 
-    EXPECT_EQ(
-        builder.str(),
-        "class Test\n"
-        "{\n"
-        "public:\n"
-        "\tstatic int &Get_power(){return *reinterpret_cast<int*>(interfaces::g_schema->FindTypeScopeForModule(\"tier0\")->FindDeclaredClass(\"Game\")->"
-        "GetStaticFields()[19]->m_pInstance);};\n"
-        "\tint up;\n"
-        "};\n"
-        "\n"
-        "");
+    EXPECT_EQ(builder.str(), "class Test\n"
+                             "{\n"
+                             "public:\n"
+                             "\tstatic int &Get_power(){return "
+                             "*reinterpret_cast<int*>(interfaces::g_schema->FindTypeScopeForModule(\"tier0\")->FindDeclaredClass(\"Game\")->"
+                             "GetStaticFields()[19]->m_pInstance);};\n"
+                             "\tint up;\n"
+                             "};\n"
+                             "\n"
+                             "");
 }
 
 TEST(CodeGenCpp, Struct) {

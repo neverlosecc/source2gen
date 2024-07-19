@@ -3,8 +3,10 @@
 
 // ReSharper disable CppClangTidyClangDiagnosticLanguageExtensionToken
 #include "sdk/sdk.h"
+#include "tools/codegen/c.h"
 #include "tools/codegen/codegen.h"
 #include "tools/codegen/cpp.h"
+#include <cstdlib>
 #include <filesystem>
 #include <list>
 #include <set>
@@ -213,21 +215,18 @@ namespace sdk {
             for (auto schema_enum_binding : enums.GetElements()) {
                 // @note: @es3n1n: get type name by align size
                 //
-                const auto get_type_name = [schema_enum_binding]() -> std::string {
+                const auto get_type_name = [&builder, schema_enum_binding]() -> std::string {
                     std::string type_storage;
 
                     switch (schema_enum_binding->m_unAlignOf) {
                     case 1:
-                        type_storage = "std::uint8_t";
-                        break;
+                        [[fallthrough]];
                     case 2:
-                        type_storage = "std::uint16_t";
-                        break;
+                        [[fallthrough]];
                     case 4:
-                        type_storage = "std::uint32_t";
-                        break;
+                        [[fallthrough]];
                     case 8:
-                        type_storage = "std::uint64_t";
+                        type_storage = builder.get_uint(8 * schema_enum_binding->m_unAlignOf);
                         break;
                     default:
                         type_storage = "INVALID_TYPE";
@@ -549,7 +548,7 @@ namespace sdk {
                     // @note: @es3n1n: parsing type
                     //
                     const auto [type, mod] = get_type(field.m_pSchemaType);
-                    const auto var_info = field_parser::parse(type, field.m_pszName, mod);
+                    const auto var_info = field_parser::parse(builder, type, field.m_pszName, mod);
 
                     // @note: @es3n1n: insert padding if needed
                     //
@@ -638,7 +637,7 @@ namespace sdk {
 
                     // @note: @es3n1n: push prop
                     //
-                    builder.prop(var_info.m_type, var_info.formatted_name(), false);
+                    builder.prop(codegen::Prop{.type_name = var_info.m_type, .name = var_info.formatted_name()}, false);
                     if (!var_info.is_bitfield()) {
                         builder.reset_tabs_count().comment(std::format("{:#x}", field.m_nSingleInheritanceOffset), false).restore_tabs_count();
                         class_dump.cached_fields_.emplace_back(var_info.formatted_name(), field.m_nSingleInheritanceOffset);
@@ -676,7 +675,7 @@ namespace sdk {
                     auto static_field = &class_info->m_pStaticFields[s];
 
                     auto [type, mod] = get_type(static_field->m_pSchemaType);
-                    const auto var_info = field_parser::parse(type, static_field->m_pszName, mod);
+                    const auto var_info = field_parser::parse(builder, type, static_field->m_pszName, mod);
                     builder.static_field_getter(var_info.m_type, var_info.m_name, current->BGetScopeName(), class_info->m_pszName, s);
                 }
 
@@ -742,7 +741,19 @@ namespace sdk {
         }
     } // namespace
 
-    void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current) {
+    std::unique_ptr<codegen::IGenerator> get_generator_for_language(source2_gen::Language language) {
+        switch (language) {
+        case source2_gen::Language::cpp:
+            return std::make_unique<codegen::generator_cpp_t>();
+        case source2_gen::Language::c:
+            return std::make_unique<codegen::generator_c_t>();
+        }
+
+        assert(false && "unhandled enumerator");
+        std::abort();
+    }
+
+    void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current, source2_gen::Language emit_language) {
         // @note: @es3n1n: getting current scope name & formatting it
         //
         constexpr std::string_view module_file_prefix = platform_specific{.windows = "", .linux = "lib"}.get();
@@ -763,7 +774,7 @@ namespace sdk {
 
         // @note: @es3n1n: init codegen
         //
-        auto generator = std::make_unique<codegen::generator_cpp_t>();
+        auto generator = get_generator_for_language(emit_language);
         auto& builder = *generator;
         builder.pragma("once");
 

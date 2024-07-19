@@ -47,19 +47,34 @@ TEST(CodeGenC, ClassContents) {
     auto builder = codegen::generator_c_t{};
 
     builder.begin_class("Test", "public");
-    // TOOD: what is this?
     builder.static_field_getter("int", "power", "tier0", "Game", 19);
-    builder.prop("int", "up");
+    builder.prop(codegen::Prop{.type_name = "int", .name = "up"});
+    builder.prop(codegen::Prop{.type_name = "uint8_t", .name = "down", .bitfield_size = 7});
     builder.end_class();
 
     EXPECT_EQ(builder.str(),
               "struct Test\n"
               "{\n"
               "\tint up;\n"
+              "\tuint8_t down: 7;\n"
               "};\n"
               "\n"
               "static int &Test_Get_power(){return *(int*)(interfaces::g_schema->FindTypeScopeForModule(\"tier0\")->FindDeclaredClass(\"Game\")->"
               "GetStaticFields()[19]->m_pInstance);};\n");
+}
+
+TEST(CodeGenC, EscapesClassMembers) {
+    auto builder = codegen::generator_c_t{};
+
+    builder.begin_class("Test", "public");
+    builder.prop(codegen::Prop{.type_name = "CPlayer::Head", .name = "very::big"});
+    builder.end_class();
+
+    EXPECT_EQ(builder.str(), "struct Test\n"
+                             "{\n"
+                             "\tCPlayer__Head very__big;\n"
+                             "};\n"
+                             "\n");
 }
 
 TEST(CodeGenC, Struct) {

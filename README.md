@@ -49,11 +49,13 @@ These instructions will help you set up the project on your local machine for de
 
 - Visual Studio 2019 or newer
 - premake5
+- conan
 
 #### Linux
 
 - g++-13 or newer
 - CMake
+- conan
 
 ### Clone the repository
 
@@ -95,6 +97,8 @@ When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
 
 #### With premake5
 
+TODO: how to use conan with premake?
+
 - Open a command prompt or terminal in the project's root directory.
 - Run the following command to generate the Visual Studio solution:
 
@@ -111,7 +115,8 @@ premake5 vs2019 --game=CS2
 - Run the following sequence of commands to build the project:
 
 ```bash
-cmake -B build -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
+conan install --output-folder build --settings:host build_type=Release .
+cmake -S . -B build --preset conan-debug -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
 cmake --build build
 ```
 

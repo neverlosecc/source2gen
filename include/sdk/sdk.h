@@ -27,7 +27,7 @@
 namespace sdk {
     inline CSchemaSystem* g_schema = nullptr;
 
-    void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current);
+    void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current, source2_gen::Language emit_language);
 } // namespace sdk
 
 // source2gen - Source2 games SDK generator

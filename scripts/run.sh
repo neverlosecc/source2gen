@@ -3,6 +3,7 @@
 set -Eueo pipefail
 
 GAME_DIRECTORY="${1:-}"
+shift
 SCRIPT_DIRECTORY="$(dirname "$(readlink -f "$0")")"
 PROJECT_ROOT="${SCRIPT_DIRECTORY}/../"
 BINARY=""
@@ -30,5 +31,6 @@ if [ -z "${BINARY}" ]; then
   exit 1
 else
   set -x
-  LD_LIBRARY_PATH="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/:${GAME_DIRECTORY}/game/csgo/bin/linuxsteamrt64/:${LD_LIBRARY_PATH:-}" lldb -- "${BINARY}"
+
+  LD_LIBRARY_PATH="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/:${GAME_DIRECTORY}/game/csgo/bin/linuxsteamrt64/:${LD_LIBRARY_PATH:-}" lldb -o run -- "${BINARY}" "${@}"
 fi

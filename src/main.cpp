@@ -1,17 +1,59 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #include "options.hpp"
+#include <argparse/argparse.hpp>
 #include <Include.h>
+#include <optional>
+#include <stdexcept>
+#include <string_view>
+
+std::optional<source2_gen::Language> parse_language(std::string_view str) {
+    using enum source2_gen::Language;
+
+    if (str == "c") {
+        return c;
+    } else if (str == "cpp") {
+        return cpp;
+    } else {
+        return std::nullopt;
+    }
+}
+
+// TOOD: --help
+std::optional<source2_gen::Options> parse_args(int argc, char* argv[]) {
+    argparse::ArgumentParser parser{"source2gen"};
+
+    parser.add_argument("--emit-language").choices("c", "cpp").default_value("cpp");
+
+    try {
+        parser.parse_args(argc, argv);
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << std::endl;
+        return std::nullopt;
+    }
+
+    const auto language{parse_language(parser.get<std::string>("emit-language"))};
+
+    if (!language.has_value()) {
+        std::cerr << "invalid value for --emit-language" << std::endl;
+    }
+
+    return source2_gen::Options{.emit_language = language.value()};
+}
 
 int main(int argc, char* argv[]) {
     int exit_code = 1;
 
-    const auto options = source2_gen::Options{.emit_language{source2_gen::Language::cpp}};
+    const auto maybe_options = parse_args(argc, argv);
 
-    if (source2_gen::Dump(options)) {
-        std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
-        std::cout << kPoweredByMessage << std::endl;
-        exit_code = 0;
+    if (maybe_options.has_value()) {
+        const auto options{maybe_options.value()};
+
+        if (source2_gen::Dump(options)) {
+            std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
+            std::cout << kPoweredByMessage << std::endl;
+            exit_code = 0;
+        }
     }
 
     /// Errors would be logged in the `source2_gen::Dump` itself

@@ -40,6 +40,8 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT CMAKE_BUILD_TYPE STREQUAL "Rele
     message(FATAL_ERROR "source2gen: Invalid value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 endif()
 
+find_package(argparse REQUIRED)
+
 set(SOURCE2GEN_SUPPORTED_GAMES
     CS2
     DOTA2
@@ -69,6 +71,10 @@ file(GLOB_RECURSE source2gen_HEADERS "include/**.h" "include/**.hpp")
 
 add_library(lib${PROJECT_NAME} ${source2gen_SOURCES})
 
+target_link_libraries(lib${PROJECT_NAME}
+  argparse::argparse
+)
+
 target_include_directories(lib${PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -94,7 +100,7 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
       -pedantic-errors
       -Wno-address-of-packed-member
       $<$<NOT:$<CXX_COMPILER_ID:GNU>>:-Wno-implicit-exception-spec-mismatch>
-      -Wno-invalid-offGLIBCXX_3.4.33setof
+      -Wno-invalid-offsetof
       $<IF:$<CXX_COMPILER_ID:GNU>,-Wno-attributes,-Wno-unknown-attributes>
     )
 

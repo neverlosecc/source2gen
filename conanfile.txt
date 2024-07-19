@@ -1,4 +1,5 @@
 [requires]
+argparse/3.0
 gtest/1.14.0
 
 [generators]
