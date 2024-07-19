@@ -16,7 +16,6 @@ namespace {
     using namespace std::string_view_literals;
 
     constexpr std::string_view kOutDirName = "sdk"sv;
-    constinit std::array include_paths = {"<cstdint>"sv, R"("!GlobalTypes.hpp")"sv};
 
     constexpr uint32_t kMaxReferencesForClassEmbed = 2;
     constexpr std::size_t kMinFieldCountForClassEmbed = 2;
@@ -776,12 +775,7 @@ namespace sdk {
         //
         auto generator = get_generator_for_language(emit_language);
         auto& builder = *generator;
-        builder.pragma("once");
-
-        // @note: @es3n1n: include files
-        //
-        for (auto&& include_path : include_paths)
-            builder.include(include_path.data());
+        builder.preamble();
 
         // @note: @es3n1n: get stuff from schema that we'll use later
         // @todo @es3n1n: consider moving these to heap as they're too damn large

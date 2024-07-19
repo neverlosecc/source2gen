@@ -5,9 +5,7 @@
 TEST(CodeGenC, Simple) {
     auto builder = codegen::generator_c_t{};
 
-    // TOOD: Does C have #pragma once?
-    builder.pragma("once");
-    builder.include("<stdint.h>");
+    builder.preamble();
     builder.next_line();
     builder.comment("it's a-me", true);
     builder.forward_declaration("Mario");

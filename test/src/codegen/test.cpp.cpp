@@ -5,8 +5,7 @@
 TEST(CodeGenCpp, Simple) {
     auto builder = codegen::generator_cpp_t{};
 
-    builder.pragma("once");
-    builder.include("<cstdint>");
+    builder.preamble();
     builder.next_line();
     builder.comment("it's a-me", true);
     builder.forward_declaration("Mario");

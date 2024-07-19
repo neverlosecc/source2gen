@@ -19,11 +19,11 @@ std::optional<source2_gen::Language> parse_language(std::string_view str) {
     }
 }
 
-// TOOD: --help
+/// @return @ref std::nullopt if "--help" was passed or parsing failed
 std::optional<source2_gen::Options> parse_args(int argc, char* argv[]) {
     argparse::ArgumentParser parser{"source2gen"};
 
-    parser.add_argument("--emit-language").choices("c", "cpp").default_value("cpp");
+    parser.add_argument("--emit-language").choices("c", "cpp").default_value("cpp").help("Programming language to be used for the generated SDK");
 
     try {
         parser.parse_args(argc, argv);
@@ -36,6 +36,7 @@ std::optional<source2_gen::Options> parse_args(int argc, char* argv[]) {
 
     if (!language.has_value()) {
         std::cerr << "invalid value for --emit-language" << std::endl;
+        return std::nullopt;
     }
 
     return source2_gen::Options{.emit_language = language.value()};

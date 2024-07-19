@@ -40,12 +40,9 @@ namespace codegen {
             }
         }
 
-        self_ref pragma(const std::string& val) override {
-            return push_line(std::format("#pragma {}", val));
-        }
-
-        self_ref include(const std::string& item) override {
-            return push_line(std::format("#include {}", item));
+        self_ref preamble() override {
+            push_line("#pragma once");
+            return include("<cstdint>");
         }
 
         self_ref next_line() override {
@@ -216,6 +213,11 @@ namespace codegen {
         }
 
     private:
+        /// @param item Including brackets
+        self_ref include(std::string_view item) {
+            return push_line(std::format("#include {}", item));
+        }
+
         self_ref begin_block(const std::string& text, const std::string& access_modifier = "", const bool increment_tabs_count = true,
                              const bool move_cursor_to_next_line = true) {
             push_line(text, move_cursor_to_next_line);

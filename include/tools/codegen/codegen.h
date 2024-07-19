@@ -46,9 +46,11 @@ namespace codegen {
          */
         virtual std::optional<std::string> find_built_in(std::string_view source_name) = 0;
 
-        virtual self_ref pragma(const std::string& val) = 0;
-
-        virtual self_ref include(const std::string& item) = 0;
+        /**
+         * Can be used by implementations to generate language-specific
+         * preambles, such as header guards in C.
+         */
+        virtual self_ref preamble() = 0;
 
         virtual self_ref next_line() = 0;
 
@@ -108,6 +110,8 @@ namespace codegen {
         virtual self_ref reset_tabs_count() = 0;
 
         virtual std::string str() const = 0;
+
+        virtual ~IGenerator() = default;
     };
 
 } // namespace codegen
