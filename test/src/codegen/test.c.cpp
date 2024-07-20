@@ -101,8 +101,18 @@ TEST(CodeGenC, StructWithContents) {
     auto builder = codegen::generator_c_t{};
 
     builder.begin_struct("Test", "public");
-    builder.struct_padding(0x100, 0x200, true, false, 0);
-    builder.struct_padding(0x300, 0x200, true, false, 7);
+    builder.struct_padding(codegen::Padding{
+        .pad_offset = 0x100,
+        .size = codegen::Padding::Bytes{0x200},
+        .is_private_field = false,
+        .move_cursor_to_next_line = true,
+    });
+    builder.struct_padding(codegen::Padding{
+        .pad_offset = 0x300,
+        .size = codegen::Padding::Bits{7},
+        .is_private_field = false,
+        .move_cursor_to_next_line = true,
+    });
     builder.end_struct();
 
     EXPECT_EQ(builder.str(), "struct Test\n"

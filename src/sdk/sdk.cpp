@@ -515,7 +515,12 @@ namespace sdk {
                 //
                 if (expected_pad_size > 0) // @fixme: @es3n1n: this is wrong, i probably should check for collisions instead
                     builder.access_modifier("private")
-                        .struct_padding(parent_class_size, expected_pad_size, false, true)
+                        .struct_padding(codegen::Padding{
+                            .pad_offset = parent_class_size,
+                            .size = codegen::Padding::Bytes{static_cast<std::size_t>(expected_pad_size)},
+                            .is_private_field = true,
+                            .move_cursor_to_next_line = false,
+                        })
                         .reset_tabs_count()
                         .comment(std::format("{:#x}", parent_class_size))
                         .restore_tabs_count();
@@ -556,7 +561,12 @@ namespace sdk {
                         expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) && !state.assembling_bitfield) {
 
                         builder.access_modifier("private")
-                            .struct_padding(expected_offset, field.m_nSingleInheritanceOffset - expected_offset, false, true)
+                            .struct_padding(codegen::Padding{
+                                .pad_offset = expected_offset,
+                                .size{codegen::Padding::Bytes{field.m_nSingleInheritanceOffset - expected_offset}},
+                                .is_private_field = true,
+                                .move_cursor_to_next_line = false,
+                            })
                             .reset_tabs_count()
                             .comment(std::format("{:#x}", expected_offset))
                             .restore_tabs_count()
@@ -583,7 +593,12 @@ namespace sdk {
                                 std::format("Unexpected union size: {}. Expected: {}", state.total_bits_count_in_union, expected_union_size_bits));
 
                         if (expected_union_size_bits > state.total_bits_count_in_union)
-                            builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
+                            builder.struct_padding(codegen::Padding{
+                                .pad_offset = std::nullopt,
+                                .size = codegen::Padding::Bits{expected_union_size_bits - actual_union_size_bits},
+                                .is_private_field = false,
+                                .move_cursor_to_next_line = true,
+                            });
 
                         state.last_field_offset += expected_union_size_bytes;
                         state.last_field_size = expected_union_size_bytes;
@@ -654,7 +669,12 @@ namespace sdk {
                     const auto expected_union_size_bits = actual_union_size_bits + (actual_union_size_bits % 8);
 
                     if (expected_union_size_bits > actual_union_size_bits)
-                        builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
+                        builder.struct_padding(codegen::Padding{
+                            .pad_offset = std::nullopt,
+                            .size = codegen::Padding::Bits{expected_union_size_bits - actual_union_size_bits},
+                            .is_private_field = false,
+                            .move_cursor_to_next_line = true,
+                        });
 
                     builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
 
@@ -769,12 +789,12 @@ namespace sdk {
         //
         if (!std::filesystem::exists(kOutDirName))
             std::filesystem::create_directories(kOutDirName);
-        const std::string out_file_path = std::format("{}/{}.hpp", kOutDirName, scope_name);
 
         // @note: @es3n1n: init codegen
         //
         auto generator = get_generator_for_language(emit_language);
         auto& builder = *generator;
+
         builder.preamble();
 
         // @note: @es3n1n: get stuff from schema that we'll use later
@@ -801,6 +821,7 @@ namespace sdk {
 
         // @note: @es3n1n: write generated data to output file
         //
+        const std::string out_file_path = std::format("{}/{}.{}", kOutDirName, scope_name, builder.get_file_extension());
         std::ofstream f(out_file_path, std::ios::out);
         f << builder.str();
         if (f.bad()) {

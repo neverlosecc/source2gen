@@ -40,6 +40,10 @@ namespace codegen {
             }
         }
 
+        std::string get_file_extension() override {
+            return "hpp";
+        }
+
         self_ref preamble() override {
             push_line("#pragma once");
             return include("<cstdint>");
@@ -107,9 +111,8 @@ namespace codegen {
             return end_block();
         }
 
-        self_ref enum_item(const std::string& name, std::int64_t value) override {
-            // TOOD: outdated size checks
-            return push_line(std::vformat(sizeof(std::int64_t) >= 2 ? "{} = {:#x}," : "{} = {},", std::make_format_args(name, value)));
+        self_ref enum_item(const std::string& name, std::uint64_t value) override {
+            return push_line(std::format("{} = {:#x},", name, value));
         }
 
         // @todo: @es3n1n: add func params
@@ -171,20 +174,24 @@ namespace codegen {
             return push_line(std::format("struct {};", text));
         }
 
-        self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
-                                const bool is_private_field = false, const std::size_t bitfield_size = 0ull) override {
+        self_ref struct_padding(Padding options) override {
+            const auto is_bitfield{std::holds_alternative<Padding::Bits>(options.size)};
+
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
-            std::string type_name = bitfield_size ? c_family::guess_bitfield_type(bitfield_size) : "uint8_t";
-            if (is_private_field)
+            std::string type_name = is_bitfield ? c_family::guess_bitfield_type(std::get<Padding::Bits>(options.size).value) : "uint8_t";
+            if (options.is_private_field)
                 type_name = "[[maybe_unused]] " + type_name;
 
-            auto pad_name = pad_offset.has_value() ? std::format("__pad{:04x}", pad_offset.value()) : std::format("__pad{:d}", _pads_count++);
-            if (!bitfield_size)
-                pad_name = pad_name + std::format("[{:#x}]", padding_size);
+            auto pad_name =
+                options.pad_offset.has_value() ? std::format("__pad{:04x}", options.pad_offset.value()) : std::format("__pad{:d}", _pads_count++);
 
-            return prop(
-                Prop{.type_name = type_name, .name = pad_name, .bitfield_size = (bitfield_size == 0) ? std::nullopt : std::make_optional(bitfield_size)},
-                move_cursor_to_next_line);
+            if (!is_bitfield)
+                pad_name = pad_name + std::format("[{:#x}]", std::get<Padding::Bytes>(options.size).value);
+
+            return prop(Prop{.type_name = type_name,
+                             .name = pad_name,
+                             .bitfield_size = is_bitfield ? std::make_optional(std::get<Padding::Bits>(options.size).value) : std::nullopt},
+                        options.move_cursor_to_next_line);
         }
 
         self_ref begin_bitfield_block() override {

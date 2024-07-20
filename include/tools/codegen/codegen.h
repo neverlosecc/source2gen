@@ -1,12 +1,14 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+
 #include <array>
 #include <cstdint>
 #include <set>
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <variant>
 
 #include "tools/fnv.h"
 
@@ -18,6 +20,23 @@ namespace codegen {
         std::string type_name{};
         std::string name{};
         std::optional<int> bitfield_size{};
+    };
+
+    struct Padding {
+        struct Bytes {
+            std::size_t value{};
+        };
+        struct Bits {
+            std::size_t value{};
+        };
+
+        /**
+         * May be @ref std::nullopt in unions
+         */
+        std::optional<std::ptrdiff_t> pad_offset{};
+        std::variant<Bytes, Bits> size;
+        bool is_private_field{false};
+        bool move_cursor_to_next_line{true};
     };
 
     struct IGenerator {
@@ -45,6 +64,13 @@ namespace codegen {
          * @return @ref std::nullopt if @p source_name is not listed above
          */
         virtual std::optional<std::string> find_built_in(std::string_view source_name) = 0;
+
+        /**
+         * @return Extension to be used for generated files. Only 1 extension is
+         * supported per language.
+         */
+        [[nodiscard]]
+        virtual std::string get_file_extension() = 0;
 
         /**
          * Can be used by implementations to generate language-specific
@@ -78,7 +104,7 @@ namespace codegen {
 
         virtual self_ref end_enum_class() = 0;
 
-        virtual self_ref enum_item(const std::string& name, std::int64_t value) = 0;
+        virtual self_ref enum_item(const std::string& name, std::uint64_t value) = 0;
 
         virtual self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name,
                                         bool increment_tabs_count = true, bool move_cursor_to_next_line = true) = 0;
@@ -96,10 +122,7 @@ namespace codegen {
 
         virtual self_ref forward_declaration(const std::string& text) = 0;
 
-        // TOOD: add an "options" struct and document optionality
-        virtual self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size,
-                                        const bool move_cursor_to_next_line = true, const bool is_private_field = false,
-                                        const std::size_t bitfield_size = 0ull) = 0;
+        virtual self_ref struct_padding(Padding options) = 0;
 
         virtual self_ref begin_bitfield_block() = 0;
 
