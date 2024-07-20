@@ -39,6 +39,16 @@ errors, bugs, and wrong output. Please only file issues if you want to work on
 them. This note will be removed once we have thoroughly tested Source2Gen on
 Linux.
 
+### Using the generated SDK
+
+The sdk depends on a file/module called "source2gen_user_types". This file has
+to be provided by the user and expose all types listed in
+[types.hpp](sdk-filler/types.hpp). If you don't intend to access any of these
+types, you can use [types.hpp](sdk-filler/types.hpp) as
+"source2gen_user_types.hpp".
+
+TODO: document exact file/module name per language
+
 ## Getting Started
 
 These instructions will help you set up the project on your local machine for development and testing purposes.

@@ -44,7 +44,12 @@ namespace codegen {
 
         self_ref preamble() override {
             push_line("#pragma once");
-            return include("<stdint.h>");
+            push_line("");
+            include("<source2gen_user_types.h>");
+            include("<stdbool.h>");
+            include("<stdint.h>");
+
+            return *this;
         }
 
         self_ref next_line() override {

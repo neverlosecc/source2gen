@@ -11,6 +11,9 @@ TEST(CodeGenC, Simple) {
     builder.forward_declaration("Mario");
 
     EXPECT_EQ(builder.str(), "#pragma once\n"
+                             "\n"
+                             "#include <source2gen_user_types.h>\n"
+                             "#include <stdbool.h>\n"
                              "#include <stdint.h>\n"
                              "\n"
                              "// it's a-me\n"

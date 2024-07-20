@@ -1,5 +1,6 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
+#include <algorithm>
 #include <bit>
 #include <Include.h>
 #include <sdk/interfaces/client/game/datamap_t.h>
@@ -84,7 +85,7 @@ namespace field_parser {
 
             // @note: @es3n1n: saving parsed value
             result.m_bitfield_size = bitfield_size;
-            result.m_type = generator.get_uint(std::bit_ceil(bitfield_size));
+            result.m_type = generator.get_uint(std::max(8u, std::bit_ceil(bitfield_size)));
         }
 
         // @note: @es3n1n: we are assuming that this function would be executed right after

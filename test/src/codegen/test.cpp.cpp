@@ -11,6 +11,8 @@ TEST(CodeGenCpp, Simple) {
     builder.forward_declaration("Mario");
 
     EXPECT_EQ(builder.str(), "#pragma once\n"
+                             "\n"
+                             "#include <source2gen_user_types.hpp>\n"
                              "#include <cstdint>\n"
                              "\n"
                              "// it's a-me\n"

@@ -48,6 +48,7 @@ namespace codegen::detail::c_family {
         // clang-format on
     });
 
+    // TOOD: remove?
     [[nodiscard]]
     inline std::string guess_bitfield_type(const std::size_t bits_count) {
         for (const auto p : kBitfieldIntegralTypes) {
@@ -71,6 +72,8 @@ namespace codegen::detail::c_family {
         if (found != kBitfieldIntegralTypes.end()) {
             return std::string{found->second};
         } else {
+            throw std::runtime_error(std::format("{} : Unable to guess bitfield type with size {}", __FUNCTION__, bits_count));
+            // TOOD: replace all assert+abort with throw
             assert(false && "unsupported bits_count, see kBitfieldIntegralTypes for supported types");
             std::abort();
         }
