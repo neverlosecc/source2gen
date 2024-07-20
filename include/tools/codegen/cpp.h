@@ -1,7 +1,7 @@
 #pragma once
 
-#include "c_family.h"
 #include "codegen.h"
+#include "detail/c_family.h"
 
 namespace codegen {
     struct generator_cpp_t : public IGenerator {
@@ -22,13 +22,14 @@ namespace codegen {
 
     public:
         std::string get_uint(std::size_t bits_count) override {
-            return std::format("std::{}", c_family::get_uint(bits_count));
+            return std::format("std::{}", detail::c_family::get_uint(bits_count));
         }
 
         std::optional<std::string> find_built_in(std::string_view source_name) override {
-            const auto found = std::ranges::find(c_family::kNumericTypes, source_name, &decltype(c_family::kNumericTypes)::value_type::first);
+            const auto found =
+                std::ranges::find(detail::c_family::kNumericTypes, source_name, &decltype(detail::c_family::kNumericTypes)::value_type::first);
 
-            if (found != c_family::kNumericTypes.end()) {
+            if (found != detail::c_family::kNumericTypes.end()) {
                 // Add "std::" prefix to fixed-width integer types
                 if (found->second.ends_with("_t")) {
                     return std::format("std::{}", found->second);
@@ -178,7 +179,7 @@ namespace codegen {
             const auto is_bitfield{std::holds_alternative<Padding::Bits>(options.size)};
 
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
-            std::string type_name = is_bitfield ? c_family::guess_bitfield_type(std::get<Padding::Bits>(options.size).value) : "uint8_t";
+            std::string type_name = is_bitfield ? detail::c_family::guess_bitfield_type(std::get<Padding::Bits>(options.size).value) : "uint8_t";
             if (options.is_private_field)
                 type_name = "[[maybe_unused]] " + type_name;
 
@@ -275,7 +276,9 @@ namespace codegen {
             result.resize(name.size());
 
             for (std::size_t i = 0; i < name.size(); i++)
-                result[i] = std::ranges::find(c_family::kBlacklistedCharacters, name[i]) == std::end(c_family::kBlacklistedCharacters) ? name[i] : '_';
+                result[i] = std::ranges::find(detail::c_family::kBlacklistedCharacters, name[i]) == std::end(detail::c_family::kBlacklistedCharacters) ?
+                                name[i] :
+                                '_';
 
             return result;
         }

@@ -97,7 +97,7 @@ When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
 
 #### With premake5
 
-TODO: how to use conan with premake?
+TOOD: how to use conan with premake?
 
 - Open a command prompt or terminal in the project's root directory.
 - Run the following command to generate the Visual Studio solution:

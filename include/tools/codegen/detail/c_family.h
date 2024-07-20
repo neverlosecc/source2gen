@@ -10,7 +10,7 @@
 #include <string_view>
 #include <utility>
 
-namespace codegen::c_family {
+namespace codegen::detail::c_family {
     constexpr std::array kBlacklistedCharacters = {':', ';', '\\', '/'};
 
     // @note: @es3n1n: a list of possible integral types for bitfields (would be used in `guess_bitfield_type`)
@@ -50,7 +50,7 @@ namespace codegen::c_family {
 
     [[nodiscard]]
     inline std::string guess_bitfield_type(const std::size_t bits_count) {
-        for (auto p : kBitfieldIntegralTypes) {
+        for (const auto p : kBitfieldIntegralTypes) {
             if (bits_count > p.first)
                 continue;
 
@@ -75,4 +75,4 @@ namespace codegen::c_family {
             std::abort();
         }
     }
-} // namespace codegen::c_family
+} // namespace codegen::detail::c_family
