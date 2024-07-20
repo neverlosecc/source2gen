@@ -8,5 +8,6 @@ namespace source2_gen {
 
     struct Options {
         Language emit_language{};
+        bool static_members{};
     };
 } // namespace source2_gen

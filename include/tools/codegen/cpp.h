@@ -48,6 +48,7 @@ namespace codegen {
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
+            include("\"!GlobalTypes.hpp\"");
             include("<source2gen_user_types.hpp>");
             include("<cstdint>");
 

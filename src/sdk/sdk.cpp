@@ -210,8 +210,18 @@ namespace sdk {
             }
         }
 
-        void AssembleEnums(codegen::IGenerator::self_ref builder, CUtlTSHash<CSchemaEnumBinding*> enums) {
+        void AssembleEnums(std::vector<std::pair<std::string, std::string>>& defined_types, codegen::IGenerator::self_ref builder,
+                           CUtlTSHash<CSchemaEnumBinding*> enums) {
             for (auto schema_enum_binding : enums.GetElements()) {
+
+                const auto found{std::ranges::find(defined_types, schema_enum_binding->m_pszName, &std::pair<std::string, std::string>::second)};
+                if (found != defined_types.end()) {
+                    std::cout << std::format("enum {} was already defined\n", schema_enum_binding->m_pszName);
+                    continue;
+                } else {
+                    defined_types.emplace_back("", schema_enum_binding->m_pszName);
+                }
+
                 // @note: @es3n1n: get type name by align size
                 //
                 const auto get_type_name = [&builder, schema_enum_binding]() -> std::string {
@@ -286,7 +296,8 @@ namespace sdk {
             }
         }
 
-        void AssembleClasses(CSchemaSystemTypeScope* current, codegen::IGenerator::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
+        void AssembleClasses(std::vector<std::pair<std::string, std::string>>& defined_types, source2_gen::Options options,
+                             CSchemaSystemTypeScope* current, codegen::IGenerator::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
             struct class_t {
                 CSchemaClassInfo* target_{};
                 std::set<CSchemaClassInfo*> refs_;
@@ -471,6 +482,15 @@ namespace sdk {
                 //
                 const auto class_parent = class_dump.GetParent();
                 const auto class_info = class_dump.target_;
+
+                const auto found{std::ranges::find(defined_types, class_info->GetName(), &std::pair<std::string, std::string>::second)};
+                if (found != defined_types.end()) {
+                    std::cout << std::format("in {}: {} was already defined in {}\n", current->GetScopeName(), class_info->GetName(), found->first);
+                    continue;
+                } else {
+                    defined_types.emplace_back(current->GetScopeName(), class_info->GetName());
+                }
+
                 const auto is_struct = std::string_view{class_info->m_pszName}.ends_with("_t");
                 PrintClassInfo(builder, class_info);
 
@@ -684,18 +704,20 @@ namespace sdk {
 
                 // @note: @es3n1n: dump static fields
                 //
-                if (class_info->m_nStaticFieldsSize) {
-                    if (class_info->m_nFieldSize)
-                        builder.next_line();
-                    builder.comment("Static fields:");
-                }
+                if (options.static_members) {
+                    if (class_info->m_nStaticFieldsSize) {
+                        if (class_info->m_nFieldSize)
+                            builder.next_line();
+                        builder.comment("Static fields:");
+                    }
 
-                for (auto s = 0; s < class_info->m_nStaticFieldsSize; s++) {
-                    auto static_field = &class_info->m_pStaticFields[s];
+                    for (auto s = 0; s < class_info->m_nStaticFieldsSize; s++) {
+                        auto static_field = &class_info->m_pStaticFields[s];
 
-                    auto [type, mod] = get_type(static_field->m_pSchemaType);
-                    const auto var_info = field_parser::parse(builder, type, static_field->m_pszName, mod);
-                    builder.static_field_getter(var_info.m_type, var_info.m_name, current->BGetScopeName(), class_info->m_pszName, s);
+                        auto [type, mod] = get_type(static_field->m_pSchemaType);
+                        const auto var_info = field_parser::parse(builder, type, static_field->m_pszName, mod);
+                        builder.static_field_getter(var_info.m_type, var_info.m_name, current->BGetScopeName(), class_info->m_pszName, s);
+                    }
                 }
 
                 if (class_info->m_pFieldMetadataOverrides && class_info->m_pFieldMetadataOverrides->m_iTypeDescriptionCount > 1) {
@@ -772,7 +794,8 @@ namespace sdk {
         std::abort();
     }
 
-    void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current, source2_gen::Language emit_language) {
+    void GenerateTypeScopeSdk(std::vector<std::pair<std::string, std::string>>& defined_types, CSchemaSystemTypeScope* current,
+                              source2_gen::Options options) {
         // @note: @es3n1n: getting current scope name & formatting it
         //
         constexpr std::string_view module_file_prefix = platform_specific{.windows = "", .linux = "lib"}.get();
@@ -792,7 +815,7 @@ namespace sdk {
 
         // @note: @es3n1n: init codegen
         //
-        auto generator = get_generator_for_language(emit_language);
+        auto generator = get_generator_for_language(options.emit_language);
         auto& builder = *generator;
 
         builder.preamble();
@@ -816,8 +839,8 @@ namespace sdk {
 
         // @note: @es3n1n: assemble props
         //
-        AssembleEnums(builder, current_enums);
-        AssembleClasses(current, builder, current_classes);
+        AssembleEnums(defined_types, builder, current_enums);
+        AssembleClasses(defined_types, options, current, builder, current_classes);
 
         // @note: @es3n1n: write generated data to output file
         //

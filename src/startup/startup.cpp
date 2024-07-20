@@ -116,12 +116,15 @@ namespace source2_gen {
         const auto type_scopes = sdk::g_schema->GetTypeScopes();
         assert(type_scopes.Count() > 0 && "sdk is outdated");
 
+        // TODO: remove
+        std::vector<std::pair<std::string, std::string>> defined_types{};
+
         for (auto i = 0; i < type_scopes.Count(); ++i)
-            sdk::GenerateTypeScopeSdk(type_scopes.m_pElements[i], options.emit_language);
+            sdk::GenerateTypeScopeSdk(defined_types, type_scopes.m_pElements[i], options);
 
         // @note: @es3n1n: Generating sdk for global type scope
         //
-        sdk::GenerateTypeScopeSdk(sdk::g_schema->GlobalTypeScope(), options.emit_language);
+        sdk::GenerateTypeScopeSdk(defined_types, sdk::g_schema->GlobalTypeScope(), options);
 
         std::cout << std::format("Schema stats: {} registrations; {} were redundant; {} were ignored ({} bytes of ignored data)",
                                  util::PrettifyNum(sdk::g_schema->GetRegistration()), util::PrettifyNum(sdk::g_schema->GetRedundant()),
