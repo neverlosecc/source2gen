@@ -1,4 +1,4 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 
@@ -10,9 +10,9 @@ enum class fieldtype_t : uint8_t;
 namespace field_parser {
     class field_info_t {
     public:
-        std::string m_type = ""; // var type
+        std::string m_type; // var type
         fieldtype_t m_field_type = static_cast<fieldtype_t>(24); // var type
-        std::string m_name = ""; // var name
+        std::string m_name; // var name
 
         // array sizes, for example {13, 37} for multi demensional array "[13][37]"
         std::vector<std::size_t> m_array_sizes = {};
@@ -20,16 +20,16 @@ namespace field_parser {
         std::size_t m_bitfield_size = 0ull; // bitfield size, set to 0 if var isn't a bitfield
 
     public:
-        bool is_bitfield() const noexcept {
+        [[nodiscard]] bool is_bitfield() const noexcept {
             return static_cast<bool>(m_bitfield_size);
         }
 
-        bool is_array() const noexcept {
+        [[nodiscard]] bool is_array() const noexcept {
             return !m_array_sizes.empty();
         }
 
     public:
-        std::size_t total_array_size() const {
+        [[nodiscard]] std::size_t total_array_size() const {
             std::size_t result = 0ull;
 
             for (auto size : m_array_sizes) {
@@ -45,7 +45,7 @@ namespace field_parser {
         }
 
     public:
-        std::string formatted_array_sizes() const {
+        [[nodiscard]] std::string formatted_array_sizes() const {
             std::string result;
 
             for (std::size_t size : m_array_sizes)
@@ -54,7 +54,7 @@ namespace field_parser {
             return result;
         }
 
-        std::string formatted_name() const {
+        [[nodiscard]] std::string formatted_name() const {
             if (is_bitfield())
                 return std::format("{}: {}", m_name, m_bitfield_size);
 
@@ -70,7 +70,7 @@ namespace field_parser {
 } // namespace field_parser
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

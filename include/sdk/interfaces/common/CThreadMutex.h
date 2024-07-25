@@ -1,8 +1,10 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 
+#include "tools/platform.h"
 #include <cstddef>
+#include <cstdint>
 
 #ifdef _WIN32
 typedef std::uint32_t ThreadId_t;
@@ -22,10 +24,11 @@ public:
     bool m_bTrace;
     const char* m_pDebugName;
 };
-static_assert(sizeof(CThreadMutex) == 0x38);
+// static_assert(sizeof(CThreadMutex) == 0x30 + sizeof(ThreadId_t) + sizeof(char*));
+static_assert(sizeof(CThreadMutex) == platform_specific{.windows = 0x38, .linux = 0x40});
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

@@ -1,7 +1,10 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 
 #pragma once
+
+#include "CThreadMutex.h"
+#include <type_traits>
 
 #if defined(CS2) || defined(DOTA2)
 constexpr auto kThreadSpinMutex = 2;
@@ -19,6 +22,8 @@ private:
     const char* m_pszDebugName;
 };
 
+static_assert(sizeof(CThreadSpinMutexV1) == 0x18);
+
 class CThreadSpinMutexV2 {
 public:
     CThreadSpinMutexV2([[maybe_unused]] const char* pDebugName = NULL): m_ownerID(0), m_depth(0) { }
@@ -28,11 +33,13 @@ private:
     int m_depth;
 };
 
+static_assert(sizeof(CThreadSpinMutexV1) == 0x18);
+
 using CThreadSpinMutex = std::conditional_t<kThreadSpinMutex == 1, CThreadSpinMutexV1, CThreadSpinMutexV2>;
 using CThreadFastMutex = CThreadSpinMutex;
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

@@ -1,4 +1,4 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 
@@ -9,7 +9,6 @@
 #include <fstream>
 #include <thread>
 #include <unordered_map>
-#include <windows.h>
 
 using namespace std::chrono_literals;
 using namespace std::this_thread;
@@ -19,10 +18,6 @@ using namespace std::this_thread;
 #include <iostream>
 #pragma endregion Format
 
-#pragma region Source Engine 2
-#include <SDK/SDK.h>
-#pragma endregion Source Engine 2
-
 #pragma region Tools
 #include "tools/codegen.h"
 #include "tools/field_parser.h"
@@ -31,15 +26,16 @@ using namespace std::this_thread;
 #pragma endregion Tools
 
 namespace source2_gen {
-    void main(HMODULE h_module);
-}
+    /// Logs errors. Calls @ref std::abort() on fatal errors.
+    /// @return true on success
+    bool Dump();
+} // namespace source2_gen
 
-constexpr std::string_view kConsoleTitleMessage = {"source2gen :: github.com/neverlosecc/source2gen"};
 constexpr std::string_view kPoweredByMessage = {"Powered by github.com/neverlosecc/source2gen"};
 constexpr std::string_view kCreatedBySource2genMessage = {"Created using source2gen - github.com/neverlosecc/source2gen"};
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

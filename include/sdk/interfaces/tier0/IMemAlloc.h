@@ -1,4 +1,4 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
 
@@ -9,13 +9,13 @@
 class IMemAlloc {
 public:
     void* Alloc(std::size_t nSize) {
-        return Virtual::Get<void*(__thiscall*)(IMemAlloc*, std::size_t)>(this, 1)(this, nSize);
+        return Virtual::Get<void*(__thiscall*)(IMemAlloc*, std::size_t)>(this, platform_specific{.windows = 1, .linux = 2})(this, nSize);
     }
 
     void* AllocAligned(std::size_t nSize, std::size_t nAlign);
 
     void* Realloc(void* pMemory, std::size_t nSize) {
-        return Virtual::Get<void*(__thiscall*)(IMemAlloc*, void*, std::size_t)>(this, 2)(this, pMemory, nSize);
+        return Virtual::Get<void*(__thiscall*)(IMemAlloc*, void*, std::size_t)>(this, platform_specific{.windows = 2, .linux = 3})(this, pMemory, nSize);
     }
 
     void* ReallocAligned(void* pMemory, std::size_t nSize, std::size_t nAlign);
@@ -23,15 +23,15 @@ public:
     void* Calloc(std::size_t nNum, std::size_t nSize);
 
     void Free(void* pMemory) {
-        return Virtual::Get<void(__thiscall*)(IMemAlloc*, void*)>(this, 3)(this, pMemory);
+        return Virtual::Get<void(__thiscall*)(IMemAlloc*, void*)>(this, platform_specific{.windows = 3, .linux = 4})(this, pMemory);
     }
 
     void FreeAligned(void* pMemory);
 
-    size_t GetSizeAligned(void* pMemory);
+    [[nodiscard]] std::size_t GetSizeAligned(void* pMemory);
 
-    std::size_t GetSize(void* pMemory) {
-        return Virtual::Get<std::size_t(__thiscall*)(IMemAlloc*, void*)>(this, 17)(this, pMemory);
+    [[nodiscard]] std::size_t GetSize(void* pMemory) {
+        return Virtual::Get<std::size_t(__thiscall*)(IMemAlloc*, void*)>(this, platform_specific{.windows = 17, .linux = 18})(this, pMemory);
     }
 };
 
@@ -40,7 +40,7 @@ extern IMemAlloc* GetMemAlloc();
 #pragma warning(pop)
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

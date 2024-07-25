@@ -1,8 +1,10 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
+
 // ReSharper disable CppClangTidyClangDiagnosticLanguageExtensionToken
 #include "sdk/sdk.h"
 #include <filesystem>
+#include <list>
 #include <set>
 #include <string_view>
 
@@ -10,11 +12,11 @@ namespace {
     using namespace std::string_view_literals;
 
     constexpr std::string_view kOutDirName = "sdk"sv;
-    constinit std::array include_paths = {"<cstdint>"sv, "\"!GlobalTypes.hpp\""sv};
+    constinit std::array include_paths = {"<cstdint>"sv, R"("!GlobalTypes.hpp")"sv};
 
     constexpr uint32_t kMaxReferencesForClassEmbed = 2;
-    constexpr size_t kMinFieldCountForClassEmbed = 2;
-    constexpr size_t kMaxFieldCountForClassEmbed = 12;
+    constexpr std::size_t kMinFieldCountForClassEmbed = 2;
+    constexpr std::size_t kMaxFieldCountForClassEmbed = 12;
 
     constinit std::array string_metadata_entries = {
         FNV32("MNetworkChangeCallback"),
@@ -35,44 +37,63 @@ namespace {
         FNV32("MVectorIsSometimesCoordinate"),
         FNV32("MNetworkEncoder"),
         FNV32("MPropertyCustomFGDType"),
+        FNV32("MPropertyCustomEditor"),
         FNV32("MVDataUniqueMonotonicInt"),
         FNV32("MScriptDescription"),
+        FNV32("MPropertyAttributeSuggestionName"),
+        FNV32("MPropertyIconName"),
+        FNV32("MVDataOutlinerIcon"),
+        FNV32("MPropertyExtendedEditor"),
+        FNV32("MParticleReplacementOp"),
+        FNV32("MCustomFGDMetadata"),
+        FNV32("MCellForDomain"),
+        FNV32("MSrc1ImportDmElementType"),
+        FNV32("MSrc1ImportAttributeName"),
+        FNV32("MResourceBlockType"),
+        FNV32("MVDataOutlinerIconExpr"),
+        FNV32("MPropertyArrayElementNameKey"),
+        FNV32("MPropertyFriendlyName"),
+        FNV32("MPropertyDescription"),
+        FNV32("MNetworkExcludeByName"),
+        FNV32("MNetworkExcludeByUserGroup"),
+        FNV32("MNetworkIncludeByName"),
+        FNV32("MNetworkIncludeByUserGroup"),
+        FNV32("MNetworkUserGroupProxy"),
+        FNV32("MNetworkReplayCompatField"),
+        FNV32("MPulseProvideFeatureTag"),
+        FNV32("MPulseEditorHeaderIcon"),
     };
 
     constinit std::array string_class_metadata_entries = {
         FNV32("MResourceTypeForInfoType"),
+        FNV32("MDiskDataForResourceType"),
     };
 
     constinit std::array var_name_string_class_metadata_entries = {
-        FNV32("MNetworkVarNames"),
-        FNV32("MNetworkOverride"),
-        FNV32("MNetworkVarTypeOverride"),
-    };
-
-    constinit std::array var_string_class_metadata_entries = {
-        FNV32("MPropertyArrayElementNameKey"), FNV32("MPropertyFriendlyName"),      FNV32("MPropertyDescription"),
-        FNV32("MNetworkExcludeByName"),        FNV32("MNetworkExcludeByUserGroup"), FNV32("MNetworkIncludeByName"),
-        FNV32("MNetworkIncludeByUserGroup"),   FNV32("MNetworkUserGroupProxy"),     FNV32("MNetworkReplayCompatField"),
+        FNV32("MNetworkVarNames"),          FNV32("MNetworkOverride"),   FNV32("MNetworkVarTypeOverride"),
+        FNV32("MPulseCellOutflowHookInfo"), FNV32("MScriptDescription"), FNV32("MParticleDomainTag"),
     };
 
     constinit std::array integer_metadata_entries = {
         FNV32("MNetworkVarEmbeddedFieldOffsetDelta"),
         FNV32("MNetworkBitCount"),
         FNV32("MNetworkPriority"),
+        FNV32("MParticleOperatorType"),
         FNV32("MPropertySortPriority"),
         FNV32("MParticleMinVersion"),
         FNV32("MParticleMaxVersion"),
         FNV32("MNetworkEncodeFlags"),
+        FNV32("MResourceVersion"),
+        FNV32("MVDataNodeType"),
+        FNV32("MVDataOverlayType"),
+        FNV32("MAlignment"),
+        FNV32("MGenerateArrayKeynamesFirstIndex"),
     };
 
     constinit std::array float_metadata_entries = {
         FNV32("MNetworkMinValue"),
         FNV32("MNetworkMaxValue"),
     };
-
-    inline bool ends_with(const std::string& str, const std::string& suffix) {
-        return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
-    }
 
     // @note: @es3n1n: some more utils
     //
@@ -82,7 +103,33 @@ namespace {
         const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_szName);
 
         // clang-format off
-        if (std::ranges::find(string_metadata_entries, value_hash_name) != string_metadata_entries.end())
+        if (std::ranges::find(var_name_string_class_metadata_entries, value_hash_name) != var_name_string_class_metadata_entries.end())
+        {
+            const auto &var_value = metadata_entry.m_pNetworkValue->m_VarValue;
+            if (var_value.m_pszType && var_value.m_pszName)
+                value = std::format("{} {}", var_value.m_pszType, var_value.m_pszName);
+            else if (var_value.m_pszName && !var_value.m_pszType)
+                value = var_value.m_pszName;
+            else if (!var_value.m_pszName && var_value.m_pszType)
+                value = var_value.m_pszType;
+        }
+        else if (std::ranges::find(string_class_metadata_entries, value_hash_name) != string_class_metadata_entries.end())
+        {
+            auto clean_string = [](const std::string_view& input) {
+                std::string result;
+                for (const char &ch : input) {
+                    if (std::isalpha(static_cast<unsigned char>(ch))) {
+                        result += ch;
+                    } else {
+                        break;
+                    }
+                }
+                return result;
+            };
+
+            value = clean_string(metadata_entry.m_pNetworkValue->m_szValue.data());
+        }
+        else if (std::ranges::find(string_metadata_entries, value_hash_name) != string_metadata_entries.end())
             value = metadata_entry.m_pNetworkValue->m_pszValue;
         else if (std::ranges::find(integer_metadata_entries, value_hash_name) != integer_metadata_entries.end())
             value = std::to_string(metadata_entry.m_pNetworkValue->m_nValue);
@@ -101,7 +148,7 @@ namespace sdk {
                 .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetClassInfoBinaryName(class_info),
                                      g_schema->GetClassProjectName(class_info)))
                 .comment(std::format("Alignment: {}", class_info->GetAligment()))
-                .comment(std::format("Size: {:#x}", class_info->m_nSize));
+                .comment(std::format("Size: {:#x}", class_info->m_nSizeOf));
 
             if ((class_info->m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
                 builder.comment("Has VTable");
@@ -112,50 +159,32 @@ namespace sdk {
             if ((class_info->m_nClassFlags & SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR) != 0)
                 builder.comment("Has Trivial Destructor");
 
+#if defined(CS2) || defined(DOTA2)
+            if ((class_info->m_nClassFlags & SCHEMA_CF1_CONSTRUCT_ALLOWED) != 0)
+                builder.comment("Construct allowed");
+            if ((class_info->m_nClassFlags & SCHEMA_CF1_CONSTRUCT_DISALLOWED) != 0)
+                builder.comment("Construct disallowed");
+            if ((class_info->m_nClassFlags & SCHEMA_CF1_INFO_TAG_MConstructibleClassBase) != 0)
+                builder.comment("MConstructibleClassBase");
+            if ((class_info->m_nClassFlags & SCHEMA_CF1_INFO_TAG_MClassHasCustomAlignedNewDelete) != 0)
+                builder.comment("MClassHasCustomAlignedNewDelete");
+            if ((class_info->m_nClassFlags & SCHEMA_CF1_INFO_TAG_MClassHasEntityLimitedDataDesc) != 0)
+                builder.comment("MClassHasEntityLimitedDataDesc");
+            if ((class_info->m_nClassFlags & SCHEMA_CF1_INFO_TAG_MDisableDataDescValidation) != 0)
+                builder.comment("MDisableDataDescValidation");
+            if ((class_info->m_nClassFlags & SCHEMA_CF1_INFO_TAG_MIgnoreTypeScopeMetaChecks) != 0)
+                builder.comment("MIgnoreTypeScopeMetaChecks");
+            if ((class_info->m_nClassFlags & SCHEMA_CF1_INFO_TAG_MNetworkNoBase) != 0)
+                builder.comment("MNetworkNoBase");
+            if ((class_info->m_nClassFlags & SCHEMA_CF1_INFO_TAG_MNetworkAssumeNotNetworkable) != 0)
+                builder.comment("MNetworkAssumeNotNetworkable");
+#endif
+
             if (class_info->m_nStaticMetadataSize > 0)
                 builder.comment("");
 
-            auto get_metadata_type = [&](const SchemaMetadataEntryData_t metadata_entry) -> std::string {
-                std::string value;
-
-                const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_szName);
-
-                // clang-format off
-                if (std::ranges::find(var_name_string_class_metadata_entries, value_hash_name) != var_name_string_class_metadata_entries.end())
-                {
-                    const auto &var_value = metadata_entry.m_pNetworkValue->m_VarValue;
-                    if (var_value.m_pszType && var_value.m_pszName)
-                        value = std::format("{} {}", var_value.m_pszType, var_value.m_pszName);
-                    else if (var_value.m_pszName && !var_value.m_pszType)
-                        value = var_value.m_pszName;
-                    else if (!var_value.m_pszName && var_value.m_pszType)
-                        value = var_value.m_pszType;
-                 }
-                else if (std::ranges::find(string_class_metadata_entries, value_hash_name) != string_class_metadata_entries.end())
-                {
-                    auto clean_string = [](const std::string_view& input) {
-                        std::string result;
-                        for (const char &ch : input) {
-                            if (std::isalpha(static_cast<unsigned char>(ch))) {
-                                result += ch;
-                            } else {
-                                break;
-                            }
-                        }
-                        return result;
-                    };
-
-                    value = clean_string(metadata_entry.m_pNetworkValue->m_szValue.data());
-                }
-                else if (std::ranges::find(var_string_class_metadata_entries, value_hash_name) != var_string_class_metadata_entries.end())
-                    value = metadata_entry.m_pNetworkValue->m_pszValue;
-                // clang-format on
-
-                return value;
-            };
-
             for (const auto& metadata : class_info->GetStaticMetadata()) {
-                if (const auto value = get_metadata_type(metadata); !value.empty())
+                if (const auto value = GetMetadataValue(metadata); !value.empty())
                     builder.comment(std::format("{} \"{}\"", metadata.m_szName, value));
                 else
                     builder.comment(metadata.m_szName);
@@ -168,7 +197,7 @@ namespace sdk {
                                      g_schema->GetEnumProjectName(enum_binding)))
                 .comment(std::format("Enumerator count: {}", enum_binding->m_nEnumeratorCount))
                 .comment(std::format("Alignment: {}", enum_binding->m_unAlignOf))
-                .comment(std::format("Size: {:#x}", enum_binding->m_unSize));
+                .comment(std::format("Size: {:#x}", enum_binding->m_unSizeOf));
 
             if (enum_binding->m_nStaticMetadataSize > 0)
                 builder.comment("");
@@ -182,21 +211,21 @@ namespace sdk {
             for (auto schema_enum_binding : enums.GetElements()) {
                 // @note: @es3n1n: get type name by align size
                 //
-                const auto get_type_name = [schema_enum_binding]() [[msvc::forceinline]] {
+                const auto get_type_name = [schema_enum_binding]() -> std::string {
                     std::string type_storage;
 
                     switch (schema_enum_binding->m_unAlignOf) {
                     case 1:
-                        type_storage = "uint8_t";
+                        type_storage = "std::uint8_t";
                         break;
                     case 2:
-                        type_storage = "uint16_t";
+                        type_storage = "std::uint16_t";
                         break;
                     case 4:
-                        type_storage = "uint32_t";
+                        type_storage = "std::uint32_t";
                         break;
                     case 8:
-                        type_storage = "uint64_t";
+                        type_storage = "std::uint64_t";
                         break;
                     default:
                         type_storage = "INVALID_TYPE";
@@ -205,10 +234,6 @@ namespace sdk {
                     return type_storage;
                 };
 
-                // @todo: @es3n1n: assemble flags
-                //
-                // if (schema_enum_binding->m_flags_) out.print("// Flags: MEnumFlagsWithOverlappingBits\n");
-
                 // @note: @es3n1n: print meta info
                 //
                 PrintEnumInfo(builder, schema_enum_binding);
@@ -216,6 +241,27 @@ namespace sdk {
                 // @note: @es3n1n: begin enum class
                 //
                 builder.begin_enum_class(schema_enum_binding->m_pszName, get_type_name());
+
+                // @note: @og: build max based on numeric_limits of unAlignOf
+                //
+                const auto print_enum_item = [schema_enum_binding, &builder](const SchemaEnumeratorInfoData_t& field) {
+                    switch (schema_enum_binding->m_unAlignOf) {
+                    case 1:
+                        builder.enum_item(field.m_szName, field.m_uint8);
+                        break;
+                    case 2:
+                        builder.enum_item(field.m_szName, field.m_uint16);
+                        break;
+                    case 4:
+                        builder.enum_item(field.m_szName, field.m_uint32);
+                        break;
+                    case 8:
+                        builder.enum_item(field.m_szName, field.m_uint64);
+                        break;
+                    default:
+                        builder.enum_item(field.m_szName, field.m_uint64);
+                    }
+                };
 
                 // @note: @es3n1n: assemble enum items
                 //
@@ -231,7 +277,7 @@ namespace sdk {
                             builder.comment(std::format("{} \"{}\"", field_metadata.m_szName, data));
                     }
 
-                    builder.enum_item(field.m_szName, field.m_Uint == std::numeric_limits<std::size_t>::max() ? -1 : field.m_Uint);
+                    print_enum_item(field);
                 }
 
                 // @note: @es3n1n: we are done with this enum
@@ -242,9 +288,9 @@ namespace sdk {
 
         void AssembleClasses(CSchemaSystemTypeScope* current, codegen::generator_t::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
             struct class_t {
-                CSchemaClassInfo* target_;
+                CSchemaClassInfo* target_{};
                 std::set<CSchemaClassInfo*> refs_;
-                uint32_t used_count_;
+                uint32_t used_count_{};
                 std::list<std::pair<std::string, ptrdiff_t>> cached_fields_;
 
                 struct cached_datamap_t {
@@ -258,7 +304,7 @@ namespace sdk {
                     if (!target_->m_pBaseClassses)
                         return nullptr;
 
-                    return target_->m_pBaseClassses->m_pPrevByClass;
+                    return target_->m_pBaseClassses->m_pClass;
                 }
 
                 void AddRefToClass(CSchemaType* type) {
@@ -298,8 +344,8 @@ namespace sdk {
                 //
                 [[nodiscard]] std::ptrdiff_t ClassSizeWithoutParent() const {
                     if (const CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
-                        return this->target_->m_nSize - class_parent->m_nSize;
-                    return this->target_->m_nSize;
+                        return this->target_->m_nSizeOf - class_parent->m_nSizeOf;
+                    return this->target_->m_nSizeOf;
                 }
             };
 
@@ -309,7 +355,9 @@ namespace sdk {
             std::list<class_t> classes_to_dump;
             bool did_forward_decls = false;
 
-            for (const auto schema_class_binding : classes.GetElements()) {
+            for (const auto* schema_class_binding : classes.GetElements()) {
+                assert(schema_class_binding != nullptr);
+
                 const auto class_info = current->FindDeclaredClass(schema_class_binding->m_pszName);
 
                 auto& class_dump = classes_to_dump.emplace_back();
@@ -415,7 +463,7 @@ namespace sdk {
                 if (!type_name.empty() && !mods.empty())
                     return {type_name, mods};
 
-                return {type->m_pszName, {}};
+                return {std::string{type->m_pszName}, {}};
             };
 
             for (auto& class_dump : classes_to_dump) {
@@ -423,13 +471,13 @@ namespace sdk {
                 //
                 const auto class_parent = class_dump.GetParent();
                 const auto class_info = class_dump.target_;
-                const auto is_struct = ends_with(class_info->m_pszName, "_t");
+                const auto is_struct = std::string_view{class_info->m_pszName}.ends_with("_t");
                 PrintClassInfo(builder, class_info);
 
                 // @note: @es3n1n: get parent name
                 //
                 std::string parent_cls_name;
-                if (auto parent = class_info->m_pBaseClassses ? class_info->m_pBaseClassses->m_pPrevByClass : nullptr; parent)
+                if (auto parent = class_info->m_pBaseClassses ? class_info->m_pBaseClassses->m_pClass : nullptr; parent)
                     parent_cls_name = parent->m_pszName;
 
                 // @note: @es3n1n: start class
@@ -457,7 +505,7 @@ namespace sdk {
                 if (const auto first_field = class_dump.GetFirstField(); first_field)
                     first_field_offset = first_field->m_nSingleInheritanceOffset;
 
-                const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_nSize : 0;
+                const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_nSizeOf : 0;
 
                 std::ptrdiff_t expected_pad_size = first_field_offset.value_or(class_dump.ClassSizeWithoutParent());
                 if (expected_pad_size) // @note: @es3n1n: if there's a pad size we should account the parent class size
@@ -474,10 +522,10 @@ namespace sdk {
 
                 // @todo: @es3n1n: if for some mysterious reason this class describes fields
                 // of the base class we should handle it too.
-                if (class_parent && first_field_offset.has_value() && first_field_offset.value() < class_parent->m_nSize) {
+                if (class_parent && first_field_offset.has_value() && first_field_offset.value() < class_parent->m_nSizeOf) {
                     builder.comment(
-                        std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_nSize));
-                    state.collision_end_offset = class_parent->m_nSize;
+                        std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_nSizeOf));
+                    state.collision_end_offset = class_parent->m_nSizeOf;
                 }
 
                 // @note: @es3n1n: begin public members
@@ -634,7 +682,7 @@ namespace sdk {
                     const auto& dm = class_info->m_pFieldMetadataOverrides;
 
                     for (std::uint64_t s = 0; s < dm->m_iTypeDescriptionCount; s++) {
-                        auto t = &dm->m_pTypeDescription[s];
+                        auto* t = &dm->m_pTypeDescription[s];
                         if (!t)
                             continue;
 
@@ -691,10 +739,11 @@ namespace sdk {
     void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current) {
         // @note: @es3n1n: getting current scope name & formatting it
         //
-        constexpr std::string_view dll_extension = ".dll";
+        constexpr std::string_view module_file_prefix = platform_specific{.windows = "", .linux = "lib"}.get();
+        constexpr std::string_view module_file_suffix = platform_specific{.windows = ".dll", .linux = ".so"}.get();
         auto scope_name = current->BGetScopeName();
-        if (ends_with(scope_name, dll_extension.data()))
-            scope_name = scope_name.substr(0, scope_name.size() - dll_extension.size());
+        if (scope_name.ends_with(module_file_suffix))
+            scope_name = scope_name.substr(module_file_prefix.size(), scope_name.size() - (module_file_prefix.size() + module_file_suffix.size()));
 
         // @note: @es3n1n: print debug info
         //
@@ -704,7 +753,7 @@ namespace sdk {
         //
         if (!std::filesystem::exists(kOutDirName))
             std::filesystem::create_directories(kOutDirName);
-        const std::string out_file_path = std::format("{}\\{}.hpp", kOutDirName, scope_name);
+        const std::string out_file_path = std::format("{}/{}.hpp", kOutDirName, scope_name);
 
         // @note: @es3n1n: init codegen
         //
@@ -742,12 +791,19 @@ namespace sdk {
         //
         std::ofstream f(out_file_path, std::ios::out);
         f << builder.str();
-        f.close();
+        if (f.bad()) {
+            std::cerr << std::format("Could not write to {}: {}", out_file_path, std::strerror(errno)) << std::endl;
+            // This std::exit() is bad. Instead, we could return the dumped
+            // header name and content to the caller in a std::expected. Let the
+            // caller write the file. That would also allow the caller to choose
+            // the output directory and handle errors.
+            std::exit(1);
+        }
     }
 } // namespace sdk
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
