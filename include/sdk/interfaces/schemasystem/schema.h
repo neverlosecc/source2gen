@@ -8,6 +8,7 @@
 #include <sdk/interfaces/common/CBufferString.h>
 #include <sdk/interfaces/common/CUtlMap.h>
 #include <sdk/interfaces/common/CUtlTSHash.h>
+#include <tools/platform.h>
 #include <tools/virtual.h>
 #include <vector>
 
@@ -121,10 +122,10 @@ enum {
     #error unimplemented
 #elif defined(THE_LAB_ROBOT_REPAIR)
     #error unimplemented
-#elif defined(DOTA2)
+#elif defined(DOTA2) || defined(CS2)
 
-constexpr auto kSchemaSystemVersion = 2;
-constexpr auto kSchemaSystem_PAD0 = 0x188;
+constexpr auto kSchemaSystemVersion = platform_specific{.windows = 2, .linux = 1}.get();
+constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x188, .linux = 0x188 + 0x68}.get();
 constexpr auto kSchemaSystem_PAD1 = 0x120;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
@@ -141,7 +142,7 @@ enum {
     kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
 };
 
-#elif defined(CS2)
+#elif defined(CS2_OLD)
 
 /// Some functions differ between games and platforms. At least for now, 2 has
 /// return-value-optimization, 1 doesn't.
@@ -749,10 +750,16 @@ class CSchemaPtrMap {
 public:
     CUtlMap<K, V> m_Map;
 
-#if !defined(DOTA2)
+#if TARGET_OS == LINUX
+    char pad_0x28[0x08];
+#endif
+
+#if !defined(DOTA2) && !defined(CS2)
     CThreadFastMutex m_Mutex;
 #endif
 };
+
+static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x28, .linux = 0x30}.get());
 
 class CSchemaSystemTypeScope {
 public:
@@ -875,14 +882,13 @@ private:
     CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT; // 0x03A8
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_CollectionOfT*> m_AtomicsCollectionOfT; // 0x03D8
-
-#if defined(CS2)
+#if defined(CS2_OLD)
     CSchemaPtrMap<AtomicTypeInfo_TF_t, CSchemaType_Atomic_TF*> m_AtomicsTF; // 0x0408
 #endif
 
     CSchemaPtrMap<AtomicTypeInfo_TT_t, CSchemaType_Atomic_TT*> m_AtomicsTT; // 0x0438
 
-#if defined(CS2)
+#if defined(CS2_OLD)
     CSchemaPtrMap<AtomicTypeInfo_TTF_t, CSchemaType_Atomic_TTF*> m_AtomicsTTF; // 0x0468
 #endif
 

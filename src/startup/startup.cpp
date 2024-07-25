@@ -113,6 +113,7 @@ namespace source2_gen {
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk
         const auto type_scopes = sdk::g_schema->GetTypeScopes();
+        assert(type_scopes.Count() > 0 && "sdk is outdated");
         for (auto i = 0; i < type_scopes.Count(); ++i)
             sdk::GenerateTypeScopeSdk(type_scopes.m_pElements[i]);
 

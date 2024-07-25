@@ -343,6 +343,8 @@ protected:
     }
 };
 
+static_assert(sizeof(CUtlRBTree<int>) == 0x28);
+
 template <class T, class I, typename L, class M>
 inline void CUtlRBTree<T, I, L, M>::EnsureCapacity(int num) {
     m_Elements.EnsureCapacity(num);

@@ -249,10 +249,13 @@ public:
         CThreadSpinRWLock m_AddLock; // 0x0000
         HashFixedData_t* m_pFirst; // 0x0020
         HashFixedData_t* m_pFirstUncommitted; // 0x0020
+        IF_LINUX(char pad_0x20[0x08];)
     }; // Size: 0x0028
-    static_assert(sizeof(HashBucket_t) == 0x28);
+    static_assert(sizeof(HashBucket_t) == 0x30);
 
     CUtlMemoryPoolBase m_EntryMemory;
+
+    IF_LINUX(char pad[0x04]);
     std::array<HashBucket_t, BucketCount> m_aBuckets;
     bool m_bNeedsCommit{};
     CInterlockedInt m_ContentionCheck;
