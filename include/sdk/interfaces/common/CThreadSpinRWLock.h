@@ -1,6 +1,5 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
-
 #pragma once
 
 #include "sdk/interfaces/common/CThreadMutex.h"

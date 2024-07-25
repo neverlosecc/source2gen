@@ -611,7 +611,8 @@ public:
     std::uint8_t m_unAlignOf; // 0x0022
 
     std::int8_t m_nBaseClassSize; // 0x0023
-    std::int16_t m_nMultipleInheritanceDepth; // 0x0024 // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
+    std::int16_t
+        m_nMultipleInheritanceDepth; // 0x0024 // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
     std::int16_t m_nSingleInheritanceDepth; // 0x0026
 
     SchemaClassFieldData_t* m_pFields; // 0x0028
@@ -882,6 +883,7 @@ private:
     CSchemaPtrMap<int, CSchemaType_Atomic*> m_Atomics; // 0x0378
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_T*> m_AtomicsT; // 0x03A8
     CSchemaPtrMap<AtomicTypeInfo_T_t, CSchemaType_Atomic_CollectionOfT*> m_AtomicsCollectionOfT; // 0x03D8
+
 #if defined(CS2_OLD)
     CSchemaPtrMap<AtomicTypeInfo_TF_t, CSchemaType_Atomic_TF*> m_AtomicsTF; // 0x0408
 #endif
