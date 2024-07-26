@@ -6,9 +6,13 @@
 #include "options.hpp"
 #include <array>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <tools/loader/loader.h>
 #include <tools/platform.h>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 
 namespace {
     [[nodiscard]] auto get_required_modules() {
@@ -51,7 +55,57 @@ namespace {
 } // namespace
 
 namespace source2_gen {
-    bool Dump(Options const options) try {
+    struct module_dump {
+        std::unordered_set<const CSchemaEnumBinding*> enums{};
+        std::unordered_set<const CSchemaClassBinding*> classes{};
+    };
+
+    /// @return Key is the module name
+    std::unordered_map<std::string, module_dump> collect_modules(std::span<CSchemaSystemTypeScope*> type_scopes) {
+        struct unique_module_dump {
+            /// Key is the enum name. Used for de-duplication.
+            std::unordered_map<std::string, CSchemaEnumBinding*> enums{};
+            /// Key is the class name. Used for de-duplication.
+            std::unordered_map<std::string, CSchemaClassBinding*> classes{};
+        };
+
+        // Key is the module name, e.g. SchemaEnumInfoData_t::m_pszModule.
+        std::unordered_map<std::string, unique_module_dump> dumped_modules{};
+
+        for (const auto* current_scope : type_scopes) {
+            auto current_enums = current_scope->GetEnumBindings();
+            for (auto el : current_enums.GetElements()) {
+                auto& dump{dumped_modules.emplace(el->m_pszModule, unique_module_dump{}).first->second};
+                dump.enums.emplace(el->m_pszName, el);
+            }
+
+            auto current_classes = current_scope->GetClassBindings();
+            for (auto el : current_classes.GetElements()) {
+                auto& dump{dumped_modules.emplace(el->m_pszModule, unique_module_dump{}).first->second};
+                dump.classes.emplace(el->m_pszName, el);
+            }
+        }
+
+        std::unordered_map<std::string, module_dump> result{};
+
+        for (const auto& [module_name, unique_dump] : dumped_modules) {
+            constexpr auto to_set = [](const auto& pair) {
+                return pair.second;
+            };
+
+            module_dump dump{};
+
+            std::ranges::transform(unique_dump.enums, std::inserter(dump.enums, dump.enums.end()), to_set);
+
+            std::ranges::transform(unique_dump.classes, std::inserter(dump.classes, dump.classes.end()), to_set);
+
+            result.emplace(module_name, dump);
+        }
+
+        return result;
+    }
+
+    bool Dump(const Options options) try {
         // set up the allocator before anything else. we can't use allocating
         // C++ functions without it.
         const auto loaded = loader::load_module(LOADER_GET_MODULE_FILE_NAME("tier0"));
@@ -116,15 +170,11 @@ namespace source2_gen {
         const auto type_scopes = sdk::g_schema->GetTypeScopes();
         assert(type_scopes.Count() > 0 && "sdk is outdated");
 
-        // TODO: remove
-        std::vector<std::pair<std::string, std::string>> defined_types{};
+        const std::unordered_map all_modules = collect_modules(std::span{type_scopes.m_pElements, static_cast<std::size_t>(type_scopes.m_Size)});
 
-        for (auto i = 0; i < type_scopes.Count(); ++i)
-            sdk::GenerateTypeScopeSdk(defined_types, type_scopes.m_pElements[i], options);
-
-        // @note: @es3n1n: Generating sdk for global type scope
-        //
-        sdk::GenerateTypeScopeSdk(defined_types, sdk::g_schema->GlobalTypeScope(), options);
+        for (const auto& [module_name, dump] : all_modules) {
+            sdk::GenerateTypeScopeSdk(options, module_name, dump.enums, dump.classes);
+        }
 
         std::cout << std::format("Schema stats: {} registrations; {} were redundant; {} were ignored ({} bytes of ignored data)",
                                  util::PrettifyNum(sdk::g_schema->GetRegistration()), util::PrettifyNum(sdk::g_schema->GetRedundant()),

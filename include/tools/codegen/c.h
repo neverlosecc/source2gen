@@ -45,11 +45,20 @@ namespace codegen {
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
-            include("<source2gen_user_types.h>");
-            include("<stdbool.h>");
-            include("<stdint.h>");
+            include("source2gen_user_types", IncludeOptions{.local = true});
+            include("stdbool", IncludeOptions{.local = false});
+            include("stdint", IncludeOptions{.local = false});
 
             return *this;
+        }
+
+        self_ref include(std::string_view module_or_file_name, IncludeOptions options) override {
+            const auto open_bracket = options.local ? '"' : '<';
+            const auto close_bracket = options.local ? '"' : '>';
+            // ignore options.system because C system headers have file extensions
+            const auto maybe_file_extension = ("." + get_file_extension());
+
+            return push_line(std::format("#include {}{}{}{}", open_bracket, module_or_file_name, maybe_file_extension, close_bracket));
         }
 
         self_ref next_line() override {
@@ -244,11 +253,6 @@ namespace codegen {
         }
 
     private:
-        /// @param item Including brackets
-        self_ref include(std::string_view item) {
-            return push_line(std::format("#include {}", item));
-        }
-
         self_ref begin_block(const std::string& text, const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) {
             push_line(text, move_cursor_to_next_line);
 

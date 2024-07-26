@@ -39,6 +39,18 @@ namespace codegen {
         bool move_cursor_to_next_line{true};
     };
 
+    struct IncludeOptions {
+        /**
+         * Treat the included file as a local file, e.g. in C++ use quoatation marks for includes.
+         */
+        bool local{false};
+
+        /**
+         * Treat the included file as a system file, e.g. in C++ don't add a file extension.
+         */
+        bool system{false};
+    };
+
     struct IGenerator {
         using self_ref = IGenerator&;
 
@@ -77,6 +89,8 @@ namespace codegen {
          * preambles, such as header guards in C.
          */
         virtual self_ref preamble() = 0;
+
+        virtual self_ref include(std::string_view module_or_file_name, IncludeOptions options) = 0;
 
         virtual self_ref next_line() = 0;
 

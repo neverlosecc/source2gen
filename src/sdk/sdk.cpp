@@ -9,8 +9,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <list>
-#include <set>
 #include <string_view>
+#include <unordered_set>
 
 namespace {
     using namespace std::string_view_literals;
@@ -147,11 +147,7 @@ namespace {
 namespace sdk {
     namespace {
         void PrintClassInfo(codegen::IGenerator::self_ref builder, CSchemaClassBinding* class_info) {
-            builder
-                .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetClassInfoBinaryName(class_info),
-                                     g_schema->GetClassProjectName(class_info)))
-                .comment(std::format("Alignment: {}", class_info->GetAligment()))
-                .comment(std::format("Size: {:#x}", class_info->m_nSizeOf));
+            builder.comment(std::format("Alignment: {}", class_info->GetAligment())).comment(std::format("Size: {:#x}", class_info->m_nSizeOf));
 
             if ((class_info->m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
                 builder.comment("Has VTable");
@@ -194,11 +190,8 @@ namespace sdk {
             }
         }
 
-        void PrintEnumInfo(codegen::IGenerator::self_ref builder, CSchemaEnumBinding* enum_binding) {
-            builder
-                .comment(std::format("Registered binary: {} (project '{}')", g_schema->GetEnumBinaryName(enum_binding),
-                                     g_schema->GetEnumProjectName(enum_binding)))
-                .comment(std::format("Enumerator count: {}", enum_binding->m_nEnumeratorCount))
+        void PrintEnumInfo(codegen::IGenerator::self_ref builder, const CSchemaEnumBinding* enum_binding) {
+            builder.comment(std::format("Enumerator count: {}", enum_binding->m_nEnumeratorCount))
                 .comment(std::format("Alignment: {}", enum_binding->m_unAlignOf))
                 .comment(std::format("Size: {:#x}", enum_binding->m_unSizeOf));
 
@@ -210,18 +203,8 @@ namespace sdk {
             }
         }
 
-        void AssembleEnums(std::vector<std::pair<std::string, std::string>>& defined_types, codegen::IGenerator::self_ref builder,
-                           CUtlTSHash<CSchemaEnumBinding*> enums) {
-            for (auto schema_enum_binding : enums.GetElements()) {
-
-                const auto found{std::ranges::find(defined_types, schema_enum_binding->m_pszName, &std::pair<std::string, std::string>::second)};
-                if (found != defined_types.end()) {
-                    std::cout << std::format("enum {} was already defined\n", schema_enum_binding->m_pszName);
-                    continue;
-                } else {
-                    defined_types.emplace_back("", schema_enum_binding->m_pszName);
-                }
-
+        void AssembleEnums(codegen::IGenerator::self_ref builder, const std::unordered_set<const CSchemaEnumBinding*>& enums) {
+            for (auto schema_enum_binding : enums) {
                 // @note: @es3n1n: get type name by align size
                 //
                 const auto get_type_name = [&builder, schema_enum_binding]() -> std::string {
@@ -296,8 +279,63 @@ namespace sdk {
             }
         }
 
-        void AssembleClasses(std::vector<std::pair<std::string, std::string>>& defined_types, source2_gen::Options options,
-                             CSchemaSystemTypeScope* current, codegen::IGenerator::self_ref builder, CUtlTSHash<CSchemaClassBinding*> classes) {
+        /// @return {type_name, array_sizes}
+        auto parse_array(CSchemaType* type) -> std::pair<std::string, std::vector<std::size_t>> {
+            const auto ptr = type->GetRefClass();
+            const auto actual_type = ptr ? ptr : type;
+
+            std::string base_type;
+            std::vector<std::size_t> sizes;
+
+            if (actual_type->GetTypeCategory() == ETypeCategory::Schema_FixedArray) {
+                // dump all sizes.
+                auto schema = reinterpret_cast<CSchemaType_FixedArray*>(actual_type);
+                while (true) {
+                    sizes.emplace_back(schema->m_nElementCount);
+                    schema = reinterpret_cast<CSchemaType_FixedArray*>(schema->m_pElementType);
+
+                    if (schema->GetTypeCategory() != ETypeCategory::Schema_FixedArray) {
+                        base_type = schema->m_pszName;
+                        break;
+                    }
+                }
+            }
+
+            return {base_type, sizes};
+        };
+
+        /// @return @ref std::nullopt if the type is not contained in a module, e.g. because it is a built-in type
+        auto get_module(CSchemaType* type) -> std::optional<std::string> {
+            if (type->m_pTypeScope != nullptr) {
+                if (const auto* class_ = type->m_pTypeScope->FindDeclaredClass(type->m_pszName)) {
+                    return class_->m_pszModule;
+                } else if (const auto* enum_ = type->m_pTypeScope->FindDeclaredEnum(type->m_pszName)) {
+                    return enum_->m_pszModule;
+                }
+            }
+
+            return std::nullopt;
+        };
+
+        /// @return {type_name, array_sizes} where type_name is a fully qualified name
+        auto get_type(CSchemaType* type) -> std::pair<std::string, std::vector<std::size_t>> {
+            const auto maybe_with_module_name = [type](const auto& type_name) {
+                return get_module(type)
+                    .transform([&](const auto module_name) { return std::format("{}::{}", module_name, type_name); })
+                    .value_or(type_name);
+            };
+            const auto [type_name, array_sizes] = parse_array(type);
+
+            assert(type_name.empty() == array_sizes.empty());
+
+            if (!type_name.empty() && !array_sizes.empty())
+                return {maybe_with_module_name(type_name), array_sizes};
+
+            return {maybe_with_module_name(type->m_pszName), {}};
+        };
+
+        void AssembleClasses(source2_gen::Options options, codegen::IGenerator::self_ref builder,
+                             const std::unordered_set<const CSchemaClassBinding*>& classes) {
             struct class_t {
                 CSchemaClassInfo* target_{};
                 std::set<CSchemaClassInfo*> refs_;
@@ -322,13 +360,6 @@ namespace sdk {
                     if (type->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
                         refs_.insert(reinterpret_cast<CSchemaType_DeclaredClass*>(type)->m_pClassInfo);
                     }
-
-                    // auto ptr = type->GetRefClass();
-                    // if (ptr && ptr->m_nTypeCategory == Schema_DeclaredClass)
-                    // {
-                    // 	refs_.insert(ptr->m_pClassInfo);
-                    // 	return;
-                    // }
                 }
 
                 [[nodiscard]] bool IsDependsOn(const class_t& other) const {
@@ -366,10 +397,10 @@ namespace sdk {
             std::list<class_t> classes_to_dump;
             bool did_forward_decls = false;
 
-            for (const auto* schema_class_binding : classes.GetElements()) {
+            for (const auto* schema_class_binding : classes) {
                 assert(schema_class_binding != nullptr);
 
-                const auto class_info = current->FindDeclaredClass(schema_class_binding->m_pszName);
+                const auto class_info = schema_class_binding->m_pTypeScope->FindDeclaredClass(schema_class_binding->m_pszName);
 
                 auto& class_dump = classes_to_dump.emplace_back();
                 class_dump.target_ = class_info;
@@ -440,56 +471,11 @@ namespace sdk {
             } while (did_change);
             // ==================
 
-            // returns {type_name, array_sizes}
-            auto parse_array = [&](CSchemaType* type) -> std::pair<std::string, std::vector<std::size_t>> {
-                const auto ptr = type->GetRefClass();
-                const auto actual_type = ptr ? ptr : type;
-
-                std::string base_type;
-                std::vector<std::size_t> sizes;
-
-                if (actual_type->GetTypeCategory() == ETypeCategory::Schema_FixedArray) {
-                    // dump all sizes.
-                    auto schema = reinterpret_cast<CSchemaType_FixedArray*>(actual_type);
-                    while (true) {
-                        sizes.emplace_back(schema->m_nElementCount);
-                        schema = reinterpret_cast<CSchemaType_FixedArray*>(schema->m_pElementType);
-
-                        if (schema->GetTypeCategory() != ETypeCategory::Schema_FixedArray) {
-                            base_type = schema->m_pszName;
-                            break;
-                        }
-                    }
-                }
-
-                return {base_type, sizes};
-            };
-
-            // returns {type_name, array_sizes}
-            auto get_type = [&](CSchemaType* type) -> std::pair<std::string, std::vector<std::size_t>> {
-                auto [type_name, mods] = parse_array(type);
-
-                assert(type_name.empty() == mods.empty());
-
-                if (!type_name.empty() && !mods.empty())
-                    return {type_name, mods};
-
-                return {std::string{type->m_pszName}, {}};
-            };
-
             for (auto& class_dump : classes_to_dump) {
                 // @note: @es3n1n: get class info, assemble it
                 //
                 const auto class_parent = class_dump.GetParent();
                 const auto class_info = class_dump.target_;
-
-                const auto found{std::ranges::find(defined_types, class_info->GetName(), &std::pair<std::string, std::string>::second)};
-                if (found != defined_types.end()) {
-                    std::cout << std::format("in {}: {} was already defined in {}\n", current->GetScopeName(), class_info->GetName(), found->first);
-                    continue;
-                } else {
-                    defined_types.emplace_back(current->GetScopeName(), class_info->GetName());
-                }
 
                 const auto is_struct = std::string_view{class_info->m_pszName}.ends_with("_t");
                 PrintClassInfo(builder, class_info);
@@ -571,8 +557,8 @@ namespace sdk {
 
                     // @note: @es3n1n: parsing type
                     //
-                    const auto [type, mod] = get_type(field.m_pSchemaType);
-                    const auto var_info = field_parser::parse(builder, type, field.m_pszName, mod);
+                    const auto [type_name, array_sizes] = get_type(field.m_pSchemaType);
+                    const auto var_info = field_parser::parse(builder, type_name, field.m_pszName, array_sizes);
 
                     // @note: @es3n1n: insert padding if needed
                     //
@@ -645,7 +631,7 @@ namespace sdk {
 
                     // if this prop is a non-pointer class, check if its worth directly embedding the accumulated offset of it into the metadata
                     auto prop_class =
-                        std::ranges::find_if(classes_to_dump, [type](const class_t& cls) { return cls.target_->GetName().compare(type) == 0; });
+                        std::ranges::find_if(classes_to_dump, [type_name](const class_t& cls) { return cls.target_->GetName().compare(type_name) == 0; });
                     if (prop_class != classes_to_dump.end()) {
                         // verify for min/max fields count, we don't want to bloat the dump by embeding too much stuff
                         if (prop_class->cached_fields_.size() >= kMinFieldCountForClassEmbed &&
@@ -711,12 +697,16 @@ namespace sdk {
                         builder.comment("Static fields:");
                     }
 
+                    // The current class may be defined in multiple scopes. It doesn't matter which one we use, as all definitions are the same..
+                    // TODO: verify the above statement. Are static fields really shared between scopes?
+                    const std::string scope_name{class_info->m_pTypeScope->BGetScopeName()};
+
                     for (auto s = 0; s < class_info->m_nStaticFieldsSize; s++) {
                         auto static_field = &class_info->m_pStaticFields[s];
 
                         auto [type, mod] = get_type(static_field->m_pSchemaType);
                         const auto var_info = field_parser::parse(builder, type, static_field->m_pszName, mod);
-                        builder.static_field_getter(var_info.m_type, var_info.m_name, current->BGetScopeName(), class_info->m_pszName, s);
+                        builder.static_field_getter(var_info.m_type, var_info.m_name, scope_name, class_info->m_pszName, s);
                     }
                 }
 
@@ -771,15 +761,6 @@ namespace sdk {
             }
         }
 
-        template <typename Ty = CSchemaClassBinding>
-        std::string StringifyUtlTsHashCount(const CUtlTSHashV1<Ty>& item) {
-            return util::PrettifyNum(item.PeakAlloc());
-        }
-
-        template <typename Ty = CSchemaClassBinding>
-        std::string StringifyUtlTsHashCount(const CUtlTSHashV2<Ty>& item) {
-            return std::format("{} (Allocated) | {} (Unallocated)", util::PrettifyNum(item.BlocksAllocated()), util::PrettifyNum(item.PeakAlloc()));
-        }
     } // namespace
 
     std::unique_ptr<codegen::IGenerator> get_generator_for_language(source2_gen::Language language) {
@@ -794,24 +775,50 @@ namespace sdk {
         std::abort();
     }
 
-    void GenerateTypeScopeSdk(std::vector<std::pair<std::string, std::string>>& defined_types, CSchemaSystemTypeScope* current,
-                              source2_gen::Options options) {
-        // @note: @es3n1n: getting current scope name & formatting it
-        //
-        constexpr std::string_view module_file_prefix = platform_specific{.windows = "", .linux = "lib"}.get();
-        constexpr std::string_view module_file_suffix = platform_specific{.windows = ".dll", .linux = ".so"}.get();
-        auto scope_name = current->BGetScopeName();
-        if (scope_name.ends_with(module_file_suffix))
-            scope_name = scope_name.substr(module_file_prefix.size(), scope_name.size() - (module_file_prefix.size() + module_file_suffix.size()));
+    /// @param exclude_module_name will not be contained in the return value
+    /// @return All modules that are required by properties of @p classes
+    std::set<std::string> find_required_modules_of_class(std::string_view exclude_module_name, const CSchemaClassBinding& class_) {
+        std::set<std::string> modules{};
 
+        for (const auto& field : std::span{class_.m_pFields, static_cast<std::size_t>(class_.m_nFieldSize)}) {
+            if (const auto module = get_module(field.m_pSchemaType)) {
+                modules.emplace(module.value());
+            }
+        }
+
+        for (const auto& field : std::span{class_.m_pStaticFields, static_cast<std::size_t>(class_.m_nStaticFieldsSize)}) {
+            if (const auto module = get_module(field.m_pSchemaType)) {
+                modules.emplace(module.value());
+            }
+        }
+
+        if (const auto found = modules.find(std::string{exclude_module_name}); found != modules.end()) {
+            modules.erase(found);
+        }
+
+        return modules;
+    }
+
+    /// @param exclude_module_name will not be contained in the return value
+    /// @return All modules that are required by properties of @p classes
+    std::set<std::string> find_required_modules(std::string_view exclude_module_name, const std::unordered_set<const CSchemaClassBinding*>& classes) {
+        std::set<std::string> modules{};
+
+        for (const auto& class_ : classes) {
+            assert(class_ != nullptr);
+
+            const auto partial = find_required_modules_of_class(exclude_module_name, *class_);
+            modules.insert(partial.begin(), partial.end());
+        }
+
+        return modules;
+    }
+
+    void GenerateTypeScopeSdk(source2_gen::Options options, std::string_view module_name, const std::unordered_set<const CSchemaEnumBinding*>& enums,
+                              const std::unordered_set<const CSchemaClassBinding*>& classes) {
         // @note: @es3n1n: print debug info
         //
-        std::cout << std::format("{}: Assembling {}", __FUNCTION__, scope_name) << std::endl;
-
-        // @note: @es3n1n: build file path
-        //
-        if (!std::filesystem::exists(kOutDirName))
-            std::filesystem::create_directories(kOutDirName);
+        std::cout << std::format("{}: Assembling {}", __FUNCTION__, module_name) << std::endl;
 
         // @note: @es3n1n: init codegen
         //
@@ -820,31 +827,39 @@ namespace sdk {
 
         builder.preamble();
 
-        // @note: @es3n1n: get stuff from schema that we'll use later
-        // @todo @es3n1n: consider moving these to heap as they're too damn large
+        // @note: @es3n1n: include files
         //
-        const auto current_classes = current->GetClassBindings();
-        const auto current_enums = current->GetEnumBindings();
+        for (const auto& required_module : find_required_modules(module_name, classes)) {
+            builder.include(required_module, codegen::IncludeOptions{.local = true, .system = false});
+        }
 
         // @note: @es3n1n: print banner
         //
         builder.next_line()
             .comment("/////////////////////////////////////////////////////////////")
-            .comment(std::format("Binary: {}", current->GetScopeName()))
-            .comment(std::format("Classes count: {}", StringifyUtlTsHashCount(current_classes)))
-            .comment(std::format("Enums count: {}", StringifyUtlTsHashCount(current_enums)))
-            .comment(kCreatedBySource2genMessage.data())
+            .comment(std::format("Module: {}", module_name))
+            .comment(std::format("Classes count: {}", classes.size()))
+            .comment(std::format("Enums count: {}", enums.size()))
+            .comment(std::string{kCreatedBySource2genMessage})
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();
 
+        builder.begin_namespace(std::format("source2sdk::{}", module_name));
+
         // @note: @es3n1n: assemble props
         //
-        AssembleEnums(defined_types, builder, current_enums);
-        AssembleClasses(defined_types, options, current, builder, current_classes);
+        AssembleEnums(builder, enums);
+        AssembleClasses(options, builder, classes);
+
+        builder.end_namespace();
 
         // @note: @es3n1n: write generated data to output file
         //
-        const std::string out_file_path = std::format("{}/{}.{}", kOutDirName, scope_name, builder.get_file_extension());
+        if (!std::filesystem::exists(kOutDirName))
+            std::filesystem::create_directories(kOutDirName);
+
+        const std::string out_file_path = std::format("{}/{}.{}", kOutDirName, module_name, builder.get_file_extension());
+
         std::ofstream f(out_file_path, std::ios::out);
         f << builder.str();
         if (f.bad()) {

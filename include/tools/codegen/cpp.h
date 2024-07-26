@@ -48,11 +48,18 @@ namespace codegen {
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
-            include("\"!GlobalTypes.hpp\"");
-            include("<source2gen_user_types.hpp>");
-            include("<cstdint>");
+            include("source2gen_user_types", IncludeOptions{.local = true, .system = false});
+            include("cstdint", IncludeOptions{.local = false, .system = true});
 
             return *this;
+        }
+
+        self_ref include(std::string_view module_or_file_name, IncludeOptions options) override {
+            const auto open_bracket = options.local ? '"' : '<';
+            const auto close_bracket = options.local ? '"' : '>';
+            const auto maybe_file_extension = options.system ? "" : ("." + get_file_extension());
+
+            return push_line(std::format("#include {}{}{}{}", open_bracket, module_or_file_name, maybe_file_extension, close_bracket));
         }
 
         self_ref next_line() override {
@@ -226,11 +233,6 @@ namespace codegen {
         }
 
     private:
-        /// @param item Including brackets
-        self_ref include(std::string_view item) {
-            return push_line(std::format("#include {}", item));
-        }
-
         self_ref begin_block(const std::string& text, const std::string& access_modifier = "", const bool increment_tabs_count = true,
                              const bool move_cursor_to_next_line = true) {
             push_line(text, move_cursor_to_next_line);
