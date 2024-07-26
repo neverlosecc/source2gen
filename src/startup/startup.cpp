@@ -74,14 +74,12 @@ namespace source2_gen {
         for (const auto* current_scope : type_scopes) {
             auto current_enums = current_scope->GetEnumBindings();
             for (auto el : current_enums.GetElements()) {
-                // TOOD: this is an expensive get_or_default()
                 auto& dump{dumped_modules.emplace(el->m_pszModule, unique_module_dump{}).first->second};
                 dump.enums.emplace(el->m_pszName, el);
             }
 
             auto current_classes = current_scope->GetClassBindings();
             for (auto el : current_classes.GetElements()) {
-                // TOOD: this is an expensive get_or_default()
                 auto& dump{dumped_modules.emplace(el->m_pszModule, unique_module_dump{}).first->second};
                 dump.classes.emplace(el->m_pszName, el);
             }
