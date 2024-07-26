@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
 using CAnimVariant = char[0x14];
 using CBufferString = char[0x10];
@@ -52,7 +52,7 @@ using FourVectors = char[0x30];
 using HSCRIPT = char[0x08];
 using KeyValues3 = char[0x10];
 // size doesn't mapper. only used as a pointer
-using KeyValues = char[0x00];
+using KeyValues = char[0x01];
 using QAngle = char[0x0c];
 using QuaternionStorage = char[0x10];
 using Quaternion = char[0x10];
@@ -70,4 +70,4 @@ using matrix3x4_t = char[0x30];
 using matrix3x4a_t = char[0x30];
 using uint256_t = char[0x20];
 
-using uint8 = uint8_t; // TOOD: happens in CUtlVector<unit8>. how to fix?
+using uint8 = std::uint8_t; // TOOD: happens in CUtlVector<unit8>. how to fix?
