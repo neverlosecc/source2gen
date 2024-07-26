@@ -110,4 +110,5 @@ target_compile_definitions(source2gen PRIVATE
     "NOMINMAX"
     "WIN32_LEAN_AND_MEAN"
     "_WIN32_WINNT=0x601"
+    "__cpp_lib_expected" # Because clangd-18 + GLIBCXX_3.4.33 doesn't know std::expected. This is a hack to make the language server work.
 )
