@@ -1,3 +1,9 @@
+TOOD: remove
+
+- add missing types as dummies
+- add empty `interfaces` sdk
+- sort template classes below their template types
+
 # Source2Gen
 
 Source2Gen is a tool to generate Source 2 SDKs. \
@@ -15,6 +21,7 @@ can use the registry to find the game path and set `PATH` automatically.
 
 ```sh
 source2gen
+copy .\sdk-dummy\source2gen_user_types.hpp .\sdk
 # view generated sdk
 dir .\sdk
 ```
@@ -23,6 +30,7 @@ dir .\sdk
 
 ```sh
 ./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/"
+pc ./sdk-dummy/source2gen_user_types.hpp ./sdk
 # view generated sdk
 ls ./sdk
 ```
@@ -38,6 +46,14 @@ Source2Gen for Linux support is currently in an alpha state. There will be
 errors, bugs, and wrong output. Please only file issues if you want to work on
 them. This note will be removed once we have thoroughly tested Source2Gen on
 Linux.
+
+### Using the generated SDK
+
+The sdk depends on a file/module called "source2gen_user_types". This file has
+to be provided by the user and expose all types listed in
+[source2gen_user_types.hpp](sdk-dummy/source2gen_user_types.hpp). If you don't
+intend to access any of these types, you can use the dummy
+[source2gen_user_types.hpp](sdk-dummy/source2gen_user_types.hpp).
 
 ## Getting Started
 
@@ -74,7 +90,7 @@ or
 You can use premake5 options and specify which game you want to dump:
 
 ```bash
- --game=CS2          
+ --game=CS2
  Choose a particular game for dumping source 2 sdk; one of:
      ARTIFACT1        Artifact Classic
      ARTIFACT2        Artifact Foundry

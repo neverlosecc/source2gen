@@ -5,14 +5,16 @@
 #include "sdk/sdk.h"
 #include <filesystem>
 #include <list>
+#include <span>
 #include <string_view>
 #include <unordered_set>
+#include <vector>
 
 namespace {
     using namespace std::string_view_literals;
 
     constexpr std::string_view kOutDirName = "sdk"sv;
-    constinit std::array include_paths = {"<cstdint>"sv};
+    constinit std::array include_paths = {"<cstdint>"sv, "\"source2gen_user_types.hpp\""sv};
 
     constexpr uint32_t kMaxReferencesForClassEmbed = 2;
     constexpr std::size_t kMinFieldCountForClassEmbed = 2;
@@ -142,6 +144,68 @@ namespace {
 } // namespace
 
 namespace sdk {
+    struct class_t {
+        CSchemaClassInfo* target_{};
+        std::set<CSchemaClassInfo*> refs_;
+        std::uint32_t used_count_{};
+        std::list<std::pair<std::string, std::ptrdiff_t>> cached_fields_;
+
+        struct cached_datamap_t {
+            std::string type_;
+            std::string name_;
+            std::ptrdiff_t offset_;
+        };
+        std::list<cached_datamap_t> cached_datamap_fields_;
+
+        [[nodiscard]] CSchemaClassInfo* GetParent() const {
+            if (!target_->m_pBaseClassses)
+                return nullptr;
+
+            return target_->m_pBaseClassses->m_pClass;
+        }
+
+        void AddRefToClass(CSchemaType* type) {
+            if (type->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+                refs_.insert(reinterpret_cast<CSchemaType_DeclaredClass*>(type)->m_pClassInfo);
+            }
+
+            // auto ptr = type->GetRefClass();
+            // if (ptr && ptr->m_nTypeCategory == Schema_DeclaredClass)
+            // {
+            // 	refs_.insert(ptr->m_pClassInfo);
+            // 	return;
+            // }
+        }
+
+        [[nodiscard]] bool IsDependsOn(const class_t& other) const {
+            // if current class inherit other.
+            const auto parent = this->GetParent();
+            if (parent == other.target_)
+                return true;
+
+            // if current class contains ref to other.
+            if (this->refs_.contains(other.target_))
+                return true;
+
+            // otherwise, order doesn`t matter.
+            return false;
+        }
+
+        [[nodiscard]] SchemaClassFieldData_t* GetFirstField() const {
+            if (target_->m_nFieldSize)
+                return &target_->m_pFields[0];
+            return nullptr;
+        }
+
+        // @note: @es3n1n: Returns the struct size without its parent's size
+        //
+        [[nodiscard]] std::ptrdiff_t ClassSizeWithoutParent() const {
+            if (const CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
+                return this->target_->m_nSizeOf - class_parent->m_nSizeOf;
+            return this->target_->m_nSizeOf;
+        }
+    };
+
     namespace {
         void PrintClassInfo(codegen::generator_t::self_ref builder, CSchemaClassBinding* class_info) {
             builder.comment(std::format("Alignment: {}", class_info->GetAligment())).comment(std::format("Size: {:#x}", class_info->m_nSizeOf));
@@ -334,133 +398,147 @@ namespace sdk {
             return {maybe_with_module_name(type->m_pszName), {}};
         };
 
-        void AssembleClasses(codegen::generator_t::self_ref builder, const std::unordered_set<const CSchemaClassBinding*>& classes) {
-            struct class_t {
-                CSchemaClassInfo* target_{};
-                std::set<CSchemaClassInfo*> refs_;
-                uint32_t used_count_{};
-                std::list<std::pair<std::string, ptrdiff_t>> cached_fields_;
+        // TOOD: move up
+        struct OrderedClasses {
+            std::list<std::string> forward_declarations{};
+            std::list<class_t> classes{};
+        };
 
-                struct cached_datamap_t {
-                    std::string type_;
-                    std::string name_;
-                    ptrdiff_t offset_;
-                };
-                std::list<cached_datamap_t> cached_datamap_fields_;
-
-                [[nodiscard]] CSchemaClassInfo* GetParent() const {
-                    if (!target_->m_pBaseClassses)
-                        return nullptr;
-
-                    return target_->m_pBaseClassses->m_pClass;
+        /// Turns e.g. "HashMap<int, CUtlVector<float>>" into ["int", "CUtlVector", "float"]
+        /// @return An empty list if @p type_name is not a template or has no template parameters
+        std::vector<std::string> parse_template_arguments_recursive(std::string_view type_name) {
+            // TODO: use a library for this once we have a package manager
+            const auto trim = [](std::string_view str) {
+                if (const auto found = str.find_first_not_of(" "); found != std::string_view::npos) {
+                    str.remove_prefix(found);
+                } else {
+                    return std::string_view{};
                 }
 
-                void AddRefToClass(CSchemaType* type) {
-                    if (type->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
-                        refs_.insert(reinterpret_cast<CSchemaType_DeclaredClass*>(type)->m_pClassInfo);
-                    }
-
-                    // auto ptr = type->GetRefClass();
-                    // if (ptr && ptr->m_nTypeCategory == Schema_DeclaredClass)
-                    // {
-                    // 	refs_.insert(ptr->m_pClassInfo);
-                    // 	return;
-                    // }
+                if (const auto found = str.find_last_not_of(" "); found != std::string_view::npos) {
+                    str.remove_suffix(str.size() - (found + 1));
                 }
 
-                [[nodiscard]] bool IsDependsOn(const class_t& other) const {
-                    // if current class inherit other.
-                    const auto parent = this->GetParent();
-                    if (parent == other.target_)
-                        return true;
-
-                    // if current class contains ref to other.
-                    if (this->refs_.contains(other.target_))
-                        return true;
-
-                    // otherwise, order doesn`t matter.
-                    return false;
-                }
-
-                [[nodiscard]] SchemaClassFieldData_t* GetFirstField() const {
-                    if (target_->m_nFieldSize)
-                        return &target_->m_pFields[0];
-                    return nullptr;
-                }
-
-                // @note: @es3n1n: Returns the struct size without its parent's size
-                //
-                [[nodiscard]] std::ptrdiff_t ClassSizeWithoutParent() const {
-                    if (const CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
-                        return this->target_->m_nSizeOf - class_parent->m_nSizeOf;
-                    return this->target_->m_nSizeOf;
-                }
+                return str;
             };
 
-            // @note: @soufiw:
-            // sort all classes based on refs and inherit, and then print it.
-            // ==================
-            std::list<class_t> classes_to_dump;
-            bool did_forward_decls = false;
+            // TODO: remove
+            assert(trim("A") == "A");
+            assert(trim(" A ") == "A");
+            assert(trim(" A") == "A");
+            assert(trim("A ") == "A");
+            assert(trim(" ") == "");
+            assert(trim("  ") == "");
+
+            const auto split_trim = [trim](std::string_view str, std::string_view separators) -> std::vector<std::string> {
+                std::vector<std::string> result{};
+                std::string_view remainder = str;
+
+                while (true) {
+                    if (const auto found = remainder.find_first_of(separators); found != std::string_view::npos) {
+                        if (const auto part = trim(remainder.substr(0, found)); !part.empty()) {
+                            result.emplace_back(part);
+                        }
+                        remainder.remove_prefix(found + 1);
+                    } else {
+                        if (const auto part = trim(remainder); !part.empty()) {
+                            result.emplace_back(part);
+                        }
+                        break;
+                    }
+                }
+
+                return result;
+            };
+
+            if (const auto start = type_name.find("<"); start != std::string_view::npos) {
+                if (const auto end = type_name.rfind(">"); end != std::string_view::npos) {
+                    const auto raw_list = type_name.substr(start + 1, end - start - 1);
+
+                    return split_trim(raw_list, "<,>");
+                }
+            }
+
+            return {};
+        }
+
+        /**
+         * Orderes classes such that dependencies are declared or defined befor dependees.
+         */
+        OrderedClasses OrderClasses(const std::unordered_set<const CSchemaClassBinding*>& classes) {
+            // TOOD: remove tests
+            assert(parse_template_arguments_recursive("vector<int>") == std::vector{std::string{"int"}});
+            assert(parse_template_arguments_recursive("vector") == std::vector<std::string>{});
+            assert((parse_template_arguments_recursive("map<int, float>") == std::vector<std::string>{"int", "float"}));
+            assert((parse_template_arguments_recursive("A< B< C > >") == std::vector<std::string>{"B", "C"}));
+
+            std::list<std::string> forward_declarations{};
+            std::list<class_t> ordered_classes{};
 
             for (const auto* schema_class_binding : classes) {
                 assert(schema_class_binding != nullptr);
 
                 const auto class_info = schema_class_binding->m_pTypeScope->FindDeclaredClass(schema_class_binding->m_pszName);
 
-                auto& class_dump = classes_to_dump.emplace_back();
+                auto& class_dump = ordered_classes.emplace_back();
                 class_dump.target_ = class_info;
             }
 
-            for (auto& class_dump : classes_to_dump) {
+            for (auto& class_dump : ordered_classes) {
                 const auto class_info = class_dump.target_;
 
-                for (auto k = 0; k < class_info->m_nFieldSize; k++) {
-                    const auto field = &class_info->m_pFields[k];
-                    if (!field)
-                        continue;
-
+                for (const auto& field : std::span{class_info->m_pFields, static_cast<std::size_t>(class_info->m_nFieldSize)}) {
                     // forward declare all classes.
                     // @todo: maybe we need to forward declare only pointers to classes?
-                    auto ptr = field->m_pSchemaType->GetRefClass();
+                    auto ref_class = field.m_pSchemaType->GetRefClass();
 
-                    if (auto actual_type = ptr ? ptr : field->m_pSchemaType; actual_type->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
-                        builder.forward_declaration(actual_type->m_pszName);
-                        did_forward_decls = true;
+                    if (auto actual_type = ref_class ? ref_class : field.m_pSchemaType;
+                        actual_type->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+                        forward_declarations.emplace_back(std::string{actual_type->m_pszName});
                     }
 
-                    class_dump.AddRefToClass(field->m_pSchemaType);
+                    class_dump.AddRefToClass(field.m_pSchemaType);
 
-                    auto field_class = std::ranges::find_if(classes_to_dump, [field](const class_t& cls) {
-                        return cls.target_ == reinterpret_cast<CSchemaType_DeclaredClass*>(field->m_pSchemaType)->m_pClassInfo;
+                    const auto type_name = std::string_view{field.m_pSchemaType->m_pszName};
+
+                    for (const auto& template_argument : parse_template_arguments_recursive(type_name)) {
+                        if (const auto found = std::ranges::find_if(classes, [=](const auto& el) { return el->m_pszName == template_argument; });
+                            found != classes.end()) {
+                            class_dump.AddRefToClass((*found)->m_pSchemaType);
+                        }
+                    }
+
+                    auto field_class = std::ranges::find_if(ordered_classes, [field](const class_t& cls) {
+                        return cls.target_ == reinterpret_cast<CSchemaType_DeclaredClass*>(field.m_pSchemaType)->m_pClassInfo;
                     });
-                    if (field_class != classes_to_dump.end())
+                    if (field_class != ordered_classes.end())
                         field_class->used_count_++;
                 }
             }
 
-            if (did_forward_decls)
-                builder.next_line();
+            // to detect inderict dependency cycles
+            std::set<CSchemaClassBinding*> hot_classes{};
+            std::set<CSchemaClassBinding*> previous_hot_classes{};
 
             bool did_change = false;
             do {
                 did_change = false;
 
                 // swap until we done.
-                for (auto first = classes_to_dump.begin(); first != classes_to_dump.end(); ++first) {
+                for (auto first = ordered_classes.begin(); first != ordered_classes.end(); ++first) {
                     bool second_below_first = false;
 
-                    for (auto second = classes_to_dump.begin(); second != classes_to_dump.end(); ++second) {
+                    for (auto second = ordered_classes.begin(); second != ordered_classes.end(); ++second) {
                         if (second == first) {
                             second_below_first = true;
                             continue;
                         }
 
                         // swap if second class below first, and first depends on second.
-                        bool first_depend = first->IsDependsOn(*second);
+                        const bool first_depend = first->IsDependsOn(*second);
 
                         // swap if first class below second, and second depends on first.
-                        bool second_depend = second->IsDependsOn(*first);
+                        const bool second_depend = second->IsDependsOn(*first);
 
                         if (first_depend && second_depend) {
                             // classes depends on each other, forward declare them.
@@ -469,13 +547,49 @@ namespace sdk {
                         }
 
                         if (second_below_first ? first_depend : second_depend) {
+                            hot_classes.emplace(first->target_);
+                            hot_classes.emplace(second->target_);
+
                             std::iter_swap(first, second);
                             did_change = true;
                         }
                     }
                 }
+
+                if (did_change && (hot_classes == previous_hot_classes)) {
+                    std::cout << "detected dependency cycle in the following classes\n";
+                    for (const auto* class_ : hot_classes) {
+                        std::cout << std::format("- {}::{}\n", class_->m_pszModule, class_->m_pszName);
+                    }
+                    std::cout << "you need to resolve the dependency cycle by hand in the generated sdk\n";
+                    break;
+                }
+                std::swap(hot_classes, previous_hot_classes);
+                hot_classes.clear();
             } while (did_change);
+
+            return OrderedClasses{
+                .forward_declarations = forward_declarations,
+                .classes = ordered_classes,
+            };
+        }
+
+        void AssembleClasses(codegen::generator_t::self_ref builder, const std::unordered_set<const CSchemaClassBinding*>& classes) {
+
+            // @note: @soufiw:
+            // sort all classes based on refs and inherit, and then print it.
             // ==================
+            const auto ordered_classes = OrderClasses(classes);
+
+            for (const auto& type_name : ordered_classes.forward_declarations) {
+                builder.forward_declaration(type_name);
+            }
+
+            if (!ordered_classes.forward_declarations.empty()) {
+                builder.next_line();
+            }
+
+            auto classes_to_dump = ordered_classes.classes;
 
             for (auto& class_dump : classes_to_dump) {
                 // @note: @es3n1n: get class info, assemble it
