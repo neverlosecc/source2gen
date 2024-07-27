@@ -5,9 +5,11 @@
 #include "sdk/sdk.h"
 #include <filesystem>
 #include <list>
+#include <ranges>
 #include <span>
 #include <string_view>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 namespace {
@@ -344,19 +346,19 @@ namespace sdk {
         }
 
         /// @return {type_name, array_sizes}
-        auto parse_array(CSchemaType* type) -> std::pair<std::string, std::vector<std::size_t>> {
-            const auto ptr = type->GetRefClass();
-            const auto actual_type = ptr ? ptr : type;
+        auto parse_array(const CSchemaType& type) -> std::pair<std::string, std::vector<std::size_t>> {
+            const auto* ptr = type.GetRefClass();
+            const auto& actual_type = ptr ? *ptr : type;
 
             std::string base_type;
             std::vector<std::size_t> sizes;
 
-            if (actual_type->GetTypeCategory() == ETypeCategory::Schema_FixedArray) {
+            if (actual_type.GetTypeCategory() == ETypeCategory::Schema_FixedArray) {
                 // dump all sizes.
-                auto schema = reinterpret_cast<CSchemaType_FixedArray*>(actual_type);
+                auto* schema = reinterpret_cast<const CSchemaType_FixedArray*>(&actual_type);
                 while (true) {
                     sizes.emplace_back(schema->m_nElementCount);
-                    schema = reinterpret_cast<CSchemaType_FixedArray*>(schema->m_pElementType);
+                    schema = reinterpret_cast<const CSchemaType_FixedArray*>(schema->m_pElementType);
 
                     if (schema->GetTypeCategory() != ETypeCategory::Schema_FixedArray) {
                         base_type = schema->m_pszName;
@@ -368,23 +370,30 @@ namespace sdk {
             return {base_type, sizes};
         };
 
-        /// @return @ref std::nullopt if the type is not contained in a module, e.g. because it is a built-in type
-        auto get_module(CSchemaType* type) -> std::optional<std::string> {
-            if (type->m_pTypeScope != nullptr) {
-                if (const auto* class_ = type->m_pTypeScope->FindDeclaredClass(type->m_pszName)) {
-                    return class_->m_pszModule;
-                } else if (const auto* enum_ = type->m_pTypeScope->FindDeclaredEnum(type->m_pszName)) {
-                    return enum_->m_pszModule;
-                }
+        /// @return @ref std::nullopt if the type is not contained in a module visible in @p scope
+        auto get_module_of_type_in_scope(const CSchemaSystemTypeScope& scope, std::string_view type_name) -> std::optional<std::string> {
+            if (const auto* class_ = scope.FindDeclaredClass(type_name)) {
+                return class_->m_pszModule;
+            } else if (const auto* enum_ = scope.FindDeclaredEnum(type_name)) {
+                return enum_->m_pszModule;
+            } else {
+                return std::nullopt;
             }
+        }
 
-            return std::nullopt;
+        /// @return @ref std::nullopt if the type is not contained in a module visible in its scope, e.g. because it is a built-in type
+        auto get_module_of_type(const CSchemaType& type) -> std::optional<std::string> {
+            if (type.m_pTypeScope != nullptr) {
+                return get_module_of_type_in_scope(*type.m_pTypeScope, type.m_pszName);
+            } else {
+                return std::nullopt;
+            }
         };
 
         /// @return {type_name, array_sizes} where type_name is a fully qualified name
-        auto get_type(CSchemaType* type) -> std::pair<std::string, std::vector<std::size_t>> {
+        auto get_type(const CSchemaType& type) -> std::pair<std::string, std::vector<std::size_t>> {
             const auto maybe_with_module_name = [type](const auto& type_name) {
-                return get_module(type)
+                return get_module_of_type(type)
                     .transform([&](const auto module_name) { return std::format("{}::{}", module_name, type_name); })
                     .value_or(type_name);
             };
@@ -395,7 +404,7 @@ namespace sdk {
             if (!type_name.empty() && !array_sizes.empty())
                 return {maybe_with_module_name(type_name), array_sizes};
 
-            return {maybe_with_module_name(type->m_pszName), {}};
+            return {maybe_with_module_name(type.m_pszName), {}};
         };
 
         // TOOD: move up
@@ -404,9 +413,12 @@ namespace sdk {
             std::list<class_t> classes{};
         };
 
-        /// Turns e.g. "HashMap<int, CUtlVector<float>>" into ["int", "CUtlVector", "float"]
-        /// @return An empty list if @p type_name is not a template or has no template parameters
-        std::vector<std::string> parse_template_arguments_recursive(std::string_view type_name) {
+        // TODO: consider moving these functions to field_parser
+        /// Decomposes a templated type into its componets, keeping template syntax for later reassembly.
+        /// e.g. "HashMap<int, Vector<float>>" -> ["HashMap", '<', "int", ',', "Vector", '<', "float", '>', '>']
+        /// @return std::string for types, char for syntax (',', '<', '>'). Spaces are removed.
+        [[nodiscard]]
+        std::vector<std::variant<std::string, char>> decompose_template(std::string_view type_name) {
             // TODO: use a library for this once we have a package manager
             const auto trim = [](std::string_view str) {
                 if (const auto found = str.find_first_not_of(" "); found != std::string_view::npos) {
@@ -430,19 +442,21 @@ namespace sdk {
             assert(trim(" ") == "");
             assert(trim("  ") == "");
 
-            const auto split_trim = [trim](std::string_view str, std::string_view separators) -> std::vector<std::string> {
-                std::vector<std::string> result{};
+            /// Preserves separators in output. Removes space.
+            const auto split_trim = [trim](std::string_view str, std::string_view separators) -> std::vector<std::variant<std::string, char>> {
+                std::vector<std::variant<std::string, char>> result{};
                 std::string_view remainder = str;
 
                 while (true) {
                     if (const auto found = remainder.find_first_of(separators); found != std::string_view::npos) {
                         if (const auto part = trim(remainder.substr(0, found)); !part.empty()) {
-                            result.emplace_back(part);
+                            result.emplace_back(std::string{part});
                         }
+                        result.emplace_back(remainder[found]);
                         remainder.remove_prefix(found + 1);
                     } else {
                         if (const auto part = trim(remainder); !part.empty()) {
-                            result.emplace_back(part);
+                            result.emplace_back(std::string{part});
                         }
                         break;
                     }
@@ -451,26 +465,59 @@ namespace sdk {
                 return result;
             };
 
-            if (const auto start = type_name.find("<"); start != std::string_view::npos) {
-                if (const auto end = type_name.rfind(">"); end != std::string_view::npos) {
-                    const auto raw_list = type_name.substr(start + 1, end - start - 1);
+            return split_trim(type_name, "<,>");
+        }
 
-                    return split_trim(raw_list, "<,>");
+        /// e.g. "HashMap<int, CUtlVector<float>>" -> ["HashMap", "int", "CUtlVector", "float"]
+        /// @return An empty list if @p type_name is not a template or has no template parameters
+        [[nodiscard]]
+        std::vector<std::string> parse_template_recursive(std::string_view type_name) {
+            assert((decompose_template("vector<int>") == std::vector<std::variant<std::string, char>>{"vector", '<', "int", '>'}));
+            assert((decompose_template("vector<hashmap<int, float>>") ==
+                    std::vector<std::variant<std::string, char>>{"vector", '<', "hashmap", '<', "int", ',', "float", '>', '>'}));
+            assert((decompose_template("int") == std::vector<std::variant<std::string, char>>{"int"}));
+
+            std::vector<std::string> result{};
+
+            // remove the topmost type and all syntax entries
+            for (const auto& el : decompose_template(type_name)) {
+                if (std::holds_alternative<std::string>(el)) {
+                    result.emplace_back(std::move(std::get<std::string>(el)));
                 }
             }
 
-            return {};
+            return result;
+        }
+
+        // TOOD: need to sort these fuctions, they're all over the place
+
+        /// @return All modules directly required to declare this type. Returns multiple
+        /// modules for template types.
+        [[nodiscard]]
+        auto get_modules_of_type(const CSchemaType& type) -> std::unordered_set<std::string> {
+            if (type.m_pTypeScope != nullptr) {
+                std::unordered_set<std::string> result{};
+                for (const auto& type_name : parse_template_recursive(type.m_pszName)) {
+                    if (auto module{get_module_of_type_in_scope(*type.m_pTypeScope, type_name)}) {
+                        result.emplace(std::move(module.value()));
+                    }
+                }
+                return result;
+            } else {
+                return {};
+            }
         }
 
         /**
          * Orderes classes such that dependencies are declared or defined befor dependees.
          */
+        [[nodiscard]]
         OrderedClasses OrderClasses(const std::unordered_set<const CSchemaClassBinding*>& classes) {
             // TOOD: remove tests
-            assert(parse_template_arguments_recursive("vector<int>") == std::vector{std::string{"int"}});
-            assert(parse_template_arguments_recursive("vector") == std::vector<std::string>{});
-            assert((parse_template_arguments_recursive("map<int, float>") == std::vector<std::string>{"int", "float"}));
-            assert((parse_template_arguments_recursive("A< B< C > >") == std::vector<std::string>{"B", "C"}));
+            assert((parse_template_recursive("vector<int>") == std::vector<std::string>{"vector", "int"}));
+            assert((parse_template_recursive("vector") == std::vector<std::string>{"vector"}));
+            assert((parse_template_recursive("map<int, float>") == std::vector<std::string>{"map", "int", "float"}));
+            assert((parse_template_recursive("A< B< C > >") == std::vector<std::string>{"A", "B", "C"}));
 
             std::list<std::string> forward_declarations{};
             std::list<class_t> ordered_classes{};
@@ -501,7 +548,7 @@ namespace sdk {
 
                     const auto type_name = std::string_view{field.m_pSchemaType->m_pszName};
 
-                    for (const auto& template_argument : parse_template_arguments_recursive(type_name)) {
+                    for (const auto& template_argument : parse_template_recursive(type_name)) {
                         if (const auto found = std::ranges::find_if(classes, [=](const auto& el) { return el->m_pszName == template_argument; });
                             found != classes.end()) {
                             class_dump.AddRefToClass((*found)->m_pSchemaType);
@@ -671,7 +718,7 @@ namespace sdk {
 
                     // @note: @es3n1n: parsing type
                     //
-                    const auto [type_name, array_sizes] = get_type(field.m_pSchemaType);
+                    const auto [type_name, array_sizes] = get_type(*field.m_pSchemaType);
                     const auto var_info = field_parser::parse(type_name, field.m_pszName, array_sizes);
 
                     // @note: @es3n1n: insert padding if needed
@@ -802,7 +849,7 @@ namespace sdk {
                 for (auto s = 0; s < class_info->m_nStaticFieldsSize; s++) {
                     auto static_field = &class_info->m_pStaticFields[s];
 
-                    auto [type, mod] = get_type(static_field->m_pSchemaType);
+                    auto [type, mod] = get_type(*static_field->m_pSchemaType);
                     const auto var_info = field_parser::parse(type, static_field->m_pszName, mod);
                     builder.static_field_getter(var_info.m_type, var_info.m_name, scope_name, class_info->m_pszName, s);
                 }
@@ -859,25 +906,23 @@ namespace sdk {
     /// @param exclude_module_name will not be contained in the return value
     /// @return All modules that are required by properties of @p classes
     std::set<std::string> find_required_modules_of_class(std::string_view exclude_module_name, const CSchemaClassBinding& class_) {
-        std::set<std::string> modules{};
+        std::set<std::string> result{};
 
         for (const auto& field : std::span{class_.m_pFields, static_cast<std::size_t>(class_.m_nFieldSize)}) {
-            if (const auto module = get_module(field.m_pSchemaType)) {
-                modules.emplace(module.value());
-            }
+            const auto modules = get_modules_of_type(*field.m_pSchemaType);
+            result.insert(modules.begin(), modules.end());
         }
 
         for (const auto& field : std::span{class_.m_pStaticFields, static_cast<std::size_t>(class_.m_nStaticFieldsSize)}) {
-            if (const auto module = get_module(field.m_pSchemaType)) {
-                modules.emplace(module.value());
-            }
+            const auto modules = get_modules_of_type(*field.m_pSchemaType);
+            result.insert(modules.begin(), modules.end());
         }
 
-        if (const auto found = modules.find(std::string{exclude_module_name}); found != modules.end()) {
-            modules.erase(found);
+        if (const auto found = result.find(std::string{exclude_module_name}); found != result.end()) {
+            result.erase(found);
         }
 
-        return modules;
+        return result;
     }
 
     /// @param exclude_module_name will not be contained in the return value

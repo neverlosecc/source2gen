@@ -3,15 +3,14 @@
 #pragma once
 
 #include <cstdint>
+#include <sdk/interfaces/client/game/datamap_t.h>
 #include <string>
-
-enum class fieldtype_t : uint8_t;
 
 namespace field_parser {
     class field_info_t {
     public:
         std::string m_type; // var type
-        fieldtype_t m_field_type = static_cast<fieldtype_t>(24); // var type
+        fieldtype_t m_field_type = fieldtype_t::FIELD_UNUSED; // var type
         std::string m_name; // var name
 
         // array sizes, for example {13, 37} for multi demensional array "[13][37]"

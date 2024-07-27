@@ -2,12 +2,17 @@
 // See end of file for extended copyright information.
 #pragma once
 
-#include <Include.h>
+#include <cstdint>
 
 namespace Virtual {
     template <typename T>
     inline T Get(void* instance, const unsigned int index) {
-        return (*static_cast<T**>(instance))[index];
+        return (*static_cast<T**>(static_cast<void*>(instance)))[index];
+    }
+
+    template <typename T>
+    inline T Get(const void* instance, const unsigned int index) {
+        return (*static_cast<T* const*>(static_cast<const void*>(instance)))[index];
     }
 
     template <typename T>

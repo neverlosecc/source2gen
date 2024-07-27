@@ -3,6 +3,12 @@ TOOD: remove
 - add missing types as dummies
 - add empty `interfaces` sdk
 - sort template classes below their template types
+- detect indirect dependency cycles
+
+TOOD:
+
+- rename template arguments to use fully qualified names
+- add includes for template arguments (add decompose_type() and use that in many places?)
 
 # Source2Gen
 

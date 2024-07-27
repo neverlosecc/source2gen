@@ -8,6 +8,7 @@
 #include <sdk/interfaces/common/CBufferString.h>
 #include <sdk/interfaces/common/CUtlMap.h>
 #include <sdk/interfaces/common/CUtlTSHash.h>
+#include <string_view>
 #include <tools/platform.h>
 #include <tools/virtual.h>
 #include <vector>
@@ -382,7 +383,7 @@ public:
     }
 
     // @todo: @og: find out to what class pointer points.
-    [[nodiscard]] CSchemaType* GetRefClass();
+    [[nodiscard]] CSchemaType* GetRefClass() const;
 
     [[nodiscard]] ETypeCategory GetTypeCategory() const {
 #if defined(CS2) || defined(DOTA2)
@@ -421,13 +422,13 @@ public:
     CSchemaType* m_pObjectType;
 };
 
-[[nodiscard]] inline CSchemaType* CSchemaType::GetRefClass() {
+[[nodiscard]] inline CSchemaType* CSchemaType::GetRefClass() const {
     if (GetTypeCategory() != ETypeCategory::Schema_Ptr)
         return nullptr;
 
-    auto ptr = reinterpret_cast<CSchemaType_Ptr*>(this)->m_pObjectType;
+    auto ptr = reinterpret_cast<const CSchemaType_Ptr*>(this)->m_pObjectType;
     while (ptr && ptr->GetTypeCategory() == ETypeCategory::Schema_Ptr)
-        ptr = reinterpret_cast<CSchemaType_Ptr*>(ptr)->m_pObjectType;
+        ptr = reinterpret_cast<const CSchemaType_Ptr*>(ptr)->m_pObjectType;
 
     return ptr;
 }
@@ -772,25 +773,25 @@ public:
         return Virtual::Get<void* (*)(CSchemaSystemTypeScope*, const char*, void*)>(this, 1)(this, szName.data(), a2);
     }
 
-    [[nodiscard]] CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) {
+    [[nodiscard]] CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) const {
         if constexpr (kSchemaSystemVersion == 2) {
             CSchemaClassInfo* class_info;
 
-            Virtual::Get<void(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, szName.data());
+            Virtual::Get<void(__thiscall*)(const void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, szName.data());
             return class_info;
         } else {
-            return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());
+            return Virtual::Get<CSchemaClassInfo*(__thiscall*)(const void*, const char*)>(this, 2)(this, szName.data());
         }
     }
 
-    [[nodiscard]] CSchemaEnumInfo* FindDeclaredEnum(const std::string_view szName) {
+    [[nodiscard]] CSchemaEnumInfo* FindDeclaredEnum(const std::string_view szName) const {
         if constexpr (kSchemaSystemVersion == 2) {
             CSchemaEnumInfo* enum_info;
 
-            Virtual::Get<void(__thiscall*)(void*, CSchemaEnumInfo**, const char*)>(this, 3)(this, &enum_info, szName.data());
+            Virtual::Get<void(__thiscall*)(const void*, CSchemaEnumInfo**, const char*)>(this, 3)(this, &enum_info, szName.data());
             return enum_info;
         } else {
-            return Virtual::Get<CSchemaEnumInfo*(__thiscall*)(void*, const char*)>(this, 3)(this, szName.data());
+            return Virtual::Get<CSchemaEnumInfo*(__thiscall*)(const void*, const char*)>(this, 3)(this, szName.data());
         }
     }
 
