@@ -390,29 +390,6 @@ namespace sdk {
             }
         };
 
-        /// @return {type_name, array_sizes} where type_name is a fully qualified name
-        auto get_type(const CSchemaType& type) -> std::pair<std::string, std::vector<std::size_t>> {
-            const auto maybe_with_module_name = [type](const auto& type_name) {
-                return get_module_of_type(type)
-                    .transform([&](const auto module_name) { return std::format("{}::{}", module_name, type_name); })
-                    .value_or(type_name);
-            };
-            const auto [type_name, array_sizes] = parse_array(type);
-
-            assert(type_name.empty() == array_sizes.empty());
-
-            if (!type_name.empty() && !array_sizes.empty())
-                return {maybe_with_module_name(type_name), array_sizes};
-
-            return {maybe_with_module_name(type.m_pszName), {}};
-        };
-
-        // TOOD: move up
-        struct OrderedClasses {
-            std::list<std::string> forward_declarations{};
-            std::list<class_t> classes{};
-        };
-
         // TODO: consider moving these functions to field_parser
         /// Decomposes a templated type into its componets, keeping template syntax for later reassembly.
         /// e.g. "HashMap<int, Vector<float>>" -> ["HashMap", '<', "int", ',', "Vector", '<', "float", '>', '>']
@@ -467,6 +444,59 @@ namespace sdk {
 
             return split_trim(type_name, "<,>");
         }
+
+        /// Adds module qualifiers and resolves built-in types
+        auto reassemble_retyped_template(const CSchemaSystemTypeScope& scope,
+                                         const std::vector<std::variant<std::string, char>>& decomposed) -> std::string {
+            const auto maybe_with_module_name = [&scope](const std::string_view type_name) {
+                return get_module_of_type_in_scope(scope, type_name)
+                    .transform([&](const auto module_name) { return std::format("{}::{}", module_name, type_name); })
+                    .value_or(std::string{type_name});
+            };
+
+            std::string result{};
+
+            for (const auto& el : decomposed) {
+                std::visit(
+                    [&](const auto& e) {
+                        if constexpr (std::is_same_v<std::decay_t<decltype(e)>, char>) {
+                            result += e;
+                        } else {
+                            if (const auto built_in = field_parser::type_name_to_cpp(e)) {
+                                result += built_in.value();
+                            } else {
+                                result += maybe_with_module_name(e);
+                            }
+                        }
+                    },
+                    el);
+            }
+
+            // std::cout << "-> " << result << '\n';
+
+            return result;
+        }
+
+        /// @return {type_name, array_sizes} where type_name is a fully qualified name
+        auto get_type(const CSchemaType& type) -> std::pair<std::string, std::vector<std::size_t>> {
+            const auto [type_name, array_sizes] = parse_array(type);
+
+            assert(type_name.empty() == array_sizes.empty());
+
+            const auto type_name_with_modules =
+                reassemble_retyped_template(*type.m_pTypeScope, decompose_template(type_name.empty() ? type.m_pszName : type_name));
+
+            if (!type_name.empty() && !array_sizes.empty())
+                return {type_name_with_modules, array_sizes};
+
+            return {type_name_with_modules, {}};
+        };
+
+        // TOOD: move up
+        struct OrderedClasses {
+            std::list<std::string> forward_declarations{};
+            std::list<class_t> classes{};
+        };
 
         /// e.g. "HashMap<int, CUtlVector<float>>" -> ["HashMap", "int", "CUtlVector", "float"]
         /// @return An empty list if @p type_name is not a template or has no template parameters
@@ -781,7 +811,7 @@ namespace sdk {
                     }
 
                     // if this prop is a non-pointer class, check if its worth directly embedding the accumulated offset of it into the metadata
-                    auto prop_class =
+                    const auto prop_class =
                         std::ranges::find_if(classes_to_dump, [type_name](const class_t& cls) { return cls.target_->GetName().compare(type_name) == 0; });
                     if (prop_class != classes_to_dump.end()) {
                         // verify for min/max fields count, we don't want to bloat the dump by embeding too much stuff

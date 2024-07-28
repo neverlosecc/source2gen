@@ -4,6 +4,7 @@ TOOD: remove
 - add empty `interfaces` sdk
 - sort template classes below their template types
 - detect indirect dependency cycles
+- add includes to modules of template arguments
 
 TOOD:
 

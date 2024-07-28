@@ -12,17 +12,17 @@ namespace field_parser {
 
             // clang-format off
             constexpr auto kTypeNameToCpp = std::to_array<std::pair<std::string_view, std::string_view>>({
-                {"float32"sv, "float"sv}, 
+                {"float32"sv, "float"sv},
                 {"float64"sv, "double"sv},
-    
-                {"int8"sv, "int8_t"sv},   
-                {"int16"sv, "int16_t"sv},   
-                {"int32"sv, "int32_t"sv},   
+
+                {"int8"sv, "int8_t"sv},
+                {"int16"sv, "int16_t"sv},
+                {"int32"sv, "int32_t"sv},
                 {"int64"sv, "int64_t"sv},
-    
-                {"uint8"sv, "uint8_t"sv}, 
-                {"uint16"sv, "uint16_t"sv}, 
-                {"uint32"sv, "uint32_t"sv}, 
+
+                {"uint8"sv, "uint8_t"sv},
+                {"uint16"sv, "uint16_t"sv},
+                {"uint32"sv, "uint32_t"sv},
                 {"uint64"sv, "uint64_t"sv}
             });
 
@@ -123,7 +123,7 @@ namespace field_parser {
             if (result.m_field_type == fieldtype_t::FIELD_UNUSED)
                 result.m_field_type = type_name;
 
-            // @note: @es3n1n: applying kTypeNameToCpp rules
+            // @note: @es3n1n: applying kDatamapToCpp rules
             for (auto& rule : kDatamapToCpp) {
                 if (result.m_field_type != rule.first)
                     continue;
@@ -133,6 +133,15 @@ namespace field_parser {
             }
         }
     } // namespace detail
+
+    std::optional<std::string_view> type_name_to_cpp(std::string_view type_name) {
+        if (const auto found = std::ranges::find(detail::kTypeNameToCpp, type_name, &decltype(detail::kTypeNameToCpp)::value_type::first);
+            found != detail::kTypeNameToCpp.end()) {
+            return found->second;
+        } else {
+            return std::nullopt;
+        }
+    }
 
     field_info_t parse(const std::string& type_name, const std::string& name, const std::vector<std::size_t>& array_sizes) {
         field_info_t result = {};
