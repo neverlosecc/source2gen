@@ -5,11 +5,12 @@ TOOD: remove
 - sort template classes below their template types
 - detect indirect dependency cycles
 - add includes to modules of template arguments
+- rename template arguments to use fully qualified names
+- add includes for template arguments (add decompose_type() and use that in many places?)
 
 TOOD:
 
-- rename template arguments to use fully qualified names
-- add includes for template arguments (add decompose_type() and use that in many places?)
+- se why the sdk doesn't compile
 
 # Source2Gen
 

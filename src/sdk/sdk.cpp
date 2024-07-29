@@ -23,49 +23,50 @@ namespace {
     constexpr std::size_t kMaxFieldCountForClassEmbed = 12;
 
     constinit std::array string_metadata_entries = {
-        FNV32("MNetworkChangeCallback"),
-        FNV32("MPropertyFriendlyName"),
-        FNV32("MPropertyDescription"),
-        FNV32("MPropertyAttributeRange"),
-        FNV32("MPropertyStartGroup"),
-        FNV32("MPropertyAttributeChoiceName"),
-        FNV32("MPropertyGroupName"),
-        FNV32("MNetworkUserGroup"),
-        FNV32("MNetworkAlias"),
-        FNV32("MNetworkTypeAlias"),
-        FNV32("MNetworkSerializer"),
-        FNV32("MPropertyAttributeEditor"),
-        FNV32("MPropertySuppressExpr"),
-        FNV32("MKV3TransferName"),
-        FNV32("MFieldVerificationName"),
-        FNV32("MVectorIsSometimesCoordinate"),
-        FNV32("MNetworkEncoder"),
-        FNV32("MPropertyCustomFGDType"),
-        FNV32("MPropertyCustomEditor"),
-        FNV32("MVDataUniqueMonotonicInt"),
-        FNV32("MScriptDescription"),
-        FNV32("MPropertyAttributeSuggestionName"),
-        FNV32("MPropertyIconName"),
-        FNV32("MVDataOutlinerIcon"),
-        FNV32("MPropertyExtendedEditor"),
-        FNV32("MParticleReplacementOp"),
-        FNV32("MCustomFGDMetadata"),
         FNV32("MCellForDomain"),
-        FNV32("MSrc1ImportDmElementType"),
-        FNV32("MSrc1ImportAttributeName"),
-        FNV32("MResourceBlockType"),
-        FNV32("MVDataOutlinerIconExpr"),
-        FNV32("MPropertyArrayElementNameKey"),
-        FNV32("MPropertyFriendlyName"),
-        FNV32("MPropertyDescription"),
+        FNV32("MCustomFGDMetadata"),
+        FNV32("MFieldVerificationName"),
+        FNV32("MKV3TransferName"),
+        FNV32("MNetworkAlias"),
+        FNV32("MNetworkChangeCallback"),
+        FNV32("MNetworkEncoder"),
         FNV32("MNetworkExcludeByName"),
         FNV32("MNetworkExcludeByUserGroup"),
         FNV32("MNetworkIncludeByName"),
         FNV32("MNetworkIncludeByUserGroup"),
-        FNV32("MNetworkUserGroupProxy"),
         FNV32("MNetworkReplayCompatField"),
-        FNV32("MPulseProvideFeatureTag"),
+        FNV32("MNetworkSerializer"),
+        FNV32("MNetworkTypeAlias"),
+        FNV32("MNetworkUserGroup"),
+        FNV32("MNetworkUserGroupProxy"),
+        FNV32("MParticleReplacementOp"),
+        FNV32("MPropertyArrayElementNameKey"),
+        FNV32("MPropertyAttributeChoiceName"),
+        FNV32("MPropertyAttributeEditor"),
+        FNV32("MPropertyAttributeRange"),
+        FNV32("MPropertyAttributeSuggestionName"),
+        FNV32("MPropertyCustomEditor"),
+        FNV32("MPropertyCustomFGDType"),
+        FNV32("MPropertyDescription"),
+        FNV32("MPropertyDescription"),
+        FNV32("MPropertyExtendedEditor"),
+        FNV32("MPropertyFriendlyName"),
+        FNV32("MPropertyFriendlyName"),
+        FNV32("MPropertyGroupName"),
+        FNV32("MPropertyIconName"),
+        FNV32("MPropertyStartGroup"),
+        FNV32("MPropertySuppressExpr"),
+        FNV32("MPulseCellOutflowHookInfo"),
         FNV32("MPulseEditorHeaderIcon"),
+        FNV32("MPulseProvideFeatureTag"),
+        FNV32("MResourceBlockType"),
+        FNV32("MScriptDescription"),
+        FNV32("MSrc1ImportAttributeName"),
+        FNV32("MSrc1ImportDmElementType"),
+        FNV32("MVDataOutlinerIcon"),
+        FNV32("MVDataOutlinerIconExpr"),
+        FNV32("MVDataUniqueMonotonicInt"),
+        FNV32("MVectorIsSometimesCoordinate"),
     };
 
     constinit std::array string_class_metadata_entries = {
@@ -75,7 +76,7 @@ namespace {
 
     constinit std::array var_name_string_class_metadata_entries = {
         FNV32("MNetworkVarNames"),          FNV32("MNetworkOverride"),   FNV32("MNetworkVarTypeOverride"),
-        FNV32("MPulseCellOutflowHookInfo"), FNV32("MScriptDescription"), FNV32("MParticleDomainTag"),
+         FNV32("MScriptDescription"), FNV32("MParticleDomainTag"),
     };
 
     constinit std::array integer_metadata_entries = {
@@ -101,7 +102,7 @@ namespace {
 
     // @note: @es3n1n: some more utils
     //
-    std::string GetMetadataValue(const SchemaMetadataEntryData_t metadata_entry) {
+    std::string GetMetadataValue(const SchemaMetadataEntryData_t& metadata_entry) {
         std::string value;
 
         const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_szName);
@@ -247,9 +248,9 @@ namespace sdk {
 
             for (const auto& metadata : class_info->GetStaticMetadata()) {
                 if (const auto value = GetMetadataValue(metadata); !value.empty())
-                    builder.comment(std::format("{} \"{}\"", metadata.m_szName, value));
+                    builder.comment(std::format("static metadata: {} \"{}\"", metadata.m_szName, value));
                 else
-                    builder.comment(metadata.m_szName);
+                    builder.comment(std::format("static metadata: {}", metadata.m_szName));
             }
         }
 
@@ -262,7 +263,7 @@ namespace sdk {
                 builder.comment("");
 
             for (const auto& metadata : enum_binding->GetStaticMetadata()) {
-                builder.comment(metadata.m_szName);
+                builder.comment(std::format("metadata: {}", metadata.m_szName));
             }
         }
 
@@ -805,9 +806,9 @@ namespace sdk {
                         auto field_metadata = field.m_pMetadata[j];
 
                         if (auto data = GetMetadataValue(field_metadata); data.empty())
-                            builder.comment(field_metadata.m_szName);
+                            builder.comment(std::format("metadata: {}", field_metadata.m_szName));
                         else
-                            builder.comment(std::format("{} \"{}\"", field_metadata.m_szName, data));
+                            builder.comment(std::format("metadata: {} \"{}\"", field_metadata.m_szName, data));
                     }
 
                     // if this prop is a non-pointer class, check if its worth directly embedding the accumulated offset of it into the metadata

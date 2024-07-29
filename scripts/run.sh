@@ -30,5 +30,5 @@ if [ -z "${BINARY}" ]; then
   exit 1
 else
   set -x
-  LD_LIBRARY_PATH="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/:${GAME_DIRECTORY}/game/csgo/bin/linuxsteamrt64/:${LD_LIBRARY_PATH:-}" "${BINARY}"
+  LD_LIBRARY_PATH="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/:${GAME_DIRECTORY}/game/csgo/bin/linuxsteamrt64/:${LD_LIBRARY_PATH:-}" lldb -o r -- "${BINARY}"
 fi
