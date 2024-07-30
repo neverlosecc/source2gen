@@ -3,14 +3,19 @@ TOOD: remove
 - add missing types as dummies
 - add empty `interfaces` sdk
 - sort template classes below their template types
+- decay arrays and pointers when sorting classes by dependencies
 - detect indirect dependency cycles
 - add includes to modules of template arguments
 - rename template arguments to use fully qualified names
 - add includes for template arguments (add decompose_type() and use that in many places?)
+- escape class names
 
 TOOD:
 
-- se why the sdk doesn't compile
+- rename nested types to use underscores
+- see why the sdk doesn't compile
+- generate static assertions
+- remove all double underscores
 
 # Source2Gen
 

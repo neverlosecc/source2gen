@@ -75,8 +75,7 @@ namespace {
     };
 
     constinit std::array var_name_string_class_metadata_entries = {
-        FNV32("MNetworkVarNames"),          FNV32("MNetworkOverride"),   FNV32("MNetworkVarTypeOverride"),
-         FNV32("MScriptDescription"), FNV32("MParticleDomainTag"),
+        FNV32("MNetworkVarNames"), FNV32("MNetworkOverride"), FNV32("MNetworkVarTypeOverride"), FNV32("MScriptDescription"), FNV32("MParticleDomainTag"),
     };
 
     constinit std::array integer_metadata_entries = {
@@ -373,9 +372,14 @@ namespace sdk {
 
         /// @return @ref std::nullopt if the type is not contained in a module visible in @p scope
         auto get_module_of_type_in_scope(const CSchemaSystemTypeScope& scope, std::string_view type_name) -> std::optional<std::string> {
-            if (const auto* class_ = scope.FindDeclaredClass(type_name)) {
+            // resolve pointers to their actual type
+            while (type_name.ends_with('*')) {
+                type_name.remove_suffix(1);
+            }
+
+            if (const auto* class_ = scope.FindDeclaredClass(std::string{type_name})) {
                 return class_->m_pszModule;
-            } else if (const auto* enum_ = scope.FindDeclaredEnum(type_name)) {
+            } else if (const auto* enum_ = scope.FindDeclaredEnum(std::string{type_name})) {
                 return enum_->m_pszModule;
             } else {
                 return std::nullopt;
@@ -446,13 +450,31 @@ namespace sdk {
             return split_trim(type_name, "<,>");
         }
 
+        // TOOD: use a library
+        [[nodiscard]]
+        auto string_replace(std::string str, std::string_view search, std::string_view replace) -> std::string {
+            const std::size_t pos = str.find(search);
+            if (pos != std::string::npos) {
+                str.replace(pos, search.length(), replace);
+            }
+            return str;
+        }
+
         /// Adds module qualifiers and resolves built-in types
         auto reassemble_retyped_template(const CSchemaSystemTypeScope& scope,
                                          const std::vector<std::variant<std::string, char>>& decomposed) -> std::string {
             const auto maybe_with_module_name = [&scope](const std::string_view type_name) {
+                // This is a hack to support nested types.
+                // When we define nested types, they're not actually nested, but contain their outer class' name in their name,
+                // e.g. "struct Player { struct Hand {}; };" is emitted as
+                // "struct Player {}; struct Player__Hand{};".
+                // But when used as a property, types expect `Hand` in `Player`, i.e. `Player::Hand m_hand;`
+                // Instead of doing this hackery, we should probably declare nested classes as nested classes.
+                const auto escaped_type_name = string_replace(std::string{type_name}, "::", "__");
+
                 return get_module_of_type_in_scope(scope, type_name)
-                    .transform([&](const auto module_name) { return std::format("{}::{}", module_name, type_name); })
-                    .value_or(std::string{type_name});
+                    .transform([&](const auto module_name) { return std::format("{}::{}", module_name, escaped_type_name); })
+                    .value_or(std::string{escaped_type_name});
             };
 
             std::string result{};
@@ -550,6 +572,20 @@ namespace sdk {
             assert((parse_template_recursive("map<int, float>") == std::vector<std::string>{"map", "int", "float"}));
             assert((parse_template_recursive("A< B< C > >") == std::vector<std::string>{"A", "B", "C"}));
 
+            /// @return Lifetime is bound to string viewed by @p type_name
+            const auto decay_type_name = [](std::string_view type_name) -> std::string_view {
+                if (const auto found = type_name.find('['); found != std::string_view::npos) {
+                    // "array[123]" -> "array"
+                    type_name = type_name.substr(0, found);
+                }
+                if (const auto found = type_name.find('*'); found != std::string_view::npos) {
+                    // "pointer***" -> "pointer"
+                    type_name = type_name.substr(0, found);
+                }
+
+                return type_name;
+            };
+
             std::list<std::string> forward_declarations{};
             std::list<class_t> ordered_classes{};
 
@@ -563,24 +599,24 @@ namespace sdk {
             }
 
             for (auto& class_dump : ordered_classes) {
-                const auto class_info = class_dump.target_;
+                const auto& class_info = *class_dump.target_;
 
-                for (const auto& field : std::span{class_info->m_pFields, static_cast<std::size_t>(class_info->m_nFieldSize)}) {
-                    // forward declare all classes.
-                    // @todo: maybe we need to forward declare only pointers to classes?
+                // forward declare all classes that are not nested. nested classes cannot be forward declared.
+                // @todo: maybe we need to forward declare only pointers to classes?
+                if (!class_info.GetName().contains("::")) {
+                    forward_declarations.emplace_back(class_info.GetName());
+                }
+
+                for (const auto& field : std::span{class_info.m_pFields, static_cast<std::size_t>(class_info.m_nFieldSize)}) {
                     auto ref_class = field.m_pSchemaType->GetRefClass();
-
-                    if (auto actual_type = ref_class ? ref_class : field.m_pSchemaType;
-                        actual_type->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
-                        forward_declarations.emplace_back(std::string{actual_type->m_pszName});
-                    }
 
                     class_dump.AddRefToClass(field.m_pSchemaType);
 
-                    const auto type_name = std::string_view{field.m_pSchemaType->m_pszName};
+                    const auto full_type_name = decay_type_name(std::string_view{field.m_pSchemaType->m_pszName});
 
-                    for (const auto& template_argument : parse_template_recursive(type_name)) {
-                        if (const auto found = std::ranges::find_if(classes, [=](const auto& el) { return el->m_pszName == template_argument; });
+                    // if `full_type_name` is `Map<int, float>`, this loop runs [`Map`, `int`, 'float`]
+                    for (const auto& type_name : parse_template_recursive(full_type_name)) {
+                        if (const auto found = std::ranges::find_if(classes, [=](const auto& el) { return el->m_pszName == type_name; });
                             found != classes.end()) {
                             class_dump.AddRefToClass((*found)->m_pSchemaType);
                         }
@@ -744,8 +780,9 @@ namespace sdk {
                     }
 
                     // @note: @es3n1n: obtaining size
+                    // fall back to 1 because there are no 0-sized types
                     //
-                    const int field_size = field.m_pSchemaType->GetSize().value_or(0);
+                    const int field_size = field.m_pSchemaType->GetSize().value_or(1);
 
                     // @note: @es3n1n: parsing type
                     //

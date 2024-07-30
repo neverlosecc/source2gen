@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <sdk/interfaces/common/CBufferString.h>
 #include <sdk/interfaces/common/CUtlMap.h>
@@ -639,13 +640,13 @@ static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68);
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
 public:
-    [[nodiscard]] std::string_view GetName() {
+    [[nodiscard]] std::string_view GetName() const {
         if (m_pszName)
             return {m_pszName};
         return {};
     }
 
-    [[nodiscard]] std::string_view GetModule() {
+    [[nodiscard]] std::string_view GetModule() const {
         if (m_pszModule)
             return {m_pszModule};
         return {};
@@ -766,14 +767,20 @@ static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x
 class CSchemaSystemTypeScope {
 public:
     void* InsertNewClassBinding(const std::string_view szName, void* a2) {
+        assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
+
         return Virtual::Get<void* (*)(CSchemaSystemTypeScope*, const char*, void*)>(this, 0)(this, szName.data(), a2);
     }
 
     void* InsertNewEnumBinding(const std::string_view szName, void* a2) {
+        assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
+
         return Virtual::Get<void* (*)(CSchemaSystemTypeScope*, const char*, void*)>(this, 1)(this, szName.data(), a2);
     }
 
     [[nodiscard]] CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) const {
+        assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
+
         if constexpr (kSchemaSystemVersion == 2) {
             CSchemaClassInfo* class_info;
 
@@ -785,6 +792,8 @@ public:
     }
 
     [[nodiscard]] CSchemaEnumInfo* FindDeclaredEnum(const std::string_view szName) const {
+        assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
+
         if constexpr (kSchemaSystemVersion == 2) {
             CSchemaEnumInfo* enum_info;
 
@@ -796,6 +805,8 @@ public:
     }
 
     [[nodiscard]] CSchemaType* FindSchemaTypeByName(const std::string_view szName) {
+        assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
+
         if constexpr (kSchemaSystemVersion == 2) {
             CSchemaType* schema_type;
 

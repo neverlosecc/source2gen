@@ -132,14 +132,14 @@ namespace codegen {
         }
 
         self_ref begin_class(const std::string& class_name, const std::string& access_modifier = "public") {
-            return begin_block(std::format("class {}", class_name), access_modifier);
+            return begin_block(std::format("class {}", escape_name(class_name)), access_modifier);
         }
 
         self_ref begin_class_with_base_type(const std::string& class_name, const std::string& base_type, const std::string& access_modifier = "public") {
             if (base_type.empty())
-                return begin_class(std::cref(class_name), access_modifier);
-
-            return begin_block(std::format("class {} : public {}", class_name, base_type), access_modifier);
+                return begin_class(class_name, access_modifier);
+            else
+                return begin_block(std::format("class {} : public {}", escape_name(class_name), escape_name(base_type)), access_modifier);
         }
 
         self_ref end_class() {
@@ -183,8 +183,8 @@ namespace codegen {
         }
 
         // @todo: @es3n1n: add func params
-        self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name, const bool increment_tabs_count = true,
-                                const bool move_cursor_to_next_line = true) {
+        self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name,
+                                const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) {
             return begin_block(std::format("{}{} {}()", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
         }
 
@@ -246,7 +246,7 @@ namespace codegen {
             if (is_private_field)
                 type_name = "[[maybe_unused]] " + type_name;
 
-            auto pad_name = pad_offset.has_value() ? std::format("__pad{:04x}", pad_offset.value()) : std::format("__pad{:d}", _pads_count++);
+            auto pad_name = pad_offset.has_value() ? std::format("pad_0x{:04x}", pad_offset.value()) : std::format("pad_{:d}", _pads_count++);
             if (!bitfield_size)
                 pad_name = pad_name + std::format("[{:#x}]", padding_size);
 
@@ -265,12 +265,11 @@ namespace codegen {
         }
 
         self_ref begin_bitfield_block() {
-            return begin_struct("", "");
+            return comment("start of bitfield block");
         }
 
         self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) {
-            dec_tabs_count(1);
-            return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
+            return comment(std::format("end of bitfield block{}", move_cursor_to_next_line ? "" : " "), move_cursor_to_next_line);
         }
 
     public:
@@ -293,8 +292,7 @@ namespace codegen {
             result.resize(name.size());
 
             for (std::size_t i = 0; i < name.size(); i++)
-                result[i] =
-                    std::ranges::find(kBlacklistedCharacters, name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
+                result[i] = std::ranges::find(kBlacklistedCharacters, name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
 
             return result;
         }
