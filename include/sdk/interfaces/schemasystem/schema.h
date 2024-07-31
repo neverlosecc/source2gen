@@ -658,15 +658,16 @@ public:
         return std::nullopt;
     }
 
-    [[nodiscard]] std::vector<SchemaClassFieldData_t> GetFields() {
+    // TODO: when we have AddressSanitizer, try returning std::span instead of std::vector. Repeats for other functions.
+    [[nodiscard]] std::vector<SchemaClassFieldData_t> GetFields() const {
         return {m_pFields, m_pFields + m_nFieldSize};
     }
 
-    [[nodiscard]] std::vector<SchemaStaticFieldData_t> GetStaticFields() {
+    [[nodiscard]] std::vector<SchemaStaticFieldData_t> GetStaticFields() const {
         return {m_pStaticFields, m_pStaticFields + m_nStaticFieldsSize};
     }
 
-    [[nodiscard]] std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() {
+    [[nodiscard]] std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() const {
         return {m_pStaticMetadata, m_pStaticMetadata + m_nStaticMetadataSize};
     }
 

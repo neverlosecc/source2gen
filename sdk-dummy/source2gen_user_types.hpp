@@ -55,6 +55,8 @@ using CUtlVector = char[0x18];
 // size is a guess that fits both occurences of this type in CS2
 template <class T>
 using CUtlVectorFixedGrowable = char[0x18 + ((sizeof(T) < 4) ? 4 : sizeof(T))];
+template <class T>
+using CUtlLeanVectorFixedGrowable = char[0x18 + ((sizeof(T) < 4) ? 4 : sizeof(T))];
 template <class>
 using C_UtlVectorEmbeddedNetworkVar = char[0x50];
 using CUtlVectorSIMDPaddedVector = char[0x18];
@@ -68,6 +70,8 @@ template <class>
 using CStrongHandleCopyable = char[0x08];
 // size doesn't mapper. only used as a pointer
 using CStrongHandleVoid = char[0x08];
+template <class>
+using CVariantBase = char[0x10];
 template <class>
 using CWeakHandle = char[0x18];
 using Color = char[0x04];
