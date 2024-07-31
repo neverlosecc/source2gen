@@ -690,8 +690,7 @@ namespace sdk {
             };
         }
 
-        // TOOD: see if we can get rid of, or simplify, classes_to_dump
-        void AssembleClass(const std::list<class_t>& classes_to_dump, codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
+        void AssembleClass(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
             // @note: @es3n1n: get class info, assemble it
             //
             const auto* class_parent = class_.m_pBaseClassses ? class_.m_pBaseClassses->m_pClass : nullptr;
@@ -834,22 +833,6 @@ namespace sdk {
                         builder.comment(std::format("metadata: {} \"{}\"", field_metadata.m_szName, data));
                 }
 
-                // if this prop is a non-pointer class, check if its worth directly embedding the accumulated offset of it into the metadata
-                const auto prop_class =
-                    std::ranges::find_if(classes_to_dump, [type_name](const class_t& cls) { return cls.target_->GetName().compare(type_name) == 0; });
-                if (prop_class != classes_to_dump.end()) {
-                    // verify for min/max fields count, we don't want to bloat the dump by embeding too much stuff
-                    if (cached_fields.size() >= kMinFieldCountForClassEmbed && cached_fields.size() <= kMaxFieldCountForClassEmbed) {
-                        // if a class is used in too many classes its likely not very useful, so ignore it
-                        if (prop_class->used_count_ <= kMaxReferencesForClassEmbed) {
-                            for (const auto& [cached_field_name, cached_field_offset] : cached_fields) {
-                                const auto accumulated_offset = cached_field_offset + field.m_nSingleInheritanceOffset;
-                                builder.comment(std::format("-> {} - {:#x}", cached_field_name, accumulated_offset));
-                            }
-                        }
-                    }
-                }
-
                 // @note: @es3n1n: update state
                 //
                 if (field.m_nSingleInheritanceOffset && field_size) {
@@ -969,10 +952,8 @@ namespace sdk {
                 builder.next_line();
             }
 
-            auto classes_to_dump = ordered_classes.classes;
-
             for (const auto* class_ : classes) {
-                AssembleClass(ordered_classes.classes, builder, *class_);
+                AssembleClass(builder, *class_);
             }
         }
 
@@ -1056,8 +1037,7 @@ namespace sdk {
         }
     }
 
-    // TOOD: get rid of classes_to_dump
-    void GenerateClassSdk(const std::list<class_t>& classes_to_dump, std::string_view module_name, const CSchemaClassBinding& class_) {
+    void GenerateClassSdk(std::string_view module_name, const CSchemaClassBinding& class_) {
         const std::filesystem::path out_file_path = std::format("{}/{}/{}.hpp", kOutDirName, module_name, class_.m_pszName);
 
         // @note: @es3n1n: init codegen
@@ -1087,7 +1067,7 @@ namespace sdk {
 
         // @note: @es3n1n: assemble props
         //
-        AssembleClass(classes_to_dump, builder, class_);
+        AssembleClass(builder, class_);
 
         builder.end_namespace();
 
@@ -1117,10 +1097,8 @@ namespace sdk {
         if (!std::filesystem::exists(out_directory_path))
             std::filesystem::create_directories(out_directory_path);
 
-        const auto ordered_classes = OrderClasses(classes);
-
         std::ranges::for_each(enums, [=](const auto* el) { GenerateEnumSdk(module_name, *el); });
-        std::ranges::for_each(classes, [=](const auto* el) { GenerateClassSdk(ordered_classes.classes, module_name, *el); });
+        std::ranges::for_each(classes, [=](const auto* el) { GenerateClassSdk(module_name, *el); });
     }
 } // namespace sdk
 
