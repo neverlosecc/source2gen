@@ -4,6 +4,7 @@
 // ReSharper disable CppClangTidyClangDiagnosticLanguageExtensionToken
 #include "sdk/sdk.h"
 #include <filesystem>
+#include <functional>
 #include <list>
 #include <ranges>
 #include <span>
@@ -152,60 +153,6 @@ namespace sdk {
         std::ptrdiff_t offset_;
     };
 
-    struct class_t {
-        CSchemaClassInfo* target_{};
-        std::set<CSchemaClassInfo*> refs_;
-        std::uint32_t used_count_{};
-
-        [[nodiscard]] CSchemaClassInfo* GetParent() const {
-            if (!target_->m_pBaseClassses)
-                return nullptr;
-
-            return target_->m_pBaseClassses->m_pClass;
-        }
-
-        void AddRefToClass(CSchemaType* type) {
-            if (type->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
-                refs_.insert(reinterpret_cast<CSchemaType_DeclaredClass*>(type)->m_pClassInfo);
-            }
-
-            // auto ptr = type->GetRefClass();
-            // if (ptr && ptr->m_nTypeCategory == Schema_DeclaredClass)
-            // {
-            // 	refs_.insert(ptr->m_pClassInfo);
-            // 	return;
-            // }
-        }
-
-        [[nodiscard]] bool IsDependsOn(const class_t& other) const {
-            // if current class inherit other.
-            const auto parent = this->GetParent();
-            if (parent == other.target_)
-                return true;
-
-            // if current class contains ref to other.
-            if (this->refs_.contains(other.target_))
-                return true;
-
-            // otherwise, order doesn`t matter.
-            return false;
-        }
-
-        [[nodiscard]] SchemaClassFieldData_t* GetFirstField() const {
-            if (target_->m_nFieldSize)
-                return &target_->m_pFields[0];
-            return nullptr;
-        }
-
-        // @note: @es3n1n: Returns the struct size without its parent's size
-        //
-        [[nodiscard]] std::ptrdiff_t ClassSizeWithoutParent() const {
-            if (const CSchemaClassInfo* class_parent = this->GetParent(); class_parent)
-                return this->target_->m_nSizeOf - class_parent->m_nSizeOf;
-            return this->target_->m_nSizeOf;
-        }
-    };
-
     namespace {
         void PrintClassInfo(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_info) {
             builder.comment(std::format("Alignment: {}", class_info.GetAligment())).comment(std::format("Size: {:#x}", class_info.m_nSizeOf));
@@ -341,12 +288,6 @@ namespace sdk {
             builder.end_enum_class();
         }
 
-        void AssembleEnums(codegen::generator_t::self_ref builder, const std::unordered_set<const CSchemaEnumBinding*>& enums) {
-            for (const auto* schema_enum_binding : enums) {
-                AssembleEnum(builder, *schema_enum_binding);
-            }
-        }
-
         /// @return {type_name, array_sizes}
         auto parse_array(const CSchemaType& type) -> std::pair<std::string, std::vector<std::size_t>> {
             const auto* ptr = type.GetRefClass();
@@ -372,12 +313,27 @@ namespace sdk {
             return {base_type, sizes};
         };
 
+        // TOOD: I've seen a similar function somewhere. make sure it's not duplicate
+        /// @return Lifetime is bound to string viewed by @p type_name
+        [[nodiscard]]
+        auto decay_type_name(std::string_view type_name) -> std::string_view {
+            if (const auto found = type_name.find('['); found != std::string_view::npos) {
+                // "array[123]" -> "array"
+                type_name = type_name.substr(0, found);
+            }
+            if (const auto found = type_name.find('*'); found != std::string_view::npos) {
+                // "pointer***" -> "pointer"
+                type_name = type_name.substr(0, found);
+            }
+
+            return type_name;
+        };
+
         /// @return @ref std::nullopt if the type is not contained in a module visible in @p scope
         auto get_module_of_type_in_scope(const CSchemaSystemTypeScope& scope, std::string_view type_name) -> std::optional<std::string> {
-            // resolve pointers to their actual type
-            while (type_name.ends_with('*')) {
-                type_name.remove_suffix(1);
-            }
+            assert((decay_type_name(type_name) == type_name) &&
+                   "you need to decay your type names before using them for lookups. you probably need to decay them anyway if you intend to you them for "
+                   "anything really, so do it before calling this function.");
 
             if (const auto* class_ = scope.FindDeclaredClass(std::string{type_name})) {
                 return class_->m_pszModule;
@@ -391,7 +347,7 @@ namespace sdk {
         /// @return @ref std::nullopt if the type is not contained in a module visible in its scope, e.g. because it is a built-in type
         auto get_module_of_type(const CSchemaType& type) -> std::optional<std::string> {
             if (type.m_pTypeScope != nullptr) {
-                return get_module_of_type_in_scope(*type.m_pTypeScope, type.m_pszName);
+                return get_module_of_type_in_scope(*type.m_pTypeScope, decay_type_name(type.m_pszName));
             } else {
                 return std::nullopt;
             }
@@ -462,23 +418,24 @@ namespace sdk {
             return str;
         }
 
+        /// Adds the module specifier to @p type_name, if @p type_name is declared in @p scope. Otherwise returns @p type_name unmodified.
+        auto maybe_with_module_name(const CSchemaSystemTypeScope& scope, const std::string_view type_name) -> std::string {
+            // This is a hack to support nested types.
+            // When we define nested types, they're not actually nested, but contain their outer class' name in their name,
+            // e.g. "struct Player { struct Hand {}; };" is emitted as
+            // "struct Player {}; struct Player__Hand{};".
+            // But when used as a property, types expect `Hand` in `Player`, i.e. `Player::Hand m_hand;`
+            // Instead of doing this hackery, we should probably declare nested classes as nested classes.
+            const auto escaped_type_name = string_replace(std::string{type_name}, "::", "__");
+
+            return get_module_of_type_in_scope(scope, type_name)
+                .transform([&](const auto module_name) { return std::format("{}::{}", module_name, escaped_type_name); })
+                .value_or(std::string{escaped_type_name});
+        };
+
         /// Adds module qualifiers and resolves built-in types
         auto reassemble_retyped_template(const CSchemaSystemTypeScope& scope,
                                          const std::vector<std::variant<std::string, char>>& decomposed) -> std::string {
-            const auto maybe_with_module_name = [&scope](const std::string_view type_name) {
-                // This is a hack to support nested types.
-                // When we define nested types, they're not actually nested, but contain their outer class' name in their name,
-                // e.g. "struct Player { struct Hand {}; };" is emitted as
-                // "struct Player {}; struct Player__Hand{};".
-                // But when used as a property, types expect `Hand` in `Player`, i.e. `Player::Hand m_hand;`
-                // Instead of doing this hackery, we should probably declare nested classes as nested classes.
-                const auto escaped_type_name = string_replace(std::string{type_name}, "::", "__");
-
-                return get_module_of_type_in_scope(scope, type_name)
-                    .transform([&](const auto module_name) { return std::format("{}::{}", module_name, escaped_type_name); })
-                    .value_or(std::string{escaped_type_name});
-            };
-
             std::string result{};
 
             for (const auto& el : decomposed) {
@@ -490,7 +447,12 @@ namespace sdk {
                             if (const auto built_in = field_parser::type_name_to_cpp(e)) {
                                 result += built_in.value();
                             } else {
-                                result += maybe_with_module_name(e);
+                                // e is a dirty name, e.g. "CPlayer*[10]". We need to add the module, but keep it dirty.
+                                const auto type_name = decay_type_name(e);
+                                const auto type_name_with_module = maybe_with_module_name(scope, type_name);
+                                const auto dirty_type_name_with_module =
+                                    std::string{e}.replace(e.find(type_name), type_name.length(), type_name_with_module);
+                                result += dirty_type_name_with_module;
                             }
                         }
                     },
@@ -517,12 +479,6 @@ namespace sdk {
             return {type_name_with_modules, {}};
         };
 
-        // TOOD: move up
-        struct OrderedClasses {
-            std::list<std::string> forward_declarations{};
-            std::list<class_t> classes{};
-        };
-
         /// e.g. "HashMap<int, CUtlVector<float>>" -> ["HashMap", "int", "CUtlVector", "float"]
         /// @return An empty list if @p type_name is not a template or has no template parameters
         [[nodiscard]]
@@ -546,154 +502,39 @@ namespace sdk {
 
         // TOOD: need to sort these fuctions, they're all over the place
 
-        /// @return All modules directly required to declare this type. Returns multiple
+        // We assume that everything that is not a pointer odr-used.
+        // This assumption not correct, e.g. template classes that internally store pointers are
+        // not always odr-users of a type. It's good enough for what we do though.
+        [[nodiscard]]
+        constexpr auto is_odr_use(std::string_view type_name) -> bool {
+            return !type_name.contains('*');
+        }
+
+        /// @return {module,type} All includes to types odr-used by @p type. Returns multiple
         /// modules for template types.
         [[nodiscard]]
-        auto get_modules_of_type(const CSchemaType& type) -> std::unordered_set<std::string> {
+        auto get_required_includes_for_type(const CSchemaType& type) -> std::set<std::pair<std::string, std::string>> {
+            // m_pTypeScope can be nullptr for built-in types
             if (type.m_pTypeScope != nullptr) {
-                std::unordered_set<std::string> result{};
-                for (const auto& type_name : parse_template_recursive(type.m_pszName)) {
+                std::set<std::pair<std::string, std::string>> result{};
+
+                for (const auto& type_name :
+                     parse_template_recursive(type.m_pszName) | std::views::filter(is_odr_use) | std::views::transform(decay_type_name)) {
                     if (auto module{get_module_of_type_in_scope(*type.m_pTypeScope, type_name)}) {
-                        result.emplace(std::move(module.value()));
+                        result.emplace(std::move(module.value()), type_name);
                     }
                 }
+
                 return result;
             } else {
                 return {};
             }
         }
 
-        /**
-         * Orderes classes such that dependencies are declared or defined befor dependees.
-         */
-        [[nodiscard]]
-        OrderedClasses OrderClasses(const std::unordered_set<const CSchemaClassBinding*>& classes) {
-            // TOOD: remove tests
-            assert((parse_template_recursive("vector<int>") == std::vector<std::string>{"vector", "int"}));
-            assert((parse_template_recursive("vector") == std::vector<std::string>{"vector"}));
-            assert((parse_template_recursive("map<int, float>") == std::vector<std::string>{"map", "int", "float"}));
-            assert((parse_template_recursive("A< B< C > >") == std::vector<std::string>{"A", "B", "C"}));
-
-            /// @return Lifetime is bound to string viewed by @p type_name
-            const auto decay_type_name = [](std::string_view type_name) -> std::string_view {
-                if (const auto found = type_name.find('['); found != std::string_view::npos) {
-                    // "array[123]" -> "array"
-                    type_name = type_name.substr(0, found);
-                }
-                if (const auto found = type_name.find('*'); found != std::string_view::npos) {
-                    // "pointer***" -> "pointer"
-                    type_name = type_name.substr(0, found);
-                }
-
-                return type_name;
-            };
-
-            std::list<std::string> forward_declarations{};
-            std::list<class_t> ordered_classes{};
-
-            for (const auto* schema_class_binding : classes) {
-                assert(schema_class_binding != nullptr);
-
-                const auto class_info = schema_class_binding->m_pTypeScope->FindDeclaredClass(schema_class_binding->m_pszName);
-
-                auto& class_dump = ordered_classes.emplace_back();
-                class_dump.target_ = class_info;
-            }
-
-            for (auto& class_dump : ordered_classes) {
-                const auto& class_info = *class_dump.target_;
-
-                // forward declare all classes that are not nested. nested classes cannot be forward declared.
-                // @todo: maybe we need to forward declare only pointers to classes?
-                if (!class_info.GetName().contains("::")) {
-                    forward_declarations.emplace_back(class_info.GetName());
-                }
-
-                for (const auto& field : std::span{class_info.m_pFields, static_cast<std::size_t>(class_info.m_nFieldSize)}) {
-                    auto ref_class = field.m_pSchemaType->GetRefClass();
-
-                    class_dump.AddRefToClass(field.m_pSchemaType);
-
-                    const auto full_type_name = decay_type_name(std::string_view{field.m_pSchemaType->m_pszName});
-
-                    // if `full_type_name` is `Map<int, float>`, this loop runs [`Map`, `int`, 'float`]
-                    for (const auto& type_name : parse_template_recursive(full_type_name)) {
-                        if (const auto found = std::ranges::find_if(classes, [=](const auto& el) { return el->m_pszName == type_name; });
-                            found != classes.end()) {
-                            class_dump.AddRefToClass((*found)->m_pSchemaType);
-                        }
-                    }
-
-                    auto field_class = std::ranges::find_if(ordered_classes, [field](const class_t& cls) {
-                        return cls.target_ == reinterpret_cast<CSchemaType_DeclaredClass*>(field.m_pSchemaType)->m_pClassInfo;
-                    });
-                    if (field_class != ordered_classes.end())
-                        field_class->used_count_++;
-                }
-            }
-
-            // to detect inderict dependency cycles
-            std::set<CSchemaClassBinding*> hot_classes{};
-            std::set<CSchemaClassBinding*> previous_hot_classes{};
-
-            bool did_change = false;
-            do {
-                did_change = false;
-
-                // swap until we done.
-                for (auto first = ordered_classes.begin(); first != ordered_classes.end(); ++first) {
-                    bool second_below_first = false;
-
-                    for (auto second = ordered_classes.begin(); second != ordered_classes.end(); ++second) {
-                        if (second == first) {
-                            second_below_first = true;
-                            continue;
-                        }
-
-                        // swap if second class below first, and first depends on second.
-                        const bool first_depend = first->IsDependsOn(*second);
-
-                        // swap if first class below second, and second depends on first.
-                        const bool second_depend = second->IsDependsOn(*first);
-
-                        if (first_depend && second_depend) {
-                            // classes depends on each other, forward declare them.
-                            // @todo: verify that cyclic dependencies is a pointers.
-                            continue;
-                        }
-
-                        if (second_below_first ? first_depend : second_depend) {
-                            hot_classes.emplace(first->target_);
-                            hot_classes.emplace(second->target_);
-
-                            std::iter_swap(first, second);
-                            did_change = true;
-                        }
-                    }
-                }
-
-                if (did_change && (hot_classes == previous_hot_classes)) {
-                    std::cout << "detected dependency cycle in the following classes\n";
-                    for (const auto* class_ : hot_classes) {
-                        std::cout << std::format("- {}::{}\n", class_->m_pszModule, class_->m_pszName);
-                    }
-                    std::cout << "you need to resolve the dependency cycle by hand in the generated sdk\n";
-                    break;
-                }
-                std::swap(hot_classes, previous_hot_classes);
-                hot_classes.clear();
-            } while (did_change);
-
-            return OrderedClasses{
-                .forward_declarations = forward_declarations,
-                .classes = ordered_classes,
-            };
-        }
-
         void AssembleClass(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
             // @note: @es3n1n: get class info, assemble it
             //
-            const auto* class_parent = class_.m_pBaseClassses ? class_.m_pBaseClassses->m_pClass : nullptr;
+            const auto* class_parent = class_.m_pBaseClasses ? class_.m_pBaseClasses->m_pClass : nullptr;
             const auto& class_info = class_;
             const auto is_struct = std::string_view{class_info.m_pszName}.ends_with("_t");
 
@@ -701,7 +542,8 @@ namespace sdk {
 
             // @note: @es3n1n: get parent name
             //
-            const std::string parent_class_name = (class_parent != nullptr) ? class_parent->m_pszName : "";
+            const std::string parent_class_name =
+                (class_parent != nullptr) ? maybe_with_module_name(*class_parent->m_pTypeScope, class_parent->m_pszName) : "";
 
             // @note: @es3n1n: start class
             //
@@ -936,64 +778,61 @@ namespace sdk {
 
             builder.end_block();
         }
-
-        void AssembleClasses(codegen::generator_t::self_ref builder, const std::unordered_set<const CSchemaClassBinding*>& classes) {
-
-            // @note: @soufiw:
-            // sort all classes based on refs and inherit, and then print it.
-            // ==================
-            const auto ordered_classes = OrderClasses(classes);
-
-            for (const auto& type_name : ordered_classes.forward_declarations) {
-                builder.forward_declaration(type_name);
-            }
-
-            if (!ordered_classes.forward_declarations.empty()) {
-                builder.next_line();
-            }
-
-            for (const auto* class_ : classes) {
-                AssembleClass(builder, *class_);
-            }
-        }
-
     } // namespace
 
-    /// @param exclude_module_name will not be contained in the return value
-    /// @return All modules that are required by properties of @p classes
-    std::set<std::string> find_required_modules_of_class(std::string_view exclude_module_name, const CSchemaClassBinding& class_) {
-        std::set<std::string> result{};
+    /// Together with @ref find_required_forward_declarations_for_class(), returns all dependencies of a class.
+    /// Does not return types that are used as pointers. See @ref find_required_forward_declarations_for_class() for that.
+    /// @return {module,type} All modules+types that are required to define @p classes
+    std::set<std::pair<std::string, std::string>> find_required_includes_for_class(const CSchemaClassBinding& class_) {
+        std::set<std::pair<std::string, std::string>> result{};
 
         for (const auto& field : std::span{class_.m_pFields, static_cast<std::size_t>(class_.m_nFieldSize)}) {
-            const auto modules = get_modules_of_type(*field.m_pSchemaType);
-            result.insert(modules.begin(), modules.end());
+            const auto includes = get_required_includes_for_type(*field.m_pSchemaType);
+            result.insert(includes.begin(), includes.end());
         }
 
         for (const auto& field : std::span{class_.m_pStaticFields, static_cast<std::size_t>(class_.m_nStaticFieldsSize)}) {
-            const auto modules = get_modules_of_type(*field.m_pSchemaType);
-            result.insert(modules.begin(), modules.end());
+            const auto includes = get_required_includes_for_type(*field.m_pSchemaType);
+            result.insert(includes.begin(), includes.end());
         }
 
-        if (const auto found = result.find(std::string{exclude_module_name}); found != result.end()) {
-            result.erase(found);
+        if (const auto* base_classes = class_.m_pBaseClasses; base_classes != nullptr) {
+            assert(base_classes->m_pClass->m_pSchemaType != nullptr && "didn't think this could happen, feel free to touch");
+            // source2gen doesn't support multiple inheritance, only check class[0]
+            const auto includes = get_required_includes_for_type(*base_classes[0].m_pClass->m_pSchemaType);
+            result.insert(includes.begin(), includes.end());
         }
 
         return result;
     }
 
-    /// @param exclude_module_name will not be contained in the return value
-    /// @return All modules that are required by properties of @p classes
-    std::set<std::string> find_required_modules(std::string_view exclude_module_name, const std::unordered_set<const CSchemaClassBinding*>& classes) {
-        std::set<std::string> modules{};
+    /// Together with @ref find_required_includes_for_class(), returns all dependencies of a class.
+    /// @return {module,type} All modules+types that need to be forward declared to define @p classes
+    std::set<std::pair<std::string, std::string>> find_required_forward_declarations_for_class(const CSchemaClassBinding& class_) {
+        std::set<std::pair<std::string, std::string>> result{};
 
-        for (const auto& class_ : classes) {
-            assert(class_ != nullptr);
+        for (const auto& field : std::span{class_.m_pFields, static_cast<std::size_t>(class_.m_nFieldSize)} |
+                                     std::views::filter([](auto e) { return e.m_pSchemaType != nullptr; })) {
+            const std::string_view name = field.m_pszName;
+            const std::string_view type_name = field.m_pSchemaType->m_pszName;
+            if (name == "m_poseCacheHandles") {
+                std::cout << "heter";
+            }
 
-            const auto partial = find_required_modules_of_class(exclude_module_name, *class_);
-            modules.insert(partial.begin(), partial.end());
+            if (!is_odr_use(type_name)) {
+                if (const auto module = get_module_of_type(*field.m_pSchemaType)) {
+                    result.emplace(module.value(), decay_type_name(type_name));
+                }
+            }
         }
 
-        return modules;
+        // don't forward-declare self. happens for self-referencing types, e.g. entity2::CEntityComponentHelper
+        if (const auto found = result.find(std::pair<std::string, std::string>{get_module_of_type(*class_.m_pSchemaType).value(), class_.GetName()});
+            found != result.end()) {
+            result.erase(found);
+        }
+
+        return result;
     }
 
     void GenerateEnumSdk(std::string_view module_name, const CSchemaEnumBinding& enum_) {
@@ -1045,14 +884,19 @@ namespace sdk {
         auto builder = codegen::get();
         builder.pragma("once");
 
-        for (const auto& required_module : find_required_modules_of_class(module_name, class_)) {
-            // TOOD: include specific files
-            builder.include(std::format("\"{}/*.hpp\"", required_module));
+        for (const auto& required_include : find_required_includes_for_class(class_)) {
+            builder.include(std::format("\"{}/{}.hpp\"", required_include.first, required_include.second));
         }
 
         // TOOD: make <cstdint> include consistent with GenerateEnumSdk
-        for (auto&& include_path : include_paths)
+        for (const auto& include_path : include_paths)
             builder.include(include_path.data());
+
+        for (const auto& forward_declaration : find_required_forward_declarations_for_class(class_)) {
+            builder.begin_namespace(std::format("source2sdk::{}", forward_declaration.first));
+            builder.forward_declaration(forward_declaration.second);
+            builder.end_namespace();
+        }
 
         // @note: @es3n1n: print banner
         //

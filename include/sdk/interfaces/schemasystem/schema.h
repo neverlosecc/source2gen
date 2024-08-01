@@ -619,7 +619,7 @@ public:
 
     SchemaClassFieldData_t* m_pFields; // 0x0028
     SchemaStaticFieldData_t* m_pStaticFields; // 0x0030
-    SchemaBaseClassInfoData_t* m_pBaseClassses; // 0x0038
+    SchemaBaseClassInfoData_t* m_pBaseClasses; // 0x0038
     SchemaFieldMetadataOverrideSetData_t* m_pFieldMetadataOverrides; // 0x0040
     SchemaMetadataEntryData_t* m_pStaticMetadata; // 0x0048
     CSchemaSystemTypeScope* m_pTypeScope; // 0x0050
@@ -653,8 +653,8 @@ public:
     }
 
     [[nodiscard]] std::optional<CSchemaClassInfo*> GetBaseClass() const {
-        if (m_nBaseClassSize && m_pBaseClassses)
-            return m_pBaseClassses->m_pClass;
+        if (m_nBaseClassSize && m_pBaseClasses)
+            return m_pBaseClasses->m_pClass;
         return std::nullopt;
     }
 
@@ -672,9 +672,9 @@ public:
     }
 
     [[nodiscard]] std::string_view GetPrevClassName() const {
-        if (!m_pBaseClassses || !m_pBaseClassses->m_pClass)
+        if (!m_pBaseClasses || !m_pBaseClasses->m_pClass)
             return {};
-        return m_pBaseClassses->m_pClass->GetName();
+        return m_pBaseClasses->m_pClass->GetName();
     }
 
     [[nodiscard]] bool IsA(CSchemaType* pInheritance) const {
@@ -689,19 +689,19 @@ public:
     }
 
     [[nodiscard]] bool RecursiveHasVirtualTable() const {
-        return HasVirtualTable() || (m_pBaseClassses && m_pBaseClassses->m_pClass && m_pBaseClassses->m_pClass->HasVirtualTable());
+        return HasVirtualTable() || (m_pBaseClasses && m_pBaseClasses->m_pClass && m_pBaseClasses->m_pClass->HasVirtualTable());
     }
 
     [[nodiscard]] bool IsInherits(const std::string_view from) const {
-        if (!m_nBaseClassSize || !m_pBaseClassses || !m_pBaseClassses->m_pClass)
+        if (!m_nBaseClassSize || !m_pBaseClasses || !m_pBaseClasses->m_pClass)
             return false;
-        if (m_pBaseClassses->m_pClass->GetName() == from)
+        if (m_pBaseClasses->m_pClass->GetName() == from)
             return true;
         return false;
     }
 
     [[nodiscard]] bool IsRecursiveInherits(const std::string_view from) const {
-        return IsInherits(from) || (m_pBaseClassses && m_pBaseClassses->m_pClass && m_pBaseClassses->m_pClass->IsRecursiveInherits(from));
+        return IsInherits(from) || (m_pBaseClasses && m_pBaseClasses->m_pClass && m_pBaseClasses->m_pClass->IsRecursiveInherits(from));
     }
 
     [[nodiscard]] int GetSize() const {

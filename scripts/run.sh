@@ -31,7 +31,7 @@ if [ -z "${BINARY}" ]; then
 else
   export LD_LIBRARY_PATH="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/:${GAME_DIRECTORY}/game/csgo/bin/linuxsteamrt64/:${LD_LIBRARY_PATH:-}"
   set -x
-  if [ -z "${DEBUGGER}" ]; then
+  if [ -z "${DEBUGGER:-}" ]; then
     "${BINARY}"
   else
     "${DEBUGGER}" -- "${BINARY}"

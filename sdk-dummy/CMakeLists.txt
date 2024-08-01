@@ -2,6 +2,8 @@
 
 cmake_minimum_required(VERSION 3.30)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS On)
+
 project(source2sdk
   LANGUAGES CXX
 )
@@ -17,6 +19,8 @@ set(generated_cpp_file "${CMAKE_BINARY_DIR}/all_headers.cpp")
 file(WRITE ${generated_cpp_file} ${generated_cpp_contents})
 
 add_library(${PROJECT_NAME} ${generated_cpp_file})
+
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_compile_options(${PROJECT_NAME} PRIVATE
     "-Wfatal-errors"

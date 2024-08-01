@@ -139,14 +139,14 @@ namespace codegen {
             if (base_type.empty())
                 return begin_class(class_name, access_modifier);
             else
-                return begin_block(std::format("class {} : public {}", escape_name(class_name), escape_name(base_type)), access_modifier);
+                return begin_block(std::format("class {} : public {}", escape_name(class_name), base_type), access_modifier);
         }
 
         self_ref end_class() {
             return end_block();
         }
 
-        self_ref begin_namespace(const std::string& namespace_name) {
+        self_ref begin_namespace(const std::string_view namespace_name) {
             return begin_block(std::format("namespace {}", namespace_name));
         }
 
@@ -226,9 +226,9 @@ namespace codegen {
             return push_line(line, move_cursor_to_next_line);
         }
 
-        self_ref forward_declaration(const std::string& text) {
+        self_ref forward_declaration(const std::string& type_name) {
             // @note: @es3n1n: forward decl only once
-            const auto fwd_decl_hash = fnv32::hash_runtime(text.data());
+            const auto fwd_decl_hash = fnv32::hash_runtime(type_name.data());
             if (_forward_decls.contains(fwd_decl_hash))
                 return *this;
 
@@ -236,7 +236,7 @@ namespace codegen {
 
             // @fixme: split method to class_forward_declaration & struct_forward_declaration
             // one for `struct uwu_t` and the other one for `class c_uwu`
-            return push_line(std::format("struct {};", text));
+            return push_line(std::format("struct {};", type_name));
         }
 
         self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
