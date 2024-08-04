@@ -1,0 +1,43 @@
+Checks: >
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  clang-analyzer-*,
+  clang-diagnostic-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  fuchsia-multiple-inheritance,
+  google-*,
+  hicpp-*,
+  misc-*,
+  modernize-*,
+  mpi-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -cert-err58-cpp,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-union-access,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -modernize-use-trailing-return-type,
+  -readability-convert-member-functions-to-static,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,
+WarningsAsErrors: '*'
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+FormatStyle: file
+CheckOptions:
+  - key: 'cppcoreguidelines-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic'
+    value: '1'
+  - key: 'modernize-use-nullptr.NullMacros'
+    value: '1'
+  - key: 'misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic'
+    value: '1'
+  - key: 'readability-redundant-access-specifiers.CheckFirstDeclaration'
+    value: '1'

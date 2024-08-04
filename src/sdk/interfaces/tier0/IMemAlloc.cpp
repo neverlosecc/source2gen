@@ -1,36 +1,50 @@
-// Copyright (C) 2023 neverlosecc
+// Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
-#include <Include.h>
-#include <SDK/Interfaces/tier0/IMemAlloc.h>
+#include <cassert>
+#include <cstring>
+#include <sdk/interfaces/tier0/IMemAlloc.h>
+#include <tools/loader/loader.h>
 
 namespace {
+    // don't use any allocating functions in here, it'll cause a recursive call
+    // to operator new()!
     IMemAlloc* MemAllocSystemInitialize() {
-        HMODULE tier0 = nullptr;
+        // Attempt to load tier0
+        auto tier0 = loader::find_module_handle(LOADER_GET_MODULE_FILE_NAME("tier0"));
 
-        // Attempt to load tier0.dll
-        while (!tier0) {
-            tier0 = LoadLibraryA("tier0.dll");
-        }
+        assert(tier0 != nullptr && "You cannot use any allocating functions before tier0 has been loaded."
+                                   "That includes std::string{} and std::format()!"
+                                   "We're overriding operator new() and depend on tier0."
+                                   "Run a backtrace in your debugger to see where an allocation attempt was made, then adjust that code.");
 
-        IMemAlloc* g_pMemAlloc = nullptr;
+        auto g_ppMemAlloc_wrap = loader::find_module_symbol<IMemAlloc**>(tier0, "g_pMemAlloc");
 
-        // Continuously try to get the g_pMemAlloc pointer until it's successful
-        while (!g_pMemAlloc) {
-            g_pMemAlloc = *reinterpret_cast<IMemAlloc**>(GetProcAddress(tier0, "g_pMemAlloc"));
+        if (g_ppMemAlloc_wrap.has_value()) {
+            auto g_ppMemAlloc = *g_ppMemAlloc_wrap;
 
             // If g_pMemAlloc is not found, try initializing it
-            if (!g_pMemAlloc) {
-                static const auto CMemAllocSystemInitialize = reinterpret_cast<void (*)()>(GetProcAddress(tier0, "CMemAllocSystemInitialize"));
+            if (*g_ppMemAlloc == nullptr) {
+                static const auto CMemAllocSystemInitialize = loader::find_module_symbol<void (*)()>(tier0, "CMemAllocSystemInitialize");
 
-                if (CMemAllocSystemInitialize) {
-                    CMemAllocSystemInitialize();
+                if (CMemAllocSystemInitialize.has_value()) {
+                    (*CMemAllocSystemInitialize)();
                 }
+            }
+
+            if (*g_ppMemAlloc != nullptr) {
+                return *g_ppMemAlloc;
             }
         }
 
-        return g_pMemAlloc;
+        // there is no way to recover; we don't have an allocator, abort
+        const auto rc = std::fputs("could not initialize g_pMemAlloc, source2gen does not work with this version of the game.\n", stderr);
+        if (rc == EOF) {
+            std::perror("failed to use fputs to print error message");
+        }
+
+        std::abort();
     }
-}; // namespace
+} // namespace
 
 bool ValueIsPowerOfTwo(const std::size_t value) // don't clash with mathlib definition
 {
@@ -71,7 +85,7 @@ void* IMemAlloc::ReallocAligned(void* pMemory, std::size_t nSize, std::size_t nA
     memory = *static_cast<void**>(memory);
 
     // See if we have enough space
-    auto nOffset = reinterpret_cast<size_t>(pMemory) - reinterpret_cast<size_t>(memory);
+    auto nOffset = reinterpret_cast<std::size_t>(pMemory) - reinterpret_cast<std::size_t>(memory);
     auto nOldSize = GetSize(memory);
     if (nOldSize >= nSize + nOffset)
         return pMemory;
@@ -88,11 +102,11 @@ void* IMemAlloc::Calloc(std::size_t num, std::size_t nSize) {
     const auto total_size = num * nSize;
     const auto memory = Alloc(total_size);
     if (memory) {
-        static auto V_tier0_memset =
-            reinterpret_cast<void(__cdecl*)(void*, std::int8_t, std::size_t)>(GetProcAddress(GetModuleHandleA("tier0.dll"), "V_tier0_memset"));
+        static auto V_tier0_memset = loader::find_module_symbol<void(__cdecl*)(void*, std::int8_t, std::size_t)>(
+            loader::find_module_handle(loader::get_module_file_name("tier0")), "V_tier0_memset");
 
-        if (V_tier0_memset != nullptr)
-            V_tier0_memset(memory, 0, total_size);
+        if (V_tier0_memset.has_value())
+            (*V_tier0_memset)(memory, 0, total_size);
     }
     return memory;
 }
@@ -118,7 +132,7 @@ size_t IMemAlloc::GetSizeAligned(void* pMemory) {
     void* memory = pMemory;
 
     // pAlloc points to the pointer to starting of the memory block
-    memory = reinterpret_cast<void*>((reinterpret_cast<size_t>(memory) & ~(sizeof(void*) - 1)) - sizeof(void*));
+    memory = reinterpret_cast<void*>((reinterpret_cast<std::size_t>(memory) & ~(sizeof(void*) - 1)) - sizeof(void*));
 
     // pAlloc is the pointer to the start of memory block
     memory = *static_cast<void**>(memory);
@@ -131,8 +145,8 @@ IMemAlloc* GetMemAlloc() {
 }
 
 // void *malloc(size_t size) { return GetMemAlloc()->Alloc(size); }
-// void *calloc(size_t size, size_t n) { return GetMemAlloc()->Calloc(size, n); }
-// void *realloc(void *p, size_t newsize) { return GetMemAlloc()->Realloc(p, newsize); }
+// void *calloc(size_t size, std::size_t n) { return GetMemAlloc()->Calloc(size, n); }
+// void *realloc(void *p, std::size_t newsize) { return GetMemAlloc()->Realloc(p, newsize); }
 // void  free(void *p) { GetMemAlloc()->Free(p); }
 
 void operator delete(void* p) noexcept {
@@ -185,10 +199,10 @@ void operator delete[](void* p, std::align_val_t al) noexcept {
 
 void operator delete(void* p, std::size_t n, std::align_val_t al) noexcept {
     GetMemAlloc()->FreeAligned(p);
-};
+}
 void operator delete[](void* p, std::size_t n, std::align_val_t al) noexcept {
     GetMemAlloc()->FreeAligned(p);
-};
+}
 void operator delete(void* p, std::align_val_t al, const std::nothrow_t&) noexcept {
     GetMemAlloc()->FreeAligned(p);
 }
@@ -204,7 +218,7 @@ void operator delete[](void* p, std::size_t n) noexcept {
 }
 
 // source2gen - Source2 games SDK generator
-// Copyright 2023 neverlosecc
+// Copyright 2024 neverlosecc
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

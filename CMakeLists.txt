@@ -12,6 +12,8 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(FATAL_ERROR "source2gen: 32-bit targets are not supported")
 endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_CXX_STANDARD 23 CACHE STRING "Default C++ standard")
 message(STATUS "source2gen: C++ standard set to ${CMAKE_CXX_STANDARD}")
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require C++ standard")
@@ -59,7 +61,7 @@ if(NOT SOURCE2GEN_GAME IN_LIST SOURCE2GEN_SUPPORTED_GAMES)
     message(FATAL_ERROR "source2gen: Invalid value for SOURCE2GEN_GAME: ${SOURCE2GEN_GAME}")
 endif()
 
-add_library(source2gen SHARED)
+add_executable(source2gen)
 
 file(GLOB_RECURSE source2gen_SOURCES "src/**.cpp")
 file(GLOB_RECURSE source2gen_HEADERS "include/**.h" "include/**.hpp")
@@ -83,8 +85,23 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
     target_compile_definitions(source2gen PRIVATE "source2gen_RELEASE" "NDEBUG")
 endif()
 
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    target_compile_options(source2gen PRIVATE -Wno-nonportable-include-path -Wno-implicit-exception-spec-mismatch -Wno-invalid-offsetof -Wno-unknown-attributes)
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
+   ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang" OR
+   ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    target_compile_options(source2gen PRIVATE
+      -pedantic-errors
+      -Wno-address-of-packed-member
+      $<$<NOT:$<CXX_COMPILER_ID:GNU>>:-Wno-implicit-exception-spec-mismatch>
+      -Wno-invalid-offsetof
+      $<IF:$<CXX_COMPILER_ID:GNU>,-Wno-attributes,-Wno-unknown-attributes>
+    )
+
+    target_compile_definitions(source2gen PRIVATE
+      "FORCEINLINE="
+      "__forceinline="
+      "__thiscall="
+      "__cdecl="
+    )
 endif()
 
 target_compile_definitions(source2gen PRIVATE
@@ -93,4 +110,5 @@ target_compile_definitions(source2gen PRIVATE
     "NOMINMAX"
     "WIN32_LEAN_AND_MEAN"
     "_WIN32_WINNT=0x601"
+    "__cpp_lib_expected" # Because clangd-18 + GLIBCXX_3.4.33 doesn't know std::expected. This is a hack to make the language server work.
 )
