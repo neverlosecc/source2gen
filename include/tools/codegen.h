@@ -14,33 +14,6 @@ namespace codegen {
     constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many \t characters shall we place per each block
     constexpr std::array kBlacklistedCharacters = {':', ';', '\\', '/'};
 
-    // @note: @es3n1n: a list of possible integral types for bitfields (would be used in `guess_bitfield_type`)
-    //
-    // clang-format off
-    constexpr auto kBitfieldIntegralTypes = std::to_array<std::pair<std::size_t, std::string_view>>({
-        {8, "uint8_t"},
-        {16, "uint16_t"},
-        {32, "uint32_t"},
-        {64, "uint64_t"},
-
-        // @todo: @es3n1n: define uint128_t/uint256_t/... as custom structs in the very beginning of the file
-        {128, "uint128_t"},
-        {256, "uint256_t"},
-        {512, "uint512_t"},
-    });
-    // clang-format on
-
-    inline std::string guess_bitfield_type(const std::size_t bits_count) {
-        for (auto p : kBitfieldIntegralTypes) {
-            if (bits_count > p.first)
-                continue;
-
-            return p.second.data();
-        }
-
-        throw std::runtime_error(std::format("{} : Unable to guess bitfield type with size {}", __FUNCTION__, bits_count));
-    }
-
     struct generator_t {
         using self_ref = std::add_lvalue_reference_t<generator_t>;
 
@@ -241,16 +214,29 @@ namespace codegen {
 
         self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
                                 const bool is_private_field = false, const std::size_t bitfield_size = 0ull) {
+            const auto bytes = (bitfield_size == 0) ? padding_size : bitfield_size / 8;
+            const auto remaining_bits = bitfield_size % 8;
+
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
-            std::string type_name = bitfield_size ? guess_bitfield_type(bitfield_size) : "uint8_t";
+            std::string type_name = "std::uint8_t";
             if (is_private_field)
                 type_name = "[[maybe_unused]] " + type_name;
 
             auto pad_name = pad_offset.has_value() ? std::format("pad_0x{:04x}", pad_offset.value()) : std::format("pad_{:d}", _pads_count++);
-            if (!bitfield_size)
-                pad_name = pad_name + std::format("[{:#x}]", padding_size);
 
-            return prop(type_name, bitfield_size ? std::format("{}: {}", pad_name, bitfield_size) : pad_name, move_cursor_to_next_line);
+            if (bytes != 0) {
+                pad_name = pad_name + std::format("[{:#x}]", bytes);
+            }
+
+            prop(type_name, pad_name, move_cursor_to_next_line);
+
+            if (remaining_bits != 0) {
+                auto remainder_pad_name =
+                    pad_offset.has_value() ? std::format("pad_0x{:04x}", pad_offset.value() + bytes) : std::format("pad_{:d}", _pads_count++);
+                prop(type_name, std::format("{}: {}", remainder_pad_name, remaining_bits), move_cursor_to_next_line);
+            }
+
+            return *this;
         }
 
         self_ref begin_union(std::string name = "") {
