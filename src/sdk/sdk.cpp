@@ -815,9 +815,18 @@ namespace sdk {
                                      std::views::filter([](auto e) { return e.m_pSchemaType != nullptr; })) {
             const std::string_view name = field.m_pszName;
             const std::string_view type_name = field.m_pSchemaType->m_pszName;
-            if (name == "m_poseCacheHandles") {
-                std::cout << "heter";
+
+            if (!is_odr_use(type_name)) {
+                if (const auto module = get_module_of_type(*field.m_pSchemaType)) {
+                    result.emplace(module.value(), decay_type_name(type_name));
+                }
             }
+        }
+
+        for (const auto& field : std::span{class_.m_pStaticFields, static_cast<std::size_t>(class_.m_nStaticFieldsSize)} |
+                                     std::views::filter([](auto e) { return e.m_pSchemaType != nullptr; })) {
+            const std::string_view name = field.m_pszName;
+            const std::string_view type_name = field.m_pSchemaType->m_pszName;
 
             if (!is_odr_use(type_name)) {
                 if (const auto module = get_module_of_type(*field.m_pSchemaType)) {

@@ -43,9 +43,11 @@ template <class>
 using CHandle = char[0x04];
 template <class>
 using C_NetworkUtlVectorBase = char[0x18];
+// size unknown. only used in dynamic containers.
+using CSoundEventName = char[0x01];
 template <class>
 using CUtlLeanVector = char[0x10];
-template <class>
+template <class, class>
 using CUtlOrderedMap = char[0x28];
 // size doesn't mapper. only used as a pointer
 template <class, class>
