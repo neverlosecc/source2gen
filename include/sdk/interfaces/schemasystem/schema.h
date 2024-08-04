@@ -382,7 +382,7 @@ public:
     }
 
     // @todo: @og: find out to what class pointer points.
-    [[nodiscard]] CSchemaType* GetRefClass();
+    [[nodiscard]] CSchemaType* GetRefClass() const;
 
     [[nodiscard]] ETypeCategory GetTypeCategory() const {
 #if defined(CS2) || defined(DOTA2)
@@ -421,13 +421,13 @@ public:
     CSchemaType* m_pObjectType;
 };
 
-[[nodiscard]] inline CSchemaType* CSchemaType::GetRefClass() {
+[[nodiscard]] inline CSchemaType* CSchemaType::GetRefClass() const {
     if (GetTypeCategory() != ETypeCategory::Schema_Ptr)
         return nullptr;
 
-    auto ptr = reinterpret_cast<CSchemaType_Ptr*>(this)->m_pObjectType;
+    auto ptr = reinterpret_cast<const CSchemaType_Ptr*>(this)->m_pObjectType;
     while (ptr && ptr->GetTypeCategory() == ETypeCategory::Schema_Ptr)
-        ptr = reinterpret_cast<CSchemaType_Ptr*>(ptr)->m_pObjectType;
+        ptr = reinterpret_cast<const CSchemaType_Ptr*>(ptr)->m_pObjectType;
 
     return ptr;
 }
@@ -617,7 +617,7 @@ public:
 
     SchemaClassFieldData_t* m_pFields; // 0x0028
     SchemaStaticFieldData_t* m_pStaticFields; // 0x0030
-    SchemaBaseClassInfoData_t* m_pBaseClassses; // 0x0038
+    SchemaBaseClassInfoData_t* m_pBaseClasses; // 0x0038
     SchemaFieldMetadataOverrideSetData_t* m_pFieldMetadataOverrides; // 0x0040
     SchemaMetadataEntryData_t* m_pStaticMetadata; // 0x0048
     CSchemaSystemTypeScope* m_pTypeScope; // 0x0050
@@ -638,40 +638,41 @@ static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68);
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
 public:
-    [[nodiscard]] std::string_view GetName() {
+    [[nodiscard]] std::string_view GetName() const {
         if (m_pszName)
             return {m_pszName};
         return {};
     }
 
-    [[nodiscard]] std::string_view GetModule() {
+    [[nodiscard]] std::string_view GetModule() const {
         if (m_pszModule)
             return {m_pszModule};
         return {};
     }
 
     [[nodiscard]] std::optional<CSchemaClassInfo*> GetBaseClass() const {
-        if (m_nBaseClassSize && m_pBaseClassses)
-            return m_pBaseClassses->m_pClass;
+        if (m_nBaseClassSize && m_pBaseClasses)
+            return m_pBaseClasses->m_pClass;
         return std::nullopt;
     }
 
-    [[nodiscard]] std::vector<SchemaClassFieldData_t> GetFields() {
+    // TODO: when we have AddressSanitizer, try returning std::span instead of std::vector. Repeats for other functions.
+    [[nodiscard]] std::vector<SchemaClassFieldData_t> GetFields() const {
         return {m_pFields, m_pFields + m_nFieldSize};
     }
 
-    [[nodiscard]] std::vector<SchemaStaticFieldData_t> GetStaticFields() {
+    [[nodiscard]] std::vector<SchemaStaticFieldData_t> GetStaticFields() const {
         return {m_pStaticFields, m_pStaticFields + m_nStaticFieldsSize};
     }
 
-    [[nodiscard]] std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() {
+    [[nodiscard]] std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() const {
         return {m_pStaticMetadata, m_pStaticMetadata + m_nStaticMetadataSize};
     }
 
     [[nodiscard]] std::string_view GetPrevClassName() const {
-        if (!m_pBaseClassses || !m_pBaseClassses->m_pClass)
+        if (!m_pBaseClasses || !m_pBaseClasses->m_pClass)
             return {};
-        return m_pBaseClassses->m_pClass->GetName();
+        return m_pBaseClasses->m_pClass->GetName();
     }
 
     [[nodiscard]] bool IsA(CSchemaType* pInheritance) const {
@@ -686,19 +687,19 @@ public:
     }
 
     [[nodiscard]] bool RecursiveHasVirtualTable() const {
-        return HasVirtualTable() || (m_pBaseClassses && m_pBaseClassses->m_pClass && m_pBaseClassses->m_pClass->HasVirtualTable());
+        return HasVirtualTable() || (m_pBaseClasses && m_pBaseClasses->m_pClass && m_pBaseClasses->m_pClass->HasVirtualTable());
     }
 
     [[nodiscard]] bool IsInherits(const std::string_view from) const {
-        if (!m_nBaseClassSize || !m_pBaseClassses || !m_pBaseClassses->m_pClass)
+        if (!m_nBaseClassSize || !m_pBaseClasses || !m_pBaseClasses->m_pClass)
             return false;
-        if (m_pBaseClassses->m_pClass->GetName() == from)
+        if (m_pBaseClasses->m_pClass->GetName() == from)
             return true;
         return false;
     }
 
     [[nodiscard]] bool IsRecursiveInherits(const std::string_view from) const {
-        return IsInherits(from) || (m_pBaseClassses && m_pBaseClassses->m_pClass && m_pBaseClassses->m_pClass->IsRecursiveInherits(from));
+        return IsInherits(from) || (m_pBaseClasses && m_pBaseClasses->m_pClass && m_pBaseClasses->m_pClass->IsRecursiveInherits(from));
     }
 
     [[nodiscard]] int GetSize() const {
@@ -765,36 +766,46 @@ static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x
 class CSchemaSystemTypeScope {
 public:
     void* InsertNewClassBinding(const std::string_view szName, void* a2) {
+        assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
+
         return Virtual::Get<void* (*)(CSchemaSystemTypeScope*, const char*, void*)>(this, 0)(this, szName.data(), a2);
     }
 
     void* InsertNewEnumBinding(const std::string_view szName, void* a2) {
+        assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
+
         return Virtual::Get<void* (*)(CSchemaSystemTypeScope*, const char*, void*)>(this, 1)(this, szName.data(), a2);
     }
 
-    [[nodiscard]] CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) {
+    [[nodiscard]] CSchemaClassInfo* FindDeclaredClass(const std::string_view szName) const {
+        assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
+
         if constexpr (kSchemaSystemVersion == 2) {
             CSchemaClassInfo* class_info;
 
-            Virtual::Get<void(__thiscall*)(void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, szName.data());
+            Virtual::Get<void(__thiscall*)(const void*, CSchemaClassInfo**, const char*)>(this, 2)(this, &class_info, szName.data());
             return class_info;
         } else {
-            return Virtual::Get<CSchemaClassInfo*(__thiscall*)(void*, const char*)>(this, 2)(this, szName.data());
+            return Virtual::Get<CSchemaClassInfo*(__thiscall*)(const void*, const char*)>(this, 2)(this, szName.data());
         }
     }
 
-    [[nodiscard]] CSchemaEnumInfo* FindDeclaredEnum(const std::string_view szName) {
+    [[nodiscard]] CSchemaEnumInfo* FindDeclaredEnum(const std::string_view szName) const {
+        assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
+
         if constexpr (kSchemaSystemVersion == 2) {
             CSchemaEnumInfo* enum_info;
 
-            Virtual::Get<void(__thiscall*)(void*, CSchemaEnumInfo**, const char*)>(this, 3)(this, &enum_info, szName.data());
+            Virtual::Get<void(__thiscall*)(const void*, CSchemaEnumInfo**, const char*)>(this, 3)(this, &enum_info, szName.data());
             return enum_info;
         } else {
-            return Virtual::Get<CSchemaEnumInfo*(__thiscall*)(void*, const char*)>(this, 3)(this, szName.data());
+            return Virtual::Get<CSchemaEnumInfo*(__thiscall*)(const void*, const char*)>(this, 3)(this, szName.data());
         }
     }
 
     [[nodiscard]] CSchemaType* FindSchemaTypeByName(const std::string_view szName) {
+        assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
+
         if constexpr (kSchemaSystemVersion == 2) {
             CSchemaType* schema_type;
 

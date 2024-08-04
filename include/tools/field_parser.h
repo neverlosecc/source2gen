@@ -2,10 +2,13 @@
 // See end of file for extended copyright information.
 #pragma once
 
-#include <cstdint>
+#include <cstddef>
+#include <format>
+#include <sdk/interfaces/client/game/datamap_t.h>
 #include <string>
-
-enum class fieldtype_t : uint8_t;
+#include <string_view>
+#include <variant>
+#include <vector>
 
 namespace field_parser {
     class field_info_t {
@@ -64,6 +67,10 @@ namespace field_parser {
             return m_name;
         }
     };
+
+    /// @return @ref std::nullopt if type_name is not a built-in type
+    [[nodiscard]]
+    std::optional<std::string_view> type_name_to_cpp(std::string_view type_name);
 
     field_info_t parse(const std::string& type_name, const std::string& name, const std::vector<std::size_t>& array_sizes);
     field_info_t parse(const fieldtype_t& type_name, const std::string& name, const std::size_t& array_sizes = 1);
