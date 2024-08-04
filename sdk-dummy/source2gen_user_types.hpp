@@ -68,6 +68,8 @@ using CUtlVectorSIMDPaddedVector = char[0x18];
 template <class>
 using CSmartPtr = char[0x08];
 template <class>
+using CResourceArray = char[0x08];
+template <class>
 using CResourceNameTyped = char[0xe0];
 template <class>
 using CStrongHandle = char[0x08];
@@ -104,9 +106,6 @@ using float32 = char[0x04];
 using fltx4 = char[0x10];
 using matrix3x4_t = char[0x30];
 using matrix3x4a_t = char[0x30];
-using uint256_t = char[0x20];
-
-using uint8 = std::uint8_t; // TOOD: happens in CUtlVector<unit8>. how to fix?
 
 // intentionally left undefined. if you want to access static fields, add your own sdk.
 namespace interfaces {

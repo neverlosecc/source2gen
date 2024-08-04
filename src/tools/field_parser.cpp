@@ -10,6 +10,33 @@ namespace field_parser {
 
             constexpr std::string_view kBitfieldTypePrefix = "bitfield:"sv;
 
+            // @note: @es3n1n: a list of possible integral types for bitfields (would be used in `guess_bitfield_type`)
+            //
+            // clang-format off
+                constexpr auto kBitfieldIntegralTypes = std::to_array<std::pair<std::size_t, std::string_view>>({
+                    {8, "uint8_t"},
+                    {16, "uint16_t"},
+                    {32, "uint32_t"},
+                    {64, "uint64_t"},
+
+                    // @todo: @es3n1n: define uint128_t/uint256_t/... as custom structs in the very beginning of the file
+                    {128, "uint128_t"},
+                    {256, "uint256_t"},
+                    {512, "uint512_t"},
+                });
+            // clang-format on
+
+            inline std::string guess_bitfield_type(const std::size_t bits_count) {
+                for (auto p : kBitfieldIntegralTypes) {
+                    if (bits_count > p.first)
+                        continue;
+
+                    return p.second.data();
+                }
+
+                throw std::runtime_error(std::format("{} : Unable to guess bitfield type with size {}", __FUNCTION__, bits_count));
+            }
+
             // clang-format off
             constexpr auto kTypeNameToCpp = std::to_array<std::pair<std::string_view, std::string_view>>({
                 {"float32"sv, "float"sv},
@@ -97,7 +124,7 @@ namespace field_parser {
 
             // @note: @es3n1n: saving parsed value
             result.m_bitfield_size = bitfield_size;
-            result.m_type = codegen::guess_bitfield_type(bitfield_size);
+            result.m_type = guess_bitfield_type(bitfield_size);
         }
 
         // @note: @es3n1n: we are assuming that this function would be executed right after
