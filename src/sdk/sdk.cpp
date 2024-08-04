@@ -500,7 +500,8 @@ namespace sdk {
             return result;
         }
 
-        // TOOD: need to sort these fuctions, they're all over the place
+        // TOOD: need to sort these fuctions, they're all over the place.
+        // TOOD: move local functions into an anoymous namespace
 
         // We assume that everything that is not a pointer odr-used.
         // This assumption not correct, e.g. template classes that internally store pointers are
@@ -508,27 +509,6 @@ namespace sdk {
         [[nodiscard]]
         constexpr auto is_odr_use(std::string_view type_name) -> bool {
             return !type_name.contains('*');
-        }
-
-        /// @return {module,type} All includes to types odr-used by @p type. Returns multiple
-        /// modules for template types.
-        [[nodiscard]]
-        auto get_required_includes_for_type(const CSchemaType& type) -> std::set<std::pair<std::string, std::string>> {
-            // m_pTypeScope can be nullptr for built-in types
-            if (type.m_pTypeScope != nullptr) {
-                std::set<std::pair<std::string, std::string>> result{};
-
-                for (const auto& type_name :
-                     parse_template_recursive(type.m_pszName) | std::views::filter(is_odr_use) | std::views::transform(decay_type_name)) {
-                    if (auto module{get_module_of_type_in_scope(*type.m_pTypeScope, type_name)}) {
-                        result.emplace(std::move(module.value()), type_name);
-                    }
-                }
-
-                return result;
-            } else {
-                return {};
-            }
         }
 
         void AssembleClass(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
@@ -780,64 +760,86 @@ namespace sdk {
         }
     } // namespace
 
-    /// Together with @ref find_required_forward_declarations_for_class(), returns all dependencies of a class.
-    /// Does not return types that are used as pointers. See @ref find_required_forward_declarations_for_class() for that.
-    /// @return {module,type} All modules+types that are required to define @p classes
-    std::set<std::pair<std::string, std::string>> find_required_includes_for_class(const CSchemaClassBinding& class_) {
-        std::set<std::pair<std::string, std::string>> result{};
+    enum class TypeSource {
+        include,
+        forward_declaration,
+    };
+
+    // TOOD: "dependency" is a misleading term here. repeats for functions. "includes" and "forward declarations" were good terms.
+    struct TypeDependency {
+        std::string module{};
+
+        /// Decayed
+        std::string type_name{};
+
+        TypeSource source{};
+
+        auto operator<=>(const TypeDependency&) const = default;
+    };
+
+    /// @return All dependencies to types used by @p type. Returns multiple
+    /// modules for template types.
+    [[nodiscard]]
+    auto get_required_dependencies_for_type(const CSchemaType& type) -> std::set<TypeDependency> {
+        // m_pTypeScope can be nullptr for built-in types
+        if (type.m_pTypeScope != nullptr) {
+            std::set<TypeDependency> result{};
+
+            const auto destructured = parse_template_recursive(type.m_pszName);
+
+            // This is a slight hack to break dependency cycles. Some template types don't odr-use
+            // their template arguments during their declaration, think std::unique_ptr.
+            // There's no foolproof way to detect those template types, so we're hardcoding the ones that are
+            // known to cause circular dependencies.
+            static std::unordered_set<std::string_view> non_odr_containers{"CHandle"};
+            bool is_used_in_non_odr_container = false;
+
+            for (const auto& dirty_type_name : destructured) {
+                const auto type_name = decay_type_name(dirty_type_name);
+
+                if (auto module{get_module_of_type_in_scope(*type.m_pTypeScope, type_name)}) {
+                    const auto source =
+                        (!is_used_in_non_odr_container && is_odr_use(dirty_type_name)) ? TypeSource::include : TypeSource::forward_declaration;
+
+                    result.emplace(TypeDependency{.module = std::move(module.value()), .type_name = std::string{type_name}, .source = source});
+                }
+
+                is_used_in_non_odr_container = non_odr_containers.contains(type_name);
+            }
+
+            return result;
+        } else {
+            return {};
+        }
+    }
+
+    /// @return All modules+types that are required to define @p classes
+    std::set<TypeDependency> find_required_dependencies_for_class(const CSchemaClassBinding& class_) {
+        std::set<TypeDependency> result{};
 
         for (const auto& field : std::span{class_.m_pFields, static_cast<std::size_t>(class_.m_nFieldSize)}) {
-            const auto includes = get_required_includes_for_type(*field.m_pSchemaType);
+            const auto includes = get_required_dependencies_for_type(*field.m_pSchemaType);
             result.insert(includes.begin(), includes.end());
         }
 
         for (const auto& field : std::span{class_.m_pStaticFields, static_cast<std::size_t>(class_.m_nStaticFieldsSize)}) {
-            const auto includes = get_required_includes_for_type(*field.m_pSchemaType);
+            const auto includes = get_required_dependencies_for_type(*field.m_pSchemaType);
             result.insert(includes.begin(), includes.end());
         }
 
         if (const auto* base_classes = class_.m_pBaseClasses; base_classes != nullptr) {
             assert(base_classes->m_pClass->m_pSchemaType != nullptr && "didn't think this could happen, feel free to touch");
             // source2gen doesn't support multiple inheritance, only check class[0]
-            const auto includes = get_required_includes_for_type(*base_classes[0].m_pClass->m_pSchemaType);
+            const auto includes = get_required_dependencies_for_type(*base_classes[0].m_pClass->m_pSchemaType);
             result.insert(includes.begin(), includes.end());
         }
 
-        return result;
-    }
+        const auto is_self = [self_module{get_module_of_type(*class_.m_pSchemaType).value()}, self_type_name{class_.GetName()}](const auto& that) {
+            return (that.module == self_module) && (that.type_name == self_type_name);
+        };
 
-    /// Together with @ref find_required_includes_for_class(), returns all dependencies of a class.
-    /// @return {module,type} All modules+types that need to be forward declared to define @p classes
-    std::set<std::pair<std::string, std::string>> find_required_forward_declarations_for_class(const CSchemaClassBinding& class_) {
-        std::set<std::pair<std::string, std::string>> result{};
-
-        for (const auto& field : std::span{class_.m_pFields, static_cast<std::size_t>(class_.m_nFieldSize)} |
-                                     std::views::filter([](auto e) { return e.m_pSchemaType != nullptr; })) {
-            const std::string_view name = field.m_pszName;
-            const std::string_view type_name = field.m_pSchemaType->m_pszName;
-
-            if (!is_odr_use(type_name)) {
-                if (const auto module = get_module_of_type(*field.m_pSchemaType)) {
-                    result.emplace(module.value(), decay_type_name(type_name));
-                }
-            }
-        }
-
-        for (const auto& field : std::span{class_.m_pStaticFields, static_cast<std::size_t>(class_.m_nStaticFieldsSize)} |
-                                     std::views::filter([](auto e) { return e.m_pSchemaType != nullptr; })) {
-            const std::string_view name = field.m_pszName;
-            const std::string_view type_name = field.m_pSchemaType->m_pszName;
-
-            if (!is_odr_use(type_name)) {
-                if (const auto module = get_module_of_type(*field.m_pSchemaType)) {
-                    result.emplace(module.value(), decay_type_name(type_name));
-                }
-            }
-        }
-
-        // don't forward-declare self. happens for self-referencing types, e.g. entity2::CEntityComponentHelper
-        if (const auto found = result.find(std::pair<std::string, std::string>{get_module_of_type(*class_.m_pSchemaType).value(), class_.GetName()});
-            found != result.end()) {
+        // don't forward-declare or include self. happens for self-referencing types, e.g. entity2::CEntityComponentHelper
+        if (const auto found = std::ranges::find_if(result, is_self); found != result.end()) {
             result.erase(found);
         }
 
@@ -893,17 +895,20 @@ namespace sdk {
         auto builder = codegen::get();
         builder.pragma("once");
 
-        for (const auto& required_include : find_required_includes_for_class(class_)) {
-            builder.include(std::format("\"{}/{}.hpp\"", required_include.first, required_include.second));
+        const auto dependencies = find_required_dependencies_for_class(class_);
+
+        for (const auto& include : dependencies | std::views::filter([](const auto& el) { return el.source == TypeSource::include; })) {
+            builder.include(std::format("\"{}/{}.hpp\"", include.module, include.type_name));
         }
 
         // TOOD: make <cstdint> include consistent with GenerateEnumSdk
         for (const auto& include_path : include_paths)
             builder.include(include_path.data());
 
-        for (const auto& forward_declaration : find_required_forward_declarations_for_class(class_)) {
-            builder.begin_namespace(std::format("source2sdk::{}", forward_declaration.first));
-            builder.forward_declaration(forward_declaration.second);
+        for (const auto& forward_declaration :
+             dependencies | std::views::filter([](const auto& el) { return el.source == TypeSource::forward_declaration; })) {
+            builder.begin_namespace(std::format("source2sdk::{}", forward_declaration.module));
+            builder.forward_declaration(forward_declaration.type_name);
             builder.end_namespace();
         }
 

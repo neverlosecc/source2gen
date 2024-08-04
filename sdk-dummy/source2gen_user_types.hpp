@@ -6,6 +6,9 @@
 template <class>
 using CAnimValue = char[0x08];
 using CAnimVariant = char[0x14];
+// size is a guess
+template <class T>
+using CAnimScriptParam = char[0x08];
 using CBufferString = char[0x10];
 using CColorGradient = char[0x18];
 // size doesn't mapper. only used as a pointer
