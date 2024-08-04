@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <sdk/interfaces/common/CBufferString.h>
@@ -708,7 +709,7 @@ public:
         return m_nSizeOf;
     }
 
-    [[nodiscard]] std::uint8_t GetAligment() const {
+    [[nodiscard]] std::uint8_t GetAlignment() const {
         return m_unAlignOf == std::numeric_limits<std::uint8_t>::max() ? 8 : m_unAlignOf;
     }
 

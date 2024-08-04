@@ -1,6 +1,7 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
-#include <Include.h>
+#include "tools/field_parser.h"
+#include "tools/codegen.h"
 #include <sdk/interfaces/client/game/datamap_t.h>
 
 namespace field_parser {

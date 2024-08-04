@@ -3,10 +3,10 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
 #include <format>
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace field_parser {

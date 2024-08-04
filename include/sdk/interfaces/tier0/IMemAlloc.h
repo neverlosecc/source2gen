@@ -4,6 +4,7 @@
 
 #pragma warning(push)
 #pragma warning(disable:4191)
+
 #include "tools/platform.h"
 #include "tools/virtual.h"
 
