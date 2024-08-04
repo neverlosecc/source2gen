@@ -46,6 +46,8 @@ template <class>
 using CHandle = char[0x04];
 template <class>
 using C_NetworkUtlVectorBase = char[0x18];
+template <class>
+using CNetworkUtlVectorBase = char[0x18];
 // size unknown. only used in dynamic containers.
 using CSoundEventName = char[0x01];
 template <class>
@@ -64,11 +66,17 @@ template <class T>
 using CUtlLeanVectorFixedGrowable = char[0x18 + ((sizeof(T) < 4) ? 4 : sizeof(T))];
 template <class>
 using C_UtlVectorEmbeddedNetworkVar = char[0x50];
+template <class>
+using CUtlVectorEmbeddedNetworkVar = char[0x50];
 using CUtlVectorSIMDPaddedVector = char[0x18];
 template <class>
 using CSmartPtr = char[0x08];
 template <class>
 using CResourceArray = char[0x08];
+// size unknown
+using CResourceString = char[0x08];
+template <class>
+using CResourcePointer = char[0x08];
 template <class>
 using CResourceNameTyped = char[0xe0];
 template <class>
@@ -92,6 +100,7 @@ using QAngle = char[0x0c];
 using QuaternionStorage = char[0x10];
 using Quaternion = char[0x10];
 using RadianEuler = char[0x14];
+using RenderInputLayoutField_t = char[0x04];
 // we don't have a field size for this type. uses the fallback of 1.
 using RenderPrimitiveType_t = char[0x01];
 using RotationVector = char[0x0c];
