@@ -33,7 +33,18 @@ namespace {
 
     using namespace std::string_view_literals;
 
+    /**
+     * Project structure is
+     * <kOutDirName>
+     * - CMakeLists.txt
+     * - ...
+     * - <kSdkDirName>
+     *   - some_module
+     *     - some_header.hpp
+     */
     constexpr std::string_view kOutDirName = "sdk"sv;
+    /// Include directory
+    constexpr std::string_view kSdkDirName = "source2sdk"sv;
 
     constexpr uint32_t kMaxReferencesForClassEmbed = 2;
     constexpr std::size_t kMinFieldCountForClassEmbed = 2;
@@ -820,7 +831,7 @@ namespace {
     }
 
     void GenerateEnumSdk(std::string_view module_name, const CSchemaEnumBinding& enum_) {
-        const std::string out_file_path = std::format("{}/{}/{}.hpp", kOutDirName, module_name, enum_.m_pszName);
+        const std::string out_file_path = std::format("{}/{}/{}/{}.hpp", kOutDirName, kSdkDirName, module_name, enum_.m_pszName);
 
         // @note: @es3n1n: init codegen
         //
@@ -871,10 +882,10 @@ namespace {
         const auto names = GetRequiredNamesForClass(class_);
 
         for (const auto& include : names | std::views::filter([](const auto& el) { return el.source == NameSource::include; })) {
-            builder.include(std::format("\"{}/{}.hpp\"", include.module, include.type_name));
+            builder.include(std::format("\"{}/{}/{}.hpp\"", kSdkDirName, include.module, include.type_name));
         }
 
-        builder.include("\"source2gen_user_types.hpp\"");
+        builder.include(std::format("\"{}/source2gen_user_types.hpp\"", kSdkDirName));
         builder.include("<cstdint>");
 
         for (const auto& forward_declaration : names | std::views::filter([](const auto& el) { return el.source == NameSource::forward_declaration; })) {
@@ -923,7 +934,7 @@ namespace sdk {
         std::cout << std::format("{}: Assembling module {} with {} enum(s) and {} class(es)", __FUNCTION__, module_name, enums.size(), classes.size())
                   << std::endl;
 
-        const std::filesystem::path out_directory_path = std::format("{}/{}", kOutDirName, module_name);
+        const std::filesystem::path out_directory_path = std::format("{}/{}/{}", kOutDirName, kSdkDirName, module_name);
 
         if (!std::filesystem::exists(out_directory_path))
             std::filesystem::create_directories(out_directory_path);

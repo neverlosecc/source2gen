@@ -1,22 +1,3 @@
-TOOD: remove
-
-- add missing types as dummies
-- add empty `interfaces` sdk
-- sort template classes below their template types
-- decay arrays and pointers when sorting classes by dependencies
-- detect indirect dependency cycles
-- add includes to modules of template arguments
-- rename template arguments to use fully qualified names
-- add includes for template arguments (add decompose_type() and use that in many places?)
-- escape class names
-
-TOOD:
-
-- rename nested types to use underscores
-- see why the sdk doesn't compile
-- generate static assertions
-- remove all double underscores
-
 # Source2Gen
 
 Source2Gen is a tool to generate Source 2 SDKs. \
@@ -34,7 +15,7 @@ can use the registry to find the game path and set `PATH` automatically.
 
 ```sh
 source2gen
-copy .\sdk-dummy\source2gen_user_types.hpp .\sdk
+copy .\sdk-static\source2gen_user_types.hpp .\sdk
 # view generated sdk
 dir .\sdk
 ```
@@ -43,7 +24,7 @@ dir .\sdk
 
 ```sh
 ./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/"
-pc ./sdk-dummy/source2gen_user_types.hpp ./sdk
+cp -r ./sdk-static/* ./sdk
 # view generated sdk
 ls ./sdk
 ```
@@ -64,9 +45,9 @@ Linux.
 
 The sdk depends on a file/module called "source2gen_user_types". This file has
 to be provided by the user and expose all types listed in
-[source2gen_user_types.hpp](sdk-dummy/source2gen_user_types.hpp). If you don't
-intend to access any of these types, you can use the dummy
-[source2gen_user_types.hpp](sdk-dummy/source2gen_user_types.hpp).
+[source2gen_user_types.hpp](sdk-static/source2gen_user_types.hpp). If you don't
+intend to access any of these types, you can use the dummy file
+[source2gen_user_types.hpp](sdk-static/source2gen_user_types.hpp).
 
 ## Getting Started
 
