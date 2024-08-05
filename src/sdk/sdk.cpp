@@ -634,7 +634,8 @@ namespace {
         // @note: @es3n1n: and finally insert a pad
         //
         if (expected_pad_size > 0) // @fixme: @es3n1n: this is wrong, i probably should check for collisions instead
-            builder.access_modifier("private")
+            // TOOD: remove access_modifier() altogether?
+            builder.access_modifier("public")
                 .struct_padding(parent_class_size, expected_pad_size, false, true)
                 .reset_tabs_count()
                 .comment(std::format("{:#x}", parent_class_size))
@@ -674,7 +675,7 @@ namespace {
             //
             const auto expected_offset = state.last_field_offset + state.last_field_size;
             if (state.last_field_size && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) && !state.assembling_bitfield) {
-                builder.access_modifier("private")
+                builder.access_modifier("public")
                     .struct_padding(expected_offset, field.m_nSingleInheritanceOffset - expected_offset, false, true)
                     .reset_tabs_count()
                     .comment(std::format("{:#x}", expected_offset))
@@ -760,6 +761,16 @@ namespace {
 
             state.total_bits_count_in_union = 0;
             state.assembling_bitfield = false;
+        }
+
+        // pad the class end
+        const auto last_field_end = state.last_field_offset + state.last_field_size;
+        const auto end_pad = class_.GetSize() - last_field_end;
+        if (end_pad != 0) {
+            builder.struct_padding(last_field_end, end_pad, true, true);
+        } else if (end_pad < 0) [[unlikely]] {
+            throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
+                                                 -end_pad, last_field_end, class_.GetName(), class_.GetSize())};
         }
 
         // @note: @es3n1n: dump static fields
