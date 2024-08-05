@@ -1,7 +1,7 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
-#include <cstdint>
+#include <cassert>
 #include <set>
 #include <sstream>
 #include <string>
@@ -188,6 +188,12 @@ namespace codegen {
             //
             _tabs_count = backup_tabs_count;
             return *this;
+        }
+
+        self_ref static_assert_size(std::string_view type_name, int expected_size, const bool move_cursor_to_next_line = true) {
+            assert(expected_size > 0);
+
+            return push_line(std::format("static_assert(sizeof({}) == 0x{:x});", type_name, expected_size));
         }
 
         self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) {

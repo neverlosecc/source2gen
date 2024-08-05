@@ -828,6 +828,8 @@ namespace {
             builder.comment("No schema binary for binding");
 
         builder.end_block();
+
+        builder.static_assert_size(class_info.m_pszName, class_info.GetSize());
     }
 
     void GenerateEnumSdk(std::string_view module_name, const CSchemaEnumBinding& enum_) {
@@ -861,7 +863,7 @@ namespace {
         //
         std::ofstream f(out_file_path, std::ios::out);
         f << builder.str();
-        if (f.bad()) {
+        if (!f.good()) {
             std::cerr << std::format("Could not write to {}: {}", out_file_path, std::strerror(errno)) << std::endl;
             // This std::exit() is bad. Instead, we could return the dumped
             // header name and content to the caller in a std::expected. Let the
@@ -872,7 +874,7 @@ namespace {
     }
 
     void GenerateClassSdk(std::string_view module_name, const CSchemaClassBinding& class_) {
-        const std::filesystem::path out_file_path = std::format("{}/{}/{}.hpp", kOutDirName, module_name, class_.m_pszName);
+        const std::string out_file_path = std::format("{}/{}/{}/{}.hpp", kOutDirName, kSdkDirName, module_name, class_.m_pszName);
 
         // @note: @es3n1n: init codegen
         //
@@ -915,8 +917,8 @@ namespace {
         //
         std::ofstream f(out_file_path, std::ios::out);
         f << builder.str();
-        if (f.bad()) {
-            std::cerr << std::format("Could not write to {}: {}", out_file_path.string(), std::strerror(errno)) << std::endl;
+        if (!f.good()) {
+            std::cerr << std::format("Could not write to {}: {}", out_file_path, std::strerror(errno)) << std::endl;
             // This std::exit() is bad. Instead, we could return the dumped
             // header name and content to the caller in a std::expected. Let the
             // caller write the file. That would also allow the caller to choose
