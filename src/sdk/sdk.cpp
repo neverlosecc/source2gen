@@ -673,9 +673,7 @@ namespace {
             // @note: @es3n1n: insert padding if needed
             //
             const auto expected_offset = state.last_field_offset + state.last_field_size;
-            if (state.last_field_offset && state.last_field_size && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) &&
-                !state.assembling_bitfield) {
-
+            if (state.last_field_size && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) && !state.assembling_bitfield) {
                 builder.access_modifier("private")
                     .struct_padding(expected_offset, field.m_nSingleInheritanceOffset - expected_offset, false, true)
                     .reset_tabs_count()
@@ -728,7 +726,7 @@ namespace {
 
             // @note: @es3n1n: update state
             //
-            if (field.m_nSingleInheritanceOffset && field_size) {
+            if (field_size != 0) {
                 state.last_field_offset = field.m_nSingleInheritanceOffset;
                 state.last_field_size = static_cast<std::size_t>(field_size);
             }
@@ -740,7 +738,7 @@ namespace {
             builder.prop(var_info.m_type, var_info.formatted_name(), false);
 
             if (!var_info.is_bitfield()) {
-                builder.reset_tabs_count().comment(std::format("{:#x}", field.m_nSingleInheritanceOffset), false).restore_tabs_count();
+                builder.reset_tabs_count().comment(std::format("{:#x} ({:#x})", field.m_nSingleInheritanceOffset, field_size), false).restore_tabs_count();
                 cached_fields.emplace_back(var_info.formatted_name(), field.m_nSingleInheritanceOffset);
             }
             builder.next_line();
@@ -829,6 +827,10 @@ namespace {
 
         builder.end_block();
 
+        // TODO: when we have a CLI parse: make static_assert() generation optional because users might know not care about errors in file they don't use
+        for (const auto& field : class_info.GetFields()) {
+            builder.static_assert_offset(class_info.m_pszName, field.m_pszName, field.m_nSingleInheritanceOffset);
+        }
         builder.static_assert_size(class_info.m_pszName, class_info.GetSize());
     }
 
@@ -888,6 +890,7 @@ namespace {
         }
 
         builder.include(std::format("\"{}/source2gen_user_types.hpp\"", kSdkDirName));
+        builder.include("<cstddef>"); // for offsetof()
         builder.include("<cstdint>");
 
         for (const auto& forward_declaration : names | std::views::filter([](const auto& el) { return el.source == NameSource::forward_declaration; })) {
