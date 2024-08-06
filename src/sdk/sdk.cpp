@@ -627,9 +627,7 @@ namespace {
         const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_nSizeOf : 0;
         const auto class_size_without_parent = class_.m_nSizeOf - parent_class_size;
 
-        std::ptrdiff_t expected_pad_size = first_field_offset.value_or(class_size_without_parent);
-        if (expected_pad_size) // @note: @es3n1n: if there's a pad size we should account the parent class size
-            expected_pad_size -= parent_class_size;
+        const auto expected_pad_size = first_field_offset.transform([&](auto e) { return e - parent_class_size; }).value_or(class_size_without_parent);
 
         // @note: @es3n1n: and finally insert a pad
         //
@@ -644,6 +642,7 @@ namespace {
         // @todo: @es3n1n: if for some mysterious reason this class describes fields
         // of the base class we should handle it too.
         if (class_parent && first_field_offset.has_value() && first_field_offset.value() < class_parent->m_nSizeOf) {
+            // TOOD: there' a `throw` for offset overflows down below. make error reporting consistent.
             builder.comment(
                 std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_nSizeOf));
             state.collision_end_offset = class_parent->m_nSizeOf;
@@ -693,6 +692,7 @@ namespace {
             // @note: @es3n1n: if we are done with bitfields we should insert a pad and finish union
             //
             if (state.assembling_bitfield && !var_info.is_bitfield()) {
+                // TOOD: this code is duplicate
                 const auto expected_union_size_bytes = field.m_nSingleInheritanceOffset - state.last_field_offset;
                 const auto expected_union_size_bits = expected_union_size_bytes * 8;
 
@@ -750,12 +750,13 @@ namespace {
         if (state.assembling_bitfield) {
             const auto actual_union_size_bits = state.total_bits_count_in_union;
 
-            // @note: @es3n1n: apply 8 bytes align
+            // @note: @es3n1n: apply 1 byte align
             //
-            const auto expected_union_size_bits = actual_union_size_bits + (actual_union_size_bits % 8);
+            const auto expected_union_size_bits = actual_union_size_bits + (8 - (actual_union_size_bits % 8));
 
-            if (expected_union_size_bits > actual_union_size_bits)
+            if (expected_union_size_bits > actual_union_size_bits) {
                 builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
+            }
 
             builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
 
@@ -763,14 +764,17 @@ namespace {
             state.assembling_bitfield = false;
         }
 
-        // pad the class end
-        const auto last_field_end = state.last_field_offset + state.last_field_size;
-        const auto end_pad = class_.GetSize() - last_field_end;
-        if (end_pad != 0) {
-            builder.struct_padding(last_field_end, end_pad, true, true);
-        } else if (end_pad < 0) [[unlikely]] {
-            throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
-                                                 -end_pad, last_field_end, class_.GetName(), class_.GetSize())};
+        // pad the class end. if this is an empty class, padding will already have been added by the code above
+        if (class_.m_nFieldSize != 0) {
+            const auto last_field_end = state.last_field_offset + state.last_field_size;
+            const auto end_pad = class_.GetSize() - last_field_end;
+
+            if (end_pad != 0) {
+                builder.struct_padding(last_field_end, end_pad, true, true);
+            } else if (end_pad < 0) [[unlikely]] {
+                throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
+                                                     -end_pad, last_field_end, class_.GetName(), class_.GetSize())};
+            }
         }
 
         // @note: @es3n1n: dump static fields
@@ -838,10 +842,23 @@ namespace {
 
         builder.end_block();
 
-        // TODO: when we have a CLI parse: make static_assert() generation optional because users might know not care about errors in file they don't use
-        for (const auto& field : class_info.GetFields()) {
-            builder.static_assert_offset(class_info.m_pszName, field.m_pszName, field.m_nSingleInheritanceOffset);
+        // TODO: when we have a CLI parse: make static_assert() generation optional because users might not care about errors in file they don't use
+        if (class_info.m_nBaseClassSize == 0) {
+            for (const auto& field : class_info.GetFields()) {
+                if (field.m_pSchemaType->m_unTypeCategory == ETypeCategory::Schema_Bitfield) {
+                    builder.comment(std::format("Cannot assert offset of bitfield {}::{}", class_info.m_pszName, field.m_pszName));
+                } else {
+                    builder.static_assert_offset(class_info.m_pszName, field.m_pszName, field.m_nSingleInheritanceOffset);
+                }
+            }
+        } else {
+            if (class_info.m_nFieldSize != 0) {
+                builder.comment(std::format(
+                    "Cannot assert offsets of fields in {}. It is not a standard-layout class because it has a base class with non-static data members.",
+                    class_info.m_pszName));
+            }
         }
+        builder.next_line();
         builder.static_assert_size(class_info.m_pszName, class_info.GetSize());
     }
 

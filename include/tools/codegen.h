@@ -226,7 +226,9 @@ namespace codegen {
         }
 
         self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
-                                const bool is_private_field = false, const std::size_t bitfield_size = 0ull) {
+                                const bool is_private_field = false, const int bitfield_size = 0) {
+            assert(bitfield_size >= 0);
+
             const auto bytes = (bitfield_size == 0) ? padding_size : bitfield_size / 8;
             const auto remaining_bits = bitfield_size % 8;
 
@@ -238,10 +240,8 @@ namespace codegen {
             auto pad_name = pad_offset.has_value() ? std::format("pad_0x{:04x}", pad_offset.value()) : std::format("pad_{:d}", _pads_count++);
 
             if (bytes != 0) {
-                pad_name = pad_name + std::format("[{:#x}]", bytes);
+                prop(type_name, std::format("{}[{:#x}]", pad_name, bytes), move_cursor_to_next_line);
             }
-
-            prop(type_name, pad_name, move_cursor_to_next_line);
 
             if (remaining_bits != 0) {
                 auto remainder_pad_name =
