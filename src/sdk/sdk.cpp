@@ -685,8 +685,9 @@ namespace {
             // @note: @es3n1n: begin union if we're assembling bitfields
             //
             if (!state.assembling_bitfield && var_info.is_bitfield()) {
-                builder.begin_bitfield_block();
+                builder.begin_bitfield_block(expected_offset);
                 state.assembling_bitfield = true;
+                state.last_field_offset = expected_offset;
             }
 
             // @note: @es3n1n: if we are done with bitfields we should insert a pad and finish union
@@ -703,7 +704,7 @@ namespace {
                         std::format("Unexpected union size: {}. Expected: {}", state.total_bits_count_in_union, expected_union_size_bits));
 
                 if (expected_union_size_bits > state.total_bits_count_in_union)
-                    builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
+                    builder.struct_padding(expected_offset, 0, true, false, expected_union_size_bits - actual_union_size_bits);
 
                 state.last_field_offset += expected_union_size_bytes;
                 state.last_field_size = expected_union_size_bytes;
@@ -750,12 +751,11 @@ namespace {
         if (state.assembling_bitfield) {
             const auto actual_union_size_bits = state.total_bits_count_in_union;
 
-            // @note: @es3n1n: apply 1 byte align
-            //
-            const auto expected_union_size_bits = actual_union_size_bits + (8 - (actual_union_size_bits % 8));
+            // apply 1 byte align
+            const auto expected_union_size_bits = actual_union_size_bits + ((8 - (actual_union_size_bits % 8)) % 8);
 
             if (expected_union_size_bits > actual_union_size_bits) {
-                builder.struct_padding(std::nullopt, 0, true, false, expected_union_size_bits - actual_union_size_bits);
+                builder.struct_padding(state.last_field_offset + state.last_field_size, 0, true, false, expected_union_size_bits - actual_union_size_bits);
             }
 
             builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();

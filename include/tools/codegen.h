@@ -263,8 +263,8 @@ namespace codegen {
             return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
         }
 
-        self_ref begin_bitfield_block() {
-            return comment("start of bitfield block");
+        self_ref begin_bitfield_block(std::ptrdiff_t offset) {
+            return comment(std::format("start of bitfield block at {:#x}", offset));
         }
 
         self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) {
