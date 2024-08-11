@@ -168,7 +168,7 @@ enum {
 };
 
 #else
-    #error No implementation defined, please re-generate project with premake5
+    #error No implementation defined, please set SOURCE2GEN_GAME and re-generate the project
 #endif
 
 class ISaveRestoreOps;

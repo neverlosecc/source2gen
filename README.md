@@ -58,7 +58,7 @@ These instructions will help you set up the project on your local machine for de
 #### Windows
 
 - Visual Studio 2019 or newer
-- premake5
+- CMake
 
 #### Linux
 
@@ -81,39 +81,9 @@ Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLO
 
 or
 
-You can use premake5 options and specify which game you want to dump:
-
-```bash
- --game=CS2
- Choose a particular game for dumping source 2 sdk; one of:
-     ARTIFACT1        Artifact Classic
-     ARTIFACT2        Artifact Foundry
-     CS2              Counter-Strike 2
-     DESKJOB          Aperture Desk Job
-     DOTA2            Dota 2
-     HL_ALYX          Half-Life: Alyx
-     SBOX             S&BOX
-     THE_LAB_ROBOT_REPAIR Portal: Aperture Robot Repair
-     UNDERLORDS       Dota Underlords
-```
-
-or
-
 When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
 
 ### Building the project
-
-#### With premake5
-
-- Open a command prompt or terminal in the project's root directory.
-- Run the following command to generate the Visual Studio solution:
-
-```bash
-premake5 vs2019 --game=CS2
-```
-
-- Open the generated source2gen.sln file in Visual Studio.
-- Build the solution in the desired configuration (Debug, Release, or Dist).
 
 #### With CMake
 
@@ -140,7 +110,6 @@ This project is made possible by the contributions of various individuals and pr
 
 This project also utilizes the following open-source libraries:
 
-- **[Premake](https://github.com/premake/premake-core)** - Build configuration tool
 - **[CMake](https://github.com/Kitware/CMake)** - Build tool
 
 If you've contributed to the project and would like to be listed here, please submit a [pull request](https://github.com/neverlosecc/source2gen/pulls) with your information added to the credits.
