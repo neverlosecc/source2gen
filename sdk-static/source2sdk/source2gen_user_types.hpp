@@ -5,7 +5,7 @@
 
 template <class>
 using CAnimValue = char[0x08];
-using CAnimVariant = char[0x14];
+using CAnimVariant = char[0x11];
 // size is a guess
 template <class T>
 using CAnimScriptParam = char[0x08];
@@ -63,7 +63,7 @@ using CUtlVector = char[0x18];
 template <class T>
 using CUtlVectorFixedGrowable = char[0x18 + ((sizeof(T) < 4) ? 4 : sizeof(T))];
 template <class T>
-using CUtlLeanVectorFixedGrowable = char[0x18 + ((sizeof(T) < 4) ? 4 : sizeof(T))];
+using CUtlLeanVectorFixedGrowable = char[0x10 + ((sizeof(T) < 4) ? 4 : sizeof(T))];
 template <class>
 using C_UtlVectorEmbeddedNetworkVar = char[0x50];
 template <class>

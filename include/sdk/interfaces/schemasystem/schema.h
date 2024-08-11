@@ -454,6 +454,9 @@ public:
     bool m_bGlobalPromotionRequired;
 };
 
+static_assert(offsetof(CSchemaType_DeclaredClass, m_pClassInfo) == 0x20);
+static_assert(sizeof(CSchemaType_DeclaredClass) == 0x30);
+
 class CSchemaType_DeclaredEnum : public CSchemaType {
 public:
     CSchemaEnumBinding* m_pClassInfo;
@@ -500,6 +503,8 @@ public:
     SchemaAtomicFunction m_pFn;
     std::uint16_t m_unElementSize;
 };
+
+static_assert(offsetof(CSchemaType_Atomic_CollectionOfT, m_pFn) == 0x38);
 
 class CSchemaType_Atomic_TF : public CSchemaType_Atomic_T {
 public:
@@ -571,6 +576,8 @@ struct SchemaClassFieldData_t {
     std::int32_t m_nMetadataSize; // 0x0014
     SchemaMetadataEntryData_t* m_pMetadata; // 0x0018
 };
+
+static_assert(sizeof(SchemaClassFieldData_t) == 0x20);
 
 struct SchemaStaticFieldData_t {
     const char* m_pszName; // 0x0000

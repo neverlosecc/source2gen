@@ -595,6 +595,7 @@ namespace {
         // @note: @es3n1n: get parent name
         //
         const std::string parent_class_name = (class_parent != nullptr) ? MaybeWithModuleName(*class_parent->m_pTypeScope, class_parent->m_pszName) : "";
+        const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_nSizeOf : 0;
 
         // @note: @es3n1n: start class
         //
@@ -606,13 +607,14 @@ namespace {
         // @note: @es3n1n: field assembling state
         //
         struct {
-            std::size_t last_field_size = 0ull;
-            std::size_t last_field_offset = 0ull;
+            std::optional<std::size_t> last_field_size = std::nullopt;
+            std::optional<std::size_t> last_field_offset = std::nullopt;
             bool assembling_bitfield = false;
             std::size_t total_bits_count_in_union = 0ull;
 
             std::ptrdiff_t collision_end_offset = 0ull; // @fixme: @es3n1n: todo proper collision fix and remove this var
-        } state;
+            // TOOD: inconsistent optional vs 0
+        } state = {.last_field_size = parent_class_size};
 
         std::list<std::pair<std::string, std::ptrdiff_t>> cached_fields{};
         std::list<cached_datamap_t> cached_datamap_fields{};
@@ -624,25 +626,13 @@ namespace {
         if (const auto* first_field = (class_.m_pFields == nullptr) ? nullptr : &class_.m_pFields[0]; first_field)
             first_field_offset = first_field->m_nSingleInheritanceOffset;
 
-        const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_nSizeOf : 0;
         const auto class_size_without_parent = class_.m_nSizeOf - parent_class_size;
 
         const auto expected_pad_size = first_field_offset.transform([&](auto e) { return e - parent_class_size; }).value_or(class_size_without_parent);
 
-        // @note: @es3n1n: and finally insert a pad
-        //
-        if (expected_pad_size > 0) // @fixme: @es3n1n: this is wrong, i probably should check for collisions instead
-            // TOOD: remove access_modifier() altogether?
-            builder.access_modifier("public")
-                .struct_padding(parent_class_size, expected_pad_size, false, true)
-                .reset_tabs_count()
-                .comment(std::format("{:#x}", parent_class_size))
-                .restore_tabs_count();
-
         // @todo: @es3n1n: if for some mysterious reason this class describes fields
         // of the base class we should handle it too.
         if (class_parent && first_field_offset.has_value() && first_field_offset.value() < class_parent->m_nSizeOf) {
-            // TOOD: there' a `throw` for offset overflows down below. make error reporting consistent.
             builder.comment(
                 std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_nSizeOf));
             state.collision_end_offset = class_parent->m_nSizeOf;
@@ -670,10 +660,20 @@ namespace {
             const auto [type_name, array_sizes] = GetType(*field.m_pSchemaType);
             const auto var_info = field_parser::parse(type_name, field.m_pszName, array_sizes);
 
+            // if (std::string_view{type_name}.contains("CUtlLeanVectorFixedGrowable")) {
+            //     auto* p = (CSchemaType_Atomic_CollectionOfT*)field.m_pSchemaType;
+            //     std::uint64_t a{};
+            //     std::uint64_t b{};
+            //     std::uint64_t c{};
+            //     const auto r = p->m_pFn(SchemaAtomicFunctionIndex::Schema_Atomic_Get_Count, &a, &b, &c);
+            //     std::cout << "TOOD: here " << field.m_pSchemaType->m_pszName << ' ' << std::format("{} {} {} -> {:#x}", a, b, c, r) << std::endl;
+            // }
+
             // @note: @es3n1n: insert padding if needed
             //
-            const auto expected_offset = state.last_field_offset + state.last_field_size;
-            if (state.last_field_size && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) && !state.assembling_bitfield) {
+            const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
+            if (state.last_field_size.has_value() && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) &&
+                !state.assembling_bitfield) {
                 builder.access_modifier("public")
                     .struct_padding(expected_offset, field.m_nSingleInheritanceOffset - expected_offset, false, true)
                     .reset_tabs_count()
@@ -687,27 +687,27 @@ namespace {
             if (!state.assembling_bitfield && var_info.is_bitfield()) {
                 builder.begin_bitfield_block(expected_offset);
                 state.assembling_bitfield = true;
-                state.last_field_offset = expected_offset;
             }
 
             // @note: @es3n1n: if we are done with bitfields we should insert a pad and finish union
             //
             if (state.assembling_bitfield && !var_info.is_bitfield()) {
                 // TOOD: this code is duplicate
-                const auto expected_union_size_bytes = field.m_nSingleInheritanceOffset - state.last_field_offset;
-                const auto expected_union_size_bits = expected_union_size_bytes * 8;
+                const auto expected_bitfield_size_bytes = field.m_nSingleInheritanceOffset - state.last_field_offset.value_or(0);
+                const auto expected_union_size_bits = expected_bitfield_size_bytes * 8;
 
                 const auto actual_union_size_bits = state.total_bits_count_in_union;
 
                 if (expected_union_size_bits < state.total_bits_count_in_union)
                     throw std::runtime_error(
-                        std::format("Unexpected union size: {}. Expected: {}", state.total_bits_count_in_union, expected_union_size_bits));
+                        std::format("Unexpected union size: {} bits. Expected: {} bits", state.total_bits_count_in_union, expected_union_size_bits));
 
-                if (expected_union_size_bits > state.total_bits_count_in_union)
+                if (expected_union_size_bits > state.total_bits_count_in_union) {
                     builder.struct_padding(expected_offset, 0, true, false, expected_union_size_bits - actual_union_size_bits);
+                }
 
-                state.last_field_offset += expected_union_size_bytes;
-                state.last_field_size = expected_union_size_bytes;
+                state.last_field_offset = state.last_field_offset.value_or(0) + expected_bitfield_size_bytes;
+                state.last_field_size = expected_bitfield_size_bytes;
 
                 builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
 
@@ -752,29 +752,31 @@ namespace {
             const auto actual_union_size_bits = state.total_bits_count_in_union;
 
             // apply 1 byte align
-            const auto expected_union_size_bits = actual_union_size_bits + ((8 - (actual_union_size_bits % 8)) % 8);
+            const auto expected_bitfield_size_bits = actual_union_size_bits + ((8 - (actual_union_size_bits % 8)) % 8);
 
-            if (expected_union_size_bits > actual_union_size_bits) {
-                builder.struct_padding(state.last_field_offset + state.last_field_size, 0, true, false, expected_union_size_bits - actual_union_size_bits);
+            if (expected_bitfield_size_bits > actual_union_size_bits) {
+                builder.struct_padding(state.last_field_offset.value_or(0) + state.last_field_size.value_or(0), 0, true, false,
+                                       expected_bitfield_size_bits - actual_union_size_bits);
             }
 
-            builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
+            builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_bitfield_size_bits)).restore_tabs_count();
 
             state.total_bits_count_in_union = 0;
             state.assembling_bitfield = false;
+
+            state.last_field_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
+            state.last_field_size = expected_bitfield_size_bits / 8;
         }
 
-        // pad the class end. if this is an empty class, padding will already have been added by the code above
-        if (class_.m_nFieldSize != 0) {
-            const auto last_field_end = state.last_field_offset + state.last_field_size;
-            const auto end_pad = class_.GetSize() - last_field_end;
+        // pad the class end.
+        const auto last_field_end = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
+        const auto end_pad = class_.GetSize() - last_field_end;
 
-            if (end_pad != 0) {
-                builder.struct_padding(last_field_end, end_pad, true, true);
-            } else if (end_pad < 0) [[unlikely]] {
-                throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
-                                                     -end_pad, last_field_end, class_.GetName(), class_.GetSize())};
-            }
+        if (end_pad != 0) {
+            builder.struct_padding(last_field_end, end_pad, true, true);
+        } else if (end_pad < 0) [[unlikely]] {
+            throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
+                                                 -end_pad, last_field_end, class_.GetName(), class_.GetSize())};
         }
 
         // @note: @es3n1n: dump static fields
@@ -818,6 +820,7 @@ namespace {
                 std::string field_name = var_info.formatted_name();
 
                 // @note: @og: if schema dump already has this field, then just skip it
+
                 if (const auto it =
                         std::ranges::find_if(cached_fields, [t, field_name](const auto& f) { return f.first == field_name && f.second == t->m_iOffset; });
                     it != cached_fields.end())
