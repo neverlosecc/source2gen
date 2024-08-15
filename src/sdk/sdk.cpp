@@ -3,6 +3,8 @@
 
 // ReSharper disable CppClangTidyClangDiagnosticLanguageExtensionToken
 #include "sdk/sdk.h"
+
+#include <algorithm>
 #include <filesystem>
 #include <functional>
 #include <list>
@@ -11,6 +13,7 @@
 #include <span>
 #include <string_view>
 #include <unordered_set>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -577,6 +580,59 @@ namespace {
         return result;
     }
 
+    // TOOD: Move up
+
+    struct BitfieldEntry {
+        std::string name{};
+        std::size_t size{};
+        // TOOD: document lifetime
+        std::vector<SchemaMetadataEntryData_t> metadata{};
+    };
+
+    struct ClassAssemblyState {
+        std::optional<std::size_t> last_field_size = std::nullopt;
+        std::optional<std::size_t> last_field_offset = std::nullopt;
+        bool assembling_bitfield = false;
+        std::vector<BitfieldEntry> bitfield = {};
+
+        std::ptrdiff_t collision_end_offset = 0ull; // @fixme: @es3n1n: todo proper collision fix and remove this var
+        // TOOD: inconsistent optional vs 0
+    };
+
+    [[nodiscard]]
+    ClassAssemblyState AssembleBitfield(codegen::generator_t& builder, ClassAssemblyState&& state, int expected_offset) {
+        state.assembling_bitfield = false;
+
+        std::size_t exact_bitfield_size_bits = 0;
+        for (const auto& entry : state.bitfield) {
+            exact_bitfield_size_bits += entry.size;
+        }
+        const auto type_name = field_parser::guess_bitfield_type(exact_bitfield_size_bits);
+
+        builder.begin_bitfield_block(expected_offset);
+
+        for (const auto& entry : state.bitfield) {
+            // TOOD: duplicate code
+            for (const auto& field_metadata : entry.metadata) {
+                if (auto data = GetMetadataValue(field_metadata); data.empty())
+                    builder.comment(std::format("metadata: {}", field_metadata.m_szName));
+                else
+                    builder.comment(std::format("metadata: {} \"{}\"", field_metadata.m_szName, data));
+            }
+
+            builder.prop(type_name, entry.name, true);
+        }
+
+        builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", exact_bitfield_size_bits)).restore_tabs_count();
+
+        state.bitfield.clear();
+        state.last_field_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
+        // call to bit_ceil() relies on guess_bitfield_type() returning the next highest power of 2
+        state.last_field_size = std::bit_ceil(std::max(std::size_t{8}, exact_bitfield_size_bits)) / 8;
+
+        return state;
+    }
+
     void AssembleClass(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
         struct cached_datamap_t {
             std::string type_;
@@ -606,15 +662,8 @@ namespace {
 
         // @note: @es3n1n: field assembling state
         //
-        struct {
-            std::optional<std::size_t> last_field_size = std::nullopt;
-            std::optional<std::size_t> last_field_offset = std::nullopt;
-            bool assembling_bitfield = false;
-            std::size_t total_bits_count_in_union = 0ull;
-
-            std::ptrdiff_t collision_end_offset = 0ull; // @fixme: @es3n1n: todo proper collision fix and remove this var
-            // TOOD: inconsistent optional vs 0
-        } state = {.last_field_size = parent_class_size};
+        // TOOD: inconsistent optional vs 0
+        ClassAssemblyState state = {.last_field_size = parent_class_size};
 
         std::list<std::pair<std::string, std::ptrdiff_t>> cached_fields{};
         std::list<cached_datamap_t> cached_datamap_fields{};
@@ -660,18 +709,23 @@ namespace {
             const auto [type_name, array_sizes] = GetType(*field.m_pSchemaType);
             const auto var_info = field_parser::parse(type_name, field.m_pszName, array_sizes);
 
-            // if (std::string_view{type_name}.contains("CUtlLeanVectorFixedGrowable")) {
-            //     auto* p = (CSchemaType_Atomic_CollectionOfT*)field.m_pSchemaType;
-            //     std::uint64_t a{};
-            //     std::uint64_t b{};
-            //     std::uint64_t c{};
-            //     const auto r = p->m_pFn(SchemaAtomicFunctionIndex::Schema_Atomic_Get_Count, &a, &b, &c);
-            //     std::cout << "TOOD: here " << field.m_pSchemaType->m_pszName << ' ' << std::format("{} {} {} -> {:#x}", a, b, c, r) << std::endl;
-            // }
+            const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
+
+            // Collect all bitfield entries and emit them later. We need to know
+            // how large the bitfield is in order to choose the right type. We
+            // only know how large the bitfield is once we've reached its end.
+            if (var_info.is_bitfield()) {
+                state.assembling_bitfield = true;
+                state.bitfield.emplace_back(BitfieldEntry{
+                    .name = var_info.formatted_name(),
+                    .size = var_info.m_bitfield_size,
+                    .metadata = std::vector(field.m_pMetadata, field.m_pMetadata + field.m_nMetadataSize),
+                });
+                continue;
+            }
 
             // @note: @es3n1n: insert padding if needed
             //
-            const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
             if (state.last_field_size.has_value() && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) &&
                 !state.assembling_bitfield) {
                 builder.access_modifier("public")
@@ -682,43 +736,15 @@ namespace {
                     .access_modifier("public");
             }
 
-            // @note: @es3n1n: begin union if we're assembling bitfields
-            //
-            if (!state.assembling_bitfield && var_info.is_bitfield()) {
-                builder.begin_bitfield_block(expected_offset);
-                state.assembling_bitfield = true;
-            }
-
-            // @note: @es3n1n: if we are done with bitfields we should insert a pad and finish union
-            //
-            if (state.assembling_bitfield && !var_info.is_bitfield()) {
-                // TOOD: this code is duplicate
-                const auto expected_bitfield_size_bytes = field.m_nSingleInheritanceOffset - state.last_field_offset.value_or(0);
-                const auto expected_union_size_bits = expected_bitfield_size_bytes * 8;
-
-                const auto actual_union_size_bits = state.total_bits_count_in_union;
-
-                if (expected_union_size_bits < state.total_bits_count_in_union)
-                    throw std::runtime_error(
-                        std::format("Unexpected union size: {} bits. Expected: {} bits", state.total_bits_count_in_union, expected_union_size_bits));
-
-                if (expected_union_size_bits > state.total_bits_count_in_union) {
-                    builder.struct_padding(expected_offset, 0, true, false, expected_union_size_bits - actual_union_size_bits);
-                }
-
-                state.last_field_offset = state.last_field_offset.value_or(0) + expected_bitfield_size_bytes;
-                state.last_field_size = expected_bitfield_size_bytes;
-
-                builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_union_size_bits)).restore_tabs_count();
-
-                state.total_bits_count_in_union = 0ull;
-                state.assembling_bitfield = false;
+            // This is the end of a bitfield
+            if (!var_info.is_bitfield() && state.assembling_bitfield) {
+                state = AssembleBitfield(builder, std::move(state), expected_offset);
             }
 
             // @note: @es3n1n: dump metadata
             //
             for (auto j = 0; j < field.m_nMetadataSize; j++) {
-                auto field_metadata = field.m_pMetadata[j];
+                const auto field_metadata = field.m_pMetadata[j];
 
                 if (auto data = GetMetadataValue(field_metadata); data.empty())
                     builder.comment(std::format("metadata: {}", field_metadata.m_szName));
@@ -732,40 +758,27 @@ namespace {
                 state.last_field_offset = field.m_nSingleInheritanceOffset;
                 state.last_field_size = static_cast<std::size_t>(field_size);
             }
-            if (var_info.is_bitfield())
-                state.total_bits_count_in_union += var_info.m_bitfield_size;
 
             // @note: @es3n1n: push prop
             //
-            builder.prop(var_info.m_type, var_info.formatted_name(), false);
-
-            if (!var_info.is_bitfield()) {
-                builder.reset_tabs_count().comment(std::format("{:#x} ({:#x})", field.m_nSingleInheritanceOffset, field_size), false).restore_tabs_count();
-                cached_fields.emplace_back(var_info.formatted_name(), field.m_nSingleInheritanceOffset);
+            if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
+                // HACKHACK: this is a hack to get the size of template types right
+                builder.prop("char", std::format("{}[{:#x}]", var_info.formatted_name(), field.m_pSchemaType->GetSize().value()), false);
+                builder.comment(field.m_pSchemaType->m_pszName, false);
+            } else {
+                builder.prop(var_info.m_type, var_info.formatted_name(), false);
             }
+
+            builder.reset_tabs_count().comment(std::format("{:#x} ({:#x})", field.m_nSingleInheritanceOffset, field_size), false).restore_tabs_count();
+            cached_fields.emplace_back(var_info.formatted_name(), field.m_nSingleInheritanceOffset);
+
             builder.next_line();
         }
 
-        // @note: @es3n1n: if struct ends with union we should end union before ending the class
+        // @note: @es3n1n: if struct ends with bitfield we should end bitfield before ending the class
         //
         if (state.assembling_bitfield) {
-            const auto actual_union_size_bits = state.total_bits_count_in_union;
-
-            // apply 1 byte align
-            const auto expected_bitfield_size_bits = actual_union_size_bits + ((8 - (actual_union_size_bits % 8)) % 8);
-
-            if (expected_bitfield_size_bits > actual_union_size_bits) {
-                builder.struct_padding(state.last_field_offset.value_or(0) + state.last_field_size.value_or(0), 0, true, false,
-                                       expected_bitfield_size_bits - actual_union_size_bits);
-            }
-
-            builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", expected_bitfield_size_bits)).restore_tabs_count();
-
-            state.total_bits_count_in_union = 0;
-            state.assembling_bitfield = false;
-
-            state.last_field_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
-            state.last_field_size = expected_bitfield_size_bits / 8;
+            state = AssembleBitfield(builder, std::move(state), state.last_field_offset.value_or(0) + state.last_field_size.value_or(0));
         }
 
         // pad the class end.
@@ -856,9 +869,9 @@ namespace {
             }
         } else {
             if (class_info.m_nFieldSize != 0) {
-                builder.comment(std::format(
-                    "Cannot assert offsets of fields in {}. It is not a standard-layout class because it has a base class with non-static data members.",
-                    class_info.m_pszName));
+                builder.comment(std::format("Cannot assert offsets of fields in {}. It is not a standard-layout class because it has a base class "
+                                            "with non-static data members.",
+                                            class_info.m_pszName));
             }
         }
         builder.next_line();

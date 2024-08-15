@@ -13,30 +13,12 @@ namespace field_parser {
 
             // @note: @es3n1n: a list of possible integral types for bitfields (would be used in `guess_bitfield_type`)
             //
-            // clang-format off
-                constexpr auto kBitfieldIntegralTypes = std::to_array<std::pair<std::size_t, std::string_view>>({
-                    {8, "uint8_t"},
-                    {16, "uint16_t"},
-                    {32, "uint32_t"},
-                    {64, "uint64_t"},
-
-                    // @todo: @es3n1n: define uint128_t/uint256_t/... as custom structs in the very beginning of the file
-                    {128, "uint128_t"},
-                    {256, "uint256_t"},
-                    {512, "uint512_t"},
-                });
-            // clang-format on
-
-            inline std::string guess_bitfield_type(const std::size_t bits_count) {
-                for (auto p : kBitfieldIntegralTypes) {
-                    if (bits_count > p.first)
-                        continue;
-
-                    return p.second.data();
-                }
-
-                throw std::runtime_error(std::format("{} : Unable to guess bitfield type with size {}", __FUNCTION__, bits_count));
-            }
+            constexpr auto kBitfieldIntegralTypes = std::to_array<std::pair<std::size_t, std::string_view>>({
+                {8, "uint8_t"},
+                {16, "uint16_t"},
+                {32, "uint32_t"},
+                {64, "uint64_t"},
+            });
 
             // clang-format off
             constexpr auto kTypeNameToCpp = std::to_array<std::pair<std::string_view, std::string_view>>({
@@ -161,6 +143,17 @@ namespace field_parser {
             }
         }
     } // namespace detail
+
+    std::string guess_bitfield_type(const std::size_t bits_count) {
+        for (auto p : detail::kBitfieldIntegralTypes) {
+            if (bits_count > p.first)
+                continue;
+
+            return p.second.data();
+        }
+
+        throw std::runtime_error(std::format("{} : Unable to guess bitfield type with size {}", __FUNCTION__, bits_count));
+    }
 
     std::optional<std::string_view> type_name_to_cpp(std::string_view type_name) {
         if (const auto found = std::ranges::find(detail::kTypeNameToCpp, type_name, &decltype(detail::kTypeNameToCpp)::value_type::first);
