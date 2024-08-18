@@ -2,24 +2,30 @@
 // See end of file for extended copyright information.
 #pragma once
 
-#include <string>
-#include <tools/loader/loader.h>
+#include <shared/platform.h>
+#include <cstddef>
+#include <cstdint>
 
-namespace util {
-    inline std::string PrettifyNum(int num) {
-        static const auto fn =
-            loader::find_module_symbol<const char* (*)(int)>(loader::find_module_handle(loader::get_module_file_name("tier0")), "V_PrettifyNum");
+#ifdef _WIN32
+typedef std::uint32_t ThreadId_t;
+#else
+typedef std::uint64_t ThreadId_t;
+#endif
 
-        if (fn.has_value()) {
-            std::string_view res = (*fn)(num);
-            if (!res.empty()) {
-                return res.data();
-            }
-        }
+constexpr auto kTtSizeofCriticalsection = 40;
 
-        return std::to_string(num);
-    }
-} // namespace util
+class CThreadMutex {
+public:
+    std::byte m_CriticalSection[kTtSizeofCriticalsection];
+
+    // Debugging (always herge to allow mixed debug/release builds w/o changing size)
+    ThreadId_t m_currentOwnerID;
+    std::uint16_t m_lockCount;
+    bool m_bTrace;
+    const char* m_pDebugName;
+};
+// static_assert(sizeof(CThreadMutex) == 0x30 + sizeof(ThreadId_t) + sizeof(char*));
+static_assert(sizeof(CThreadMutex) == platform_specific{.windows = 0x38, .linux = 0x40});
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

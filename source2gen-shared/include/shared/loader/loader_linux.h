@@ -1,5 +1,6 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
+#pragma once
 #include <algorithm>
 #include <cassert>
 #include <cstring>
