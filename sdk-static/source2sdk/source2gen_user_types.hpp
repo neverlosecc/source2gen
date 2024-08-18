@@ -99,7 +99,7 @@ using KeyValues = char[0x01];
 using QAngle = char[0x0c];
 using QuaternionStorage = char[0x10];
 using Quaternion = char[0x10];
-using RadianEuler = char[0x14];
+using RadianEuler = char[0x0c];
 using RenderInputLayoutField_t = char[0x04];
 // we don't have a field size for this type. uses the fallback of 1.
 using RenderPrimitiveType_t = char[0x01];

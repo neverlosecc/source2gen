@@ -140,13 +140,13 @@ namespace codegen {
             return push_line(std::vformat(sizeof(T) >= 2 ? "{} = {:#x}," : "{} = {},", std::make_format_args(name, value)));
         }
 
-        self_ref begin_struct(const std::string& name, const std::string& access_modifier = "public") {
+        self_ref begin_struct(const std::string_view name, const std::string& access_modifier = "public") {
             return begin_block(std::format("struct {}", escape_name(name)), access_modifier);
         }
 
-        self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type, const std::string& access_modifier = "public") {
+        self_ref begin_struct_with_base_type(const std::string_view name, const std::string& base_type, const std::string& access_modifier = "public") {
             if (base_type.empty())
-                return begin_struct(std::cref(name), access_modifier);
+                return begin_struct(name, access_modifier);
 
             return begin_block(std::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
         }
@@ -201,6 +201,16 @@ namespace codegen {
             assert(expected_offset >= 0);
 
             return push_line(std::format("static_assert(offsetof({}, {}) == {:#x});", escape_name(class_name), prop_name, expected_offset));
+        }
+
+        /// Not to be used for inline comments. Doing so could break support for other laguages.
+        self_ref begin_multi_line_comment(const bool move_cursor_to_next_line = true) {
+            return push_line("/*", move_cursor_to_next_line);
+        }
+
+        /// Not to be used for inline comments. Doing so could break support for other laguages.
+        self_ref end_multi_line_comment(const bool move_cursor_to_next_line = true) {
+            return push_line("*/", move_cursor_to_next_line);
         }
 
         self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) {

@@ -2,10 +2,12 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <ranges>
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <sdk/interfaces/common/CBufferString.h>
 #include <sdk/interfaces/common/CUtlMap.h>
@@ -363,8 +365,8 @@ public:
     }
 
     // @note: @og: gets size with align
-    [[nodiscard]] bool GetSizeWithAlignOf(int* nOutSize, std::uint8_t* unOutAlign) {
-        return reinterpret_cast<int (*)(void*, int*, std::uint8_t*)>(vftable[kSchemaType_GetSizeWithAlignOf])(this, nOutSize, unOutAlign);
+    [[nodiscard]] bool GetSizeWithAlignOf(int* nOutSize, std::uint8_t* unOutAlign) const {
+        return reinterpret_cast<int (*)(const void*, int*, std::uint8_t*)>(vftable[kSchemaType_GetSizeWithAlignOf])(this, nOutSize, unOutAlign);
     }
 
     [[nodiscard]] bool CanReinterpretAs(CSchemaType* pType) {
@@ -377,11 +379,19 @@ public:
     }
 
 public:
-    // @note: @og: wrapper around GetSizes, this one gets CSchemaClassInfo->m_nSizeOf
+    // @note: @og: wrapper around GetSizeWithAlignOf, this one gets CSchemaClassInfo->m_nSizeOf
     [[nodiscard]] std::optional<int> GetSize() {
-        std::uint8_t align_of = 0;
-        int result = 0;
-        return GetSizeWithAlignOf(&result, &align_of) ? std::make_optional(result) : std::nullopt;
+        return GetSizeAndAlignment().transform([](auto e) { return std::get<0>(e); });
+    }
+
+    /// @return {size, alignment}
+    [[nodiscard]] std::optional<std::pair<int, std::optional<int>>> GetSizeAndAlignment() const {
+        std::uint8_t alignment = 0;
+        int size = 0;
+
+        return GetSizeWithAlignOf(&size, &alignment) ?
+                   std::make_optional(std::make_pair(size, (alignment == 0xff) ? std::nullopt : std::make_optional(static_cast<int>(alignment)))) :
+                   std::nullopt;
     }
 
     // @todo: @og: find out to what class pointer points.
@@ -646,112 +656,6 @@ public:
 };
 static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68);
 
-class CSchemaClassInfo : public SchemaClassInfoData_t {
-public:
-    [[nodiscard]] std::string_view GetName() const {
-        if (m_pszName)
-            return {m_pszName};
-        return {};
-    }
-
-    [[nodiscard]] std::string_view GetModule() const {
-        if (m_pszModule)
-            return {m_pszModule};
-        return {};
-    }
-
-    [[nodiscard]] std::optional<CSchemaClassInfo*> GetBaseClass() const {
-        if (m_nBaseClassSize && m_pBaseClasses)
-            return m_pBaseClasses->m_pClass;
-        return std::nullopt;
-    }
-
-    // TODO: when we have AddressSanitizer, try returning std::span instead of std::vector. Repeats for other functions.
-    [[nodiscard]] std::vector<SchemaClassFieldData_t> GetFields() const {
-        return {m_pFields, m_pFields + m_nFieldSize};
-    }
-
-    [[nodiscard]] std::vector<SchemaStaticFieldData_t> GetStaticFields() const {
-        return {m_pStaticFields, m_pStaticFields + m_nStaticFieldsSize};
-    }
-
-    [[nodiscard]] std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() const {
-        return {m_pStaticMetadata, m_pStaticMetadata + m_nStaticMetadataSize};
-    }
-
-    [[nodiscard]] std::string_view GetPrevClassName() const {
-        if (!m_pBaseClasses || !m_pBaseClasses->m_pClass)
-            return {};
-        return m_pBaseClasses->m_pClass->GetName();
-    }
-
-    [[nodiscard]] bool IsA(CSchemaType* pInheritance) const {
-        if (!m_pSchemaType)
-            return false;
-
-        return m_pSchemaType->IsA(pInheritance);
-    }
-
-    [[nodiscard]] bool HasVirtualTable() const {
-        return (m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0;
-    }
-
-    [[nodiscard]] bool RecursiveHasVirtualTable() const {
-        return HasVirtualTable() || (m_pBaseClasses && m_pBaseClasses->m_pClass && m_pBaseClasses->m_pClass->HasVirtualTable());
-    }
-
-    [[nodiscard]] bool IsInherits(const std::string_view from) const {
-        if (!m_nBaseClassSize || !m_pBaseClasses || !m_pBaseClasses->m_pClass)
-            return false;
-        if (m_pBaseClasses->m_pClass->GetName() == from)
-            return true;
-        return false;
-    }
-
-    [[nodiscard]] bool IsRecursiveInherits(const std::string_view from) const {
-        return IsInherits(from) || (m_pBaseClasses && m_pBaseClasses->m_pClass && m_pBaseClasses->m_pClass->IsRecursiveInherits(from));
-    }
-
-    [[nodiscard]] int GetSize() const {
-        return m_nSizeOf;
-    }
-
-    [[nodiscard]] std::uint8_t GetAlignment() const {
-        return m_unAlignOf == std::numeric_limits<std::uint8_t>::max() ? 8 : m_unAlignOf;
-    }
-
-    // @note: @og: Copy instance from original to new created with all data from original, returns new_instance
-    auto CopyInstance(void* instance, void* new_instance) const {
-        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kCreateInstance, instance, new_instance);
-    }
-
-    // @note: @og: Creates default instance with engine allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be
-    // C_BaseEntity)
-    [[nodiscard]] auto CreateInstance() const {
-        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kCreateInstance);
-    }
-
-    // @note: @og: Creates default instance with your own allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be
-    // C_BaseEntity)
-    auto CreateInstance(void* memory) const {
-        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kCreateInstanceWithMemory, memory);
-    }
-
-    // @note: @og: Destroy instance (e.g.: C_BaseEntity 1st VT fn with 0 flag)
-    auto DestroyInstance(void* instance) const {
-        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
-    }
-
-    // @note: @og: Destroy instance with de-allocating memory (e.g.: C_BaseEntity 1st VT fn with 1 flag)
-    auto DestroyInstanceWithMemory(void* instance) const {
-        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
-    }
-
-    [[nodiscard]] auto SchemaClassBinding(void* entity) const {
-        return CallFunction<CSchemaClassBinding*>(SchemaClassInfoFunctionIndex::kSchemaDynamicBinding, entity);
-    }
-};
-
 struct TypeAndCountInfo_t {
     int m_nElementCount;
     CSchemaType* m_pElementType;
@@ -928,6 +832,155 @@ private:
 
     CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x05C0
     CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings = {}; // 0x2E50
+};
+
+class CSchemaClassInfo : public SchemaClassInfoData_t {
+public:
+    [[nodiscard]] std::string_view GetName() const {
+        if (m_pszName)
+            return {m_pszName};
+        return {};
+    }
+
+    [[nodiscard]] std::string_view GetModule() const {
+        if (m_pszModule)
+            return {m_pszModule};
+        return {};
+    }
+
+    [[nodiscard]] std::optional<CSchemaClassInfo*> GetBaseClass() const {
+        if (m_nBaseClassSize && m_pBaseClasses)
+            return m_pBaseClasses->m_pClass;
+        return std::nullopt;
+    }
+
+    // TODO: when we have AddressSanitizer, try returning std::span instead of std::vector. Repeats for other functions.
+    [[nodiscard]] std::vector<SchemaClassFieldData_t> GetFields() const {
+        return {m_pFields, m_pFields + m_nFieldSize};
+    }
+
+    [[nodiscard]] std::vector<SchemaStaticFieldData_t> GetStaticFields() const {
+        return {m_pStaticFields, m_pStaticFields + m_nStaticFieldsSize};
+    }
+
+    [[nodiscard]] std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() const {
+        return {m_pStaticMetadata, m_pStaticMetadata + m_nStaticMetadataSize};
+    }
+
+    [[nodiscard]] std::string_view GetPrevClassName() const {
+        if (!m_pBaseClasses || !m_pBaseClasses->m_pClass)
+            return {};
+        return m_pBaseClasses->m_pClass->GetName();
+    }
+
+    [[nodiscard]] bool IsA(CSchemaType* pInheritance) const {
+        if (!m_pSchemaType)
+            return false;
+
+        return m_pSchemaType->IsA(pInheritance);
+    }
+
+    [[nodiscard]] bool HasVirtualTable() const {
+        return (m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0;
+    }
+
+    [[nodiscard]] bool RecursiveHasVirtualTable() const {
+        return HasVirtualTable() || (m_pBaseClasses && m_pBaseClasses->m_pClass && m_pBaseClasses->m_pClass->HasVirtualTable());
+    }
+
+    [[nodiscard]] bool IsInherits(const std::string_view from) const {
+        if (!m_nBaseClassSize || !m_pBaseClasses || !m_pBaseClasses->m_pClass)
+            return false;
+        if (m_pBaseClasses->m_pClass->GetName() == from)
+            return true;
+        return false;
+    }
+
+    [[nodiscard]] bool IsRecursiveInherits(const std::string_view from) const {
+        return IsInherits(from) || (m_pBaseClasses && m_pBaseClasses->m_pClass && m_pBaseClasses->m_pClass->IsRecursiveInherits(from));
+    }
+
+    [[nodiscard]] int GetSize() const {
+        return m_nSizeOf;
+    }
+
+    /// @return Alignment as registered in the game
+    [[nodiscard]] std::optional<int> GetRegisteredAlignment() const {
+        return m_unAlignOf == std::numeric_limits<std::uint8_t>::max() ? std::nullopt : std::make_optional(static_cast<int>(m_unAlignOf));
+    }
+
+    /// This function recurses through all members. That's expensive. Cache the result if possible.
+    /// @return @ref GetRegisteredAlignment() if set. Otherwise tries to determine the alignment.
+    /// Returns @ref std::nullopt if one or more fields have unknown alignment.
+    [[nodiscard]] std::optional<int> GetFullAlignment() const {
+        return GetRegisteredAlignment().or_else([this]() {
+            int base_alignment = 0;
+
+            if (this->m_pBaseClasses != nullptr) {
+                if (const auto maybe_base_alignment = this->m_pBaseClasses->m_pClass->GetFullAlignment()) {
+                    base_alignment = maybe_base_alignment.value();
+                } else {
+                    // we have a base class, but it has unknown alignment
+                    return std::optional<int>{};
+                }
+            }
+
+            auto field_alignments =
+                this->GetFields() | std::ranges::views::transform([](const SchemaClassFieldData_t& e) {
+                    // TOOD: lookups by name are slow. I've seen some better way somewhere.
+                    if (const auto* class_ = e.m_pSchemaType->m_pTypeScope->FindDeclaredClass(e.m_pSchemaType->m_pszName); class_ != nullptr) {
+                        return class_->GetFullAlignment();
+                    } else {
+                        return e.m_pSchemaType->GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
+                    }
+                });
+
+            if (field_alignments.empty()) {
+                // This is an empty class. The generator will add a single pad with alignment 1.
+                return std::make_optional((base_alignment == 0) ? 1 : base_alignment);
+            } else if (std::ranges::all_of(field_alignments, &std::optional<int>::has_value)) {
+                int max_alignment = base_alignment;
+                for (const auto& e : field_alignments) {
+                    max_alignment = std::max(max_alignment, e.value());
+                }
+                return std::make_optional(max_alignment);
+            } else {
+                // there are fields with unknown alignment
+                return std::optional<int>{};
+            }
+        });
+    }
+
+    // @note: @og: Copy instance from original to new created with all data from original, returns new_instance
+    auto CopyInstance(void* instance, void* new_instance) const {
+        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kCreateInstance, instance, new_instance);
+    }
+
+    // @note: @og: Creates default instance with engine allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be
+    // C_BaseEntity)
+    [[nodiscard]] auto CreateInstance() const {
+        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kCreateInstance);
+    }
+
+    // @note: @og: Creates default instance with your own allocated memory (e.g. if SchemaClassInfoData_t is C_BaseEntity, then Instance will be
+    // C_BaseEntity)
+    auto CreateInstance(void* memory) const {
+        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kCreateInstanceWithMemory, memory);
+    }
+
+    // @note: @og: Destroy instance (e.g.: C_BaseEntity 1st VT fn with 0 flag)
+    auto DestroyInstance(void* instance) const {
+        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
+    }
+
+    // @note: @og: Destroy instance with de-allocating memory (e.g.: C_BaseEntity 1st VT fn with 1 flag)
+    auto DestroyInstanceWithMemory(void* instance) const {
+        return CallFunction<void*>(SchemaClassInfoFunctionIndex::kDestroyInstanceWithMemory, instance);
+    }
+
+    [[nodiscard]] auto SchemaClassBinding(void* entity) const {
+        return CallFunction<CSchemaClassBinding*>(SchemaClassInfoFunctionIndex::kSchemaDynamicBinding, entity);
+    }
 };
 
 enum SchemaTypeScope_t : std::uint8_t {

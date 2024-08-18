@@ -36,6 +36,11 @@ namespace {
 
     using namespace std::string_view_literals;
 
+    // TOOD: move to a better place
+    std::string to_hex_string(int i) {
+        return std::format("{:#x}", i);
+    }
+
     /**
      * Project structure is
      * <kOutDirName>
@@ -130,6 +135,10 @@ namespace {
         FNV32("MNetworkMaxValue"),
     };
 
+    void warn(std::string_view message) {
+        std::cerr << "warning: " << message << '\n';
+    }
+
     // @note: @es3n1n: some more utils
     //
     std::string GetMetadataValue(const SchemaMetadataEntryData_t& metadata_entry) {
@@ -176,7 +185,10 @@ namespace {
     };
 
     void PrintClassInfo(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_info) {
-        builder.comment(std::format("Alignment: {}", class_info.GetAlignment())).comment(std::format("Size: {:#x}", class_info.m_nSizeOf));
+        builder.comment(std::format("Registered alignment: {}", class_info.GetRegisteredAlignment().transform(&to_hex_string).value_or("unknown")));
+        // TOOD: remove? this is expensive
+        builder.comment(std::format("Alignment: {}", class_info.GetFullAlignment().transform(&to_hex_string).value_or("unknown")));
+        builder.comment(std::format("Size: {:#x}", class_info.m_nSizeOf));
 
         if ((class_info.m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
             builder.comment("Has VTable");
@@ -580,6 +592,16 @@ namespace {
         return result;
     }
 
+    // TOOD: needs documentation. duplicate of CSchemaClass::GetFullAlignment()
+    [[nodiscard]]
+    std::optional<int> GetFullAlignmentOfType(const CSchemaType& type) {
+        if (const auto* class_ = type.m_pTypeScope->FindDeclaredClass(type.m_pszName); class_ != nullptr) {
+            return class_->GetFullAlignment();
+        } else {
+            return type.GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
+        }
+    }
+
     // TOOD: Move up
 
     struct BitfieldEntry {
@@ -634,6 +656,9 @@ namespace {
     }
 
     void AssembleClass(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
+        // TODO: when we have a CLI parser: pass this property in from the outside
+        const bool verbose = true;
+
         struct cached_datamap_t {
             std::string type_;
             std::string name_;
@@ -643,8 +668,27 @@ namespace {
         // @note: @es3n1n: get class info, assemble it
         //
         const auto* class_parent = class_.m_pBaseClasses ? class_.m_pBaseClasses->m_pClass : nullptr;
+        // TOOD: remove
         const auto& class_info = class_;
+        // TOOD: use these 2 variables
+        const auto class_size = class_.GetSize();
+        const auto class_alignment = class_.GetFullAlignment();
+        // TOOD: use better default alignment x3
+        const auto aligned_size = class_size + (class_alignment.value_or(8) - (class_size % class_alignment.value_or(8))) % class_alignment.value_or(8);
+        // Source2 has alignof(max_align_t)=8, i.e. every class whose size is a multiple of 8 is aligned.
+        const auto class_is_aligned = (class_size % class_alignment.value_or(8)) == 0;
         const auto is_struct = std::string_view{class_info.m_pszName}.ends_with("_t");
+
+        if (!class_is_aligned) {
+            const auto warning = std::format("Type {} is misaligned. Its size should be {:#x}, but with proper alignement it has size {:#x}.",
+                                             class_.GetName(), class_size, aligned_size);
+            warn(warning);
+            builder.comment(warning);
+            builder.comment("It has been replaced by a dummy. You can try uncommenting the struct below.");
+            builder.begin_struct(class_.GetName());
+            builder.struct_padding(0, class_size);
+            builder.end_struct();
+        }
 
         PrintClassInfo(builder, class_info);
 
@@ -652,6 +696,10 @@ namespace {
         //
         const std::string parent_class_name = (class_parent != nullptr) ? MaybeWithModuleName(*class_parent->m_pTypeScope, class_parent->m_pszName) : "";
         const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_nSizeOf : 0;
+
+        if (!class_is_aligned) {
+            builder.begin_multi_line_comment();
+        }
 
         // @note: @es3n1n: start class
         //
@@ -699,10 +747,10 @@ namespace {
                 continue;
             }
 
-            // @note: @es3n1n: obtaining size
-            // fall back to 1 because there are no 0-sized types
-            //
-            const int field_size = field.m_pSchemaType->GetSize().value_or(1);
+            // fall back to size=1 because there are no 0-sized types
+            // TOOD: why do we get no size for some types?
+            const auto field_size = field.m_pSchemaType->GetSize().value_or(1);
+            const auto field_alignment = GetFullAlignmentOfType(*field.m_pSchemaType);
 
             // @note: @es3n1n: parsing type
             //
@@ -754,22 +802,37 @@ namespace {
 
             // @note: @es3n1n: update state
             //
-            if (field_size != 0) {
-                state.last_field_offset = field.m_nSingleInheritanceOffset;
-                state.last_field_size = static_cast<std::size_t>(field_size);
-            }
+            state.last_field_offset = field.m_nSingleInheritanceOffset;
+            state.last_field_size = static_cast<std::size_t>(field_size);
 
             // @note: @es3n1n: push prop
             //
-            if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
-                // HACKHACK: this is a hack to get the size of template types right
-                builder.prop("char", std::format("{}[{:#x}]", var_info.formatted_name(), field.m_pSchemaType->GetSize().value()), false);
-                builder.comment(field.m_pSchemaType->m_pszName, false);
+            // TOOD: use better default alignment
+            if ((field.m_nSingleInheritanceOffset % field_alignment.value_or(8)) == 0) {
+                if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
+                    // HACKHACK: this is a hack to get the size of template types right
+                    builder.prop("char", std::format("{}[{:#x}]", var_info.m_name, field_size), false);
+                    builder.comment(field.m_pSchemaType->m_pszName, false);
+                } else {
+                    builder.prop(var_info.m_type, var_info.formatted_name(), false);
+                }
             } else {
-                builder.prop(var_info.m_type, var_info.formatted_name(), false);
+                // TOOD: use warn() for all errors
+                warn(std::format("property {}::{} is misaligned. it has been replaced with a byte array.", class_.GetName(), field.m_pszName));
+                builder.comment(std::format("property is misaligned, you can try marking {} as packed and uncommenting this property", class_.GetName()));
+                builder.prop("char", std::format("{}[{:#x}]", var_info.m_name, field_size), true);
+                builder.comment("", false).reset_tabs_count().prop(var_info.m_type, var_info.formatted_name(), false).restore_tabs_count();
             }
 
-            builder.reset_tabs_count().comment(std::format("{:#x} ({:#x})", field.m_nSingleInheritanceOffset, field_size), false).restore_tabs_count();
+            if (verbose) {
+                builder.reset_tabs_count()
+                    .comment(std::format("offset={:#x} size={:#x} alignment={}", field.m_nSingleInheritanceOffset, field_size,
+                                         field_alignment.transform(to_hex_string).value_or("unknown")),
+                             false)
+                    .restore_tabs_count();
+            } else {
+                builder.reset_tabs_count().comment(std::format("{:#x}", field.m_nSingleInheritanceOffset), false).restore_tabs_count();
+            }
             cached_fields.emplace_back(var_info.formatted_name(), field.m_nSingleInheritanceOffset);
 
             builder.next_line();
@@ -783,7 +846,8 @@ namespace {
 
         // pad the class end.
         const auto last_field_end = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
-        const auto end_pad = class_.GetSize() - last_field_end;
+        // TOOD: use aligned size?
+        const auto end_pad = class_size - last_field_end;
 
         if (end_pad != 0) {
             builder.struct_padding(last_field_end, end_pad, true, true);
@@ -874,8 +938,13 @@ namespace {
                                             class_info.m_pszName));
             }
         }
+
+        if (!class_is_aligned) {
+            builder.end_multi_line_comment();
+        }
+
         builder.next_line();
-        builder.static_assert_size(class_info.m_pszName, class_info.GetSize());
+        builder.static_assert_size(class_info.m_pszName, class_size);
     }
 
     void GenerateEnumSdk(std::string_view module_name, const CSchemaEnumBinding& enum_) {
