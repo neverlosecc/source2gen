@@ -61,53 +61,9 @@ if(NOT SOURCE2GEN_GAME IN_LIST SOURCE2GEN_SUPPORTED_GAMES)
     message(FATAL_ERROR "source2gen: Invalid value for SOURCE2GEN_GAME: ${SOURCE2GEN_GAME}")
 endif()
 
-add_executable(source2gen)
+# These two should be included before we include any other projects
+add_subdirectory(vendor)
+add_subdirectory(source2gen-shared)
 
-file(GLOB_RECURSE source2gen_SOURCES "src/**.cpp")
-file(GLOB_RECURSE source2gen_HEADERS "include/**.h" "include/**.hpp")
-
-target_sources(source2gen PRIVATE ${source2gen_SOURCES} ${source2gen_HEADERS})
-
-target_include_directories(source2gen PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-
-if(MSVC)
-    target_compile_options(source2gen PRIVATE /bigobj)
-endif()
-
-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    target_compile_definitions(source2gen PRIVATE "source2gen_DEBUG" "_DEBUG")
-endif()
-
-if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    target_compile_definitions(source2gen PRIVATE "source2gen_RELEASE" "NDEBUG")
-endif()
-
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
-   ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang" OR
-   ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-    target_compile_options(source2gen PRIVATE
-      -pedantic-errors
-      -Wno-address-of-packed-member
-      $<$<NOT:$<CXX_COMPILER_ID:GNU>>:-Wno-implicit-exception-spec-mismatch>
-      -Wno-invalid-offsetof
-      $<IF:$<CXX_COMPILER_ID:GNU>,-Wno-attributes,-Wno-unknown-attributes>
-    )
-
-    target_compile_definitions(source2gen PRIVATE
-      "FORCEINLINE="
-      "__forceinline="
-      "__thiscall="
-      "__cdecl="
-    )
-endif()
-
-target_compile_definitions(source2gen PRIVATE
-    "${SOURCE2GEN_GAME}"
-    "_CRT_SECURE_NO_WARNINGS"
-    "NOMINMAX"
-    "WIN32_LEAN_AND_MEAN"
-    "_WIN32_WINNT=0x601"
-)
+add_subdirectory(source2gen)
+add_subdirectory(source2gen-loader)

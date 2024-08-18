@@ -1,7 +1,7 @@
-#pragma once
-
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
+#pragma once
+
 #define WINDOWS 0
 #define LINUX 1
 

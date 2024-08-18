@@ -6,8 +6,8 @@
 #include <array>
 #include <fstream>
 #include <string>
-#include <tools/loader/loader.h>
-#include <tools/platform.h>
+#include <shared/loader/loader.h>
+#include <shared/platform.h>
 
 namespace {
     [[nodiscard]] auto get_required_modules() {

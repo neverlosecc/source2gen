@@ -6,7 +6,7 @@
 #include <sdk/interfaces/common/CInterlockedInt.h>
 #include <sdk/interfaces/common/CThreadMutex.h>
 #include <sdk/interfaces/common/CTSList.h>
-#include <tools/platform.h>
+#include <shared/platform.h>
 #include <type_traits>
 
 #if defined(CS2) || defined(DOTA2)

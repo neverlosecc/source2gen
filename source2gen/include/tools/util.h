@@ -1,23 +1,25 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
-#include <Include.h>
+#pragma once
 
-int main(int argc, char* argv[]) {
-    int exit_code = 1;
+#include <string>
+#include <shared/loader/loader.h>
 
-    if (source2_gen::Dump()) {
-        std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
-        std::cout << kPoweredByMessage << std::endl;
-        exit_code = 0;
+namespace util {
+    inline std::string PrettifyNum(int num) {
+        static const auto fn =
+            loader::find_module_symbol<const char* (*)(int)>(loader::find_module_handle(loader::get_module_file_name("tier0")), "V_PrettifyNum");
+
+        if (fn.has_value()) {
+            std::string_view res = (*fn)(num);
+            if (!res.empty()) {
+                return res.data();
+            }
+        }
+
+        return std::to_string(num);
     }
-
-    /// Errors would be logged in the `source2_gen::Dump` itself
-    /// We don't want to call getch on linux as the program would be started within a terminal anyway.
-#if TARGET_OS == WINDOWS
-    (void)std::getchar();
-#endif
-    return exit_code;
-}
+} // namespace util
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

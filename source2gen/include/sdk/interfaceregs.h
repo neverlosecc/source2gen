@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <string_view>
 
-#include <tools/loader/loader.h>
+#include <shared/loader/loader.h>
 
 namespace sdk {
     using InstantiateInterfaceFn = void* (*)();
