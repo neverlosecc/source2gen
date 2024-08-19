@@ -33,6 +33,7 @@ namespace {
 
     constexpr auto kEnvVarName = IF_LINUX("LD_LIBRARY_PATH") IF_WINDOWS("PATH");
     constexpr auto kEnvVarPathSep = IF_LINUX(":") IF_WINDOWS(";");
+    constexpr auto kPlatformDirName = IF_LINUX("linuxsteamrt64") IF_WINDOWS("win64");
 
     [[nodiscard]] std::optional<std::string> getenv_impl(const std::string& key) {
         const char* val = std::getenv(key.c_str());
@@ -48,7 +49,7 @@ namespace {
                 continue;
             }
 
-            const auto path = it.path() / "bin" / "win64";
+            const auto path = it.path() / "bin" / kPlatformDirName;
             if (!exists(path)) {
                 continue;
             }
@@ -88,7 +89,7 @@ int main(const int argc, char* argv[]) try {
     std::cout << "*** setting up the env" << std::endl;
 
     /// Uses the same priority as declared
-    const auto main_binaries_path = (*path / "game" / "bin" / "win64").string();
+    const auto main_binaries_path = (*path / "game" / "bin" / kPlatformDirName).string();
     const auto second_binaries_path = find_second_bin_directory(*path).string();
     std::array dll_paths = {
         second_binaries_path,
