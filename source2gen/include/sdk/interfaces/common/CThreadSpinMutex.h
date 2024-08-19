@@ -1,6 +1,5 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
-
 #pragma once
 
 #include "CThreadMutex.h"
@@ -21,8 +20,7 @@ private:
     int m_depth;
     const char* m_pszDebugName;
 };
-
-static_assert(sizeof(CThreadSpinMutexV1) == 0x18);
+static_assert(sizeof(CThreadSpinMutexV1) == 0x10);
 
 class CThreadSpinMutexV2 {
 public:
@@ -32,8 +30,7 @@ private:
     volatile ThreadId_t m_ownerID;
     int m_depth;
 };
-
-static_assert(sizeof(CThreadSpinMutexV1) == 0x18);
+static_assert(sizeof(CThreadSpinMutexV2) == 0x8);
 
 using CThreadSpinMutex = std::conditional_t<kThreadSpinMutex == 1, CThreadSpinMutexV1, CThreadSpinMutexV2>;
 using CThreadFastMutex = CThreadSpinMutex;

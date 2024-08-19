@@ -251,7 +251,7 @@ public:
         HashFixedData_t* m_pFirstUncommitted; // 0x0020
         IF_LINUX(char pad_0x20[0x08];)
     }; // Size: 0x0028
-    static_assert(sizeof(HashBucket_t) == 0x30);
+    static_assert(sizeof(HashBucket_t) == 0x28);
 
     CUtlMemoryPoolBase m_EntryMemory;
 

@@ -8,7 +8,7 @@
 #include <sdk/interfaces/common/CBufferString.h>
 #include <sdk/interfaces/common/CUtlMap.h>
 #include <sdk/interfaces/common/CUtlTSHash.h>
-#include <tools/platform.h>
+#include <shared/platform.h>
 #include <tools/virtual.h>
 #include <vector>
 
