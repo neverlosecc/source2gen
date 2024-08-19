@@ -3,6 +3,7 @@
 #include <Include.h>
 
 namespace {
+    /// Returns exit code, 1 - failure, 0 - success
     int bootstrap() {
         int exit_code = 1;
 
@@ -27,7 +28,7 @@ BOOL __stdcall DllMain(void*, int call_reason, void*) {
         return TRUE;
     }
 
-    return static_cast<BOOL>(bootstrap());
+    return static_cast<BOOL>(!bootstrap());
 }
 #elif TARGET_OS == LINUX
 void __attribute__((constructor)) DllMain(void) {

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <ranges>
 
 #include "steam_resolver/steam_resolver.h"
 
@@ -40,9 +41,26 @@ namespace {
         }
         return std::string(val);
     }
+
+    [[nodiscard]] std::filesystem::path find_second_bin_directory(const std::filesystem::path& game_path) {
+        for (const auto& it : std::filesystem::directory_iterator{game_path / "game"}) {
+            if (!it.is_directory()) {
+                continue;
+            }
+
+            const auto path = it.path() / "bin" / "win64";
+            if (!exists(path)) {
+                continue;
+            }
+
+            return path;
+        }
+
+        throw std::runtime_error("unable to find second bin directory");
+    }
 } // namespace
 
-int main(const int argc, char* argv[])  try {
+int main(const int argc, char* argv[]) try {
     std::cout << std::format("*** loading for game with app_id={:d}", kGameId) << std::endl;
 
     auto path = steam_resolver::find_game(kGameId);
@@ -67,21 +85,36 @@ int main(const int argc, char* argv[])  try {
     }
 
     std::cout << std::format("*** game path resolved to {}", path->string()) << std::endl;
-
     std::cout << "*** setting up the env" << std::endl;
 
-    std::string new_path_val = getenv_impl(kEnvVarName).value_or("");
-    new_path_val += kEnvVarPathSep + (*path / "game" / "bin" / "win64").string();
+    /// Uses the same priority as declared
+    const auto main_binaries_path = (*path / "game" / "bin" / "win64").string();
+    const auto second_binaries_path = find_second_bin_directory(*path).string();
+    std::array dll_paths = {
+        second_binaries_path,
+        main_binaries_path,
+    };
 
-    std::cout << std::format("*** new env var: {}", new_path_val) << std::endl;
+    /// We are adding our folders to the very start of the env var
+    std::string new_path_val;
+    for (const auto& [i, dll_path] : std::views::enumerate(dll_paths)) {
+        if (i > 0) {
+            new_path_val += kEnvVarPathSep;
+        }
+        new_path_val += dll_path;
+    }
+    if (const auto old_val = getenv_impl(kEnvVarName); old_val.has_value()) {
+        new_path_val += kEnvVarPathSep + *old_val;
+    }
+
 #if TARGET_OS == WINDOWS
     _putenv_s(kEnvVarName, new_path_val.c_str());
+    SetDllDirectoryA(main_binaries_path.c_str());
 #else
     setenv(kEnvVarName, new_path_val.c_str(), 1);
 #endif
 
     std::cout << "*** loading source2gen" << std::endl;
-
     if (auto expr = loader::load_module("source2gen"); !expr.has_value()) {
         throw std::runtime_error(expr.error().as_string().data());
     }
