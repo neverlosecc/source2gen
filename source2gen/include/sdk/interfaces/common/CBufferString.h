@@ -1,8 +1,7 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
-
 #pragma once
-
+#include "sdk/interfaces/tier0/IMemAlloc.h"
 #include <cstddef>
 #include <cstring>
 
@@ -64,6 +63,8 @@ public:
     T* ToGrowable() {
         return (T*)this;
     }
+
+    void MoveFrom(CBufferString& src);
 };
 
 template <std::size_t MAX_SIZE, bool AllowHeapAllocation = true>
