@@ -31,9 +31,7 @@ namespace steam_resolver {
 
         steam_path_str.resize(steam_path_size / sizeof(wchar_t) - 1);
 
-        std::filesystem::path library_folders_path = steam_path_str;
-        library_folders_path /= "steamapps";
-        library_folders_path /= "libraryfolders.vdf";
+        const auto library_folders_path = std::filesystem::path{steam_path_str} / "steamapps" / "libraryfolders.vdf";
         if (!exists(library_folders_path)) {
             return std::nullopt;
         }
