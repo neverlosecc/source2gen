@@ -24,3 +24,5 @@ target_compile_definitions(source2gen-loader PRIVATE
     "WIN32_LEAN_AND_MEAN"
     "_WIN32_WINNT=0x601"
 )
+
+add_dependencies(source2gen-loader source2gen)
