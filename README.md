@@ -11,6 +11,27 @@ An example of such SDKs could be found at [source2sdk](https://github.com/neverl
 Open the source2gen-loader binary, it will automatically(if supported) find the game path,
 and it will also set up the needed environment
 
+### Windows
+
+```commandline
+source2gen-loader.exe
+```
+
+### Linux
+
+```sh
+./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/"
+# view generated sdk
+ls ./sdk
+```
+
+You can also invoke source2gen directly , e.g. for debugging, by running
+
+```sh
+LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
+  source2gen
+```
+
 Source2Gen for Linux support is currently in an alpha state. There will be
 errors, bugs, and wrong output. Please only file issues if you want to work on
 them. This note will be removed once we have thoroughly tested Source2Gen on
