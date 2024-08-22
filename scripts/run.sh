@@ -33,17 +33,14 @@ fi
 find_second_bin_directory() {
     local game_path="$1"
 
-    for dir in "$game_path/game/"*/; do
-        local potential_path="$dir/bin/$kPlatformDirName"
+    local found;found="$(find "${game_path}" -name libclient.so)"
 
-        if [[ -d "$potential_path" ]]; then
-            echo "$potential_path"
-            return
-        fi
-    done
-
-    echo "Error: unable to find second bin directory" >&2
-    exit 1
+    if [ -z "${found}" ]; then
+      echo "Error: unable to find second bin directory" >&2
+      exit 1
+    else
+      dirname "${found}"
+    fi
 }
 
 FIRST_BIN_DIRECTORY="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/"
