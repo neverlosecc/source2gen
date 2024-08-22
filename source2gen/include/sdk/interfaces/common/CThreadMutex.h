@@ -24,7 +24,6 @@ public:
     bool m_bTrace;
     const char* m_pDebugName;
 };
-// static_assert(sizeof(CThreadMutex) == 0x30 + sizeof(ThreadId_t) + sizeof(char*));
 static_assert(sizeof(CThreadMutex) == platform_specific{.windows = 0x38, .linux = 0x40});
 
 // source2gen - Source2 games SDK generator
