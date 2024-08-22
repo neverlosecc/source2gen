@@ -77,7 +77,7 @@ When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
 - Run the following sequence of commands to build the project:
 
 ```bash
-cmake -B build -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
 cmake --build build
 ```
 

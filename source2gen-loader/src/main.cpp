@@ -75,7 +75,7 @@ int main(const int argc, char* argv[]) try {
         path = steam_resolver::find_game(kGameId);
     }
 
-    if (!path.has_value() || argc >= 2) {
+    if (!path.has_value()) {
         std::cerr << "game directory not found!" << std::endl;
         std::cerr << "please specify it via the command line option like this:" << std::endl;
         std::cerr << std::format("\t* {} --game_path c:\\Some\\Path\\", argv[0]) << std::endl;
