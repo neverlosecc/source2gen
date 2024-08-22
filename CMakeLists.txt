@@ -61,9 +61,8 @@ if(NOT SOURCE2GEN_GAME IN_LIST SOURCE2GEN_SUPPORTED_GAMES)
     message(FATAL_ERROR "source2gen: Invalid value for SOURCE2GEN_GAME: ${SOURCE2GEN_GAME}")
 endif()
 
-# These two should be included before we include any other projects
+# This one should be included before we include any other projects
 add_subdirectory(vendor)
-add_subdirectory(source2gen-shared)
 
 add_subdirectory(source2gen)
 add_subdirectory(source2gen-loader)

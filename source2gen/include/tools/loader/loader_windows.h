@@ -5,7 +5,7 @@
 #include <cassert>
 #include <cstring>
 #include <string>
-#include <windows.h>
+#include <Windows.h>
 
 #include "loader_shared.h"
 

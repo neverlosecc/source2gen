@@ -2,7 +2,7 @@
 // See end of file for extended copyright information.
 #pragma once
 
-#include <shared/platform.h>
+#include "tools/platform.h"
 #include <cstddef>
 #include <cstdint>
 

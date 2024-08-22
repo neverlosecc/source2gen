@@ -2,13 +2,13 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include "tools/platform.h"
 #include <array>
 #include <cstdint>
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <sdk/interfaces/common/CBufferString.h>
 #include <sdk/interfaces/common/CUtlMap.h>
 #include <sdk/interfaces/common/CUtlTSHash.h>
-#include <shared/platform.h>
 #include <tools/virtual.h>
 #include <vector>
 

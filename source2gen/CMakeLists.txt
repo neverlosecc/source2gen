@@ -1,4 +1,4 @@
-add_library(source2gen SHARED)
+add_executable(source2gen)
 
 file(GLOB_RECURSE source2gen_SOURCES "src/**.cpp")
 file(GLOB_RECURSE source2gen_HEADERS "include/**.h")
@@ -7,9 +7,6 @@ target_sources(source2gen PRIVATE ${source2gen_SOURCES} ${source2gen_HEADERS})
 
 target_include_directories(source2gen PUBLIC
     "include"
-)
-target_link_libraries(source2gen PRIVATE
-    source2gen-shared
 )
 
 if(MSVC)

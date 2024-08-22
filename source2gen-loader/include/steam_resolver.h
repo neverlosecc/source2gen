@@ -8,7 +8,7 @@
 #include <optional>
 #include <string>
 
-#include <vdf_parser.hpp>
+#include "vdf_parser.hpp"
 
 namespace steam_resolver {
     [[nodiscard]] inline std::optional<std::filesystem::path> find_game(const std::size_t app_id) {
@@ -41,7 +41,7 @@ namespace steam_resolver {
 
         const auto app_id_str = std::to_string(app_id);
 
-        for(const auto& [index, info] : library_folders.childs) {
+        for (const auto& [index, info] : library_folders.childs) {
             const auto steam_apps_path = std::filesystem::path(info->attribs.at("path")) / "steamapps";
             const auto apps_it = info->childs.at("apps");
 

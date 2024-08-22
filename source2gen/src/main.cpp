@@ -2,39 +2,22 @@
 // See end of file for extended copyright information.
 #include <Include.h>
 
-namespace {
-    /// Returns exit code, 1 - failure, 0 - success
-    int bootstrap() {
-        int exit_code = 1;
+int main(const int argc, const char* argv[]) {
+    int exit_code = 1;
 
-        if (source2_gen::Dump()) {
-            std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
-            std::cout << kPoweredByMessage << std::endl;
-            exit_code = 0;
-        }
-
-        /// Errors would be logged in the `source2_gen::Dump` itself
-        /// We don't want to call getch on linux as the program would be started within a terminal anyway.
-#if TARGET_OS == WINDOWS
-        (void)std::getchar();
-#endif
-        return exit_code;
-    }
-} // namespace
-
-#if TARGET_OS == WINDOWS
-BOOL __stdcall DllMain(void*, int call_reason, void*) {
-    if (call_reason != DLL_PROCESS_ATTACH) {
-        return TRUE;
+    if (source2_gen::Dump()) {
+        std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
+        std::cout << kPoweredByMessage << std::endl;
+        exit_code = 0;
     }
 
-    return static_cast<BOOL>(!bootstrap());
-}
-#elif TARGET_OS == LINUX
-void __attribute__((constructor)) DllMain(void) {
-    bootstrap();
-}
+    /// Errors would be logged in the `source2_gen::Dump` itself
+    /// We don't want to call getch on linux as the program would be started within a terminal anyway.
+#if TARGET_OS == WINDOWS
+    (void)std::getchar();
 #endif
+    return exit_code;
+}
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

@@ -2,7 +2,7 @@
 // See end of file for extended copyright information.
 #include <cassert>
 #include <sdk/interfaces/common/CBufferString.h>
-#include <shared/loader/loader.h>
+#include <tools/loader/loader.h>
 
 void CBufferString::MoveFrom(CBufferString& src) {
     using func_t = void (*)(CBufferString*, CBufferString&);

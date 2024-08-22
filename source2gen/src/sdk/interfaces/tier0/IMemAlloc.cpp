@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cstring>
 #include <sdk/interfaces/tier0/IMemAlloc.h>
-#include <shared/loader/loader.h>
+#include <tools/loader/loader.h>
 
 namespace {
     // don't use any allocating functions in here, it'll cause a recursive call

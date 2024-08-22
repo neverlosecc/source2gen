@@ -1,10 +1,9 @@
+#include <cassert>
 #include <iostream>
 #include <ranges>
 
-#include "steam_resolver/steam_resolver.h"
-
-#include <shared/loader/loader.h>
-#include <shared/platform.h>
+#include "steam_resolver.h"
+#include <argparse/argparse.hpp>
 
 namespace {
     constexpr std::size_t kGameId =
@@ -31,9 +30,10 @@ namespace {
 #endif
         ;
 
-    constexpr auto kEnvVarName = IF_LINUX("LD_LIBRARY_PATH") IF_WINDOWS("PATH");
-    constexpr auto kEnvVarPathSep = IF_LINUX(":") IF_WINDOWS(";");
-    constexpr auto kPlatformDirName = IF_LINUX("linuxsteamrt64") IF_WINDOWS("win64");
+    constexpr auto kEnvVarName = "PATH";
+    constexpr auto kEnvVarPathSep = ";";
+    constexpr auto kPlatformDirName = "win64";
+    constexpr auto kExecutableName = "source2gen.exe";
 
     [[nodiscard]] std::optional<std::string> getenv_impl(const std::string& key) {
         const char* val = std::getenv(key.c_str());
@@ -62,18 +62,24 @@ namespace {
 } // namespace
 
 int main(const int argc, char* argv[]) try {
+    argparse::ArgumentParser program("source2gen-loader");
+    program.add_argument("--game_path").help("set the game path manually (ignore the game path resolver)");
+    program.parse_args(argc, argv);
+
     std::cout << std::format("*** loading for game with app_id={:d}", kGameId) << std::endl;
+    std::optional<std::filesystem::path> path = std::nullopt;
+    if (program.is_used("game_path")) {
+        path = program.get<std::string>("game_path");
+    }
+    if (!path.has_value()) {
+        path = steam_resolver::find_game(kGameId);
+    }
 
-    auto path = steam_resolver::find_game(kGameId);
     if (!path.has_value() || argc >= 2) {
-        if (argc < 2) {
-            std::cerr << "game directory not found!" << std::endl;
-            std::cerr << "please specify it via the command line option like this:" << std::endl;
-            std::cerr << std::format("\t* {} game_path", argv[0]) << std::endl;
-            return 1;
-        }
-
-        path = argv[1];
+        std::cerr << "game directory not found!" << std::endl;
+        std::cerr << "please specify it via the command line option like this:" << std::endl;
+        std::cerr << std::format("\t* {} --game_path c:\\Some\\Path\\", argv[0]) << std::endl;
+        return 1;
     }
 
     /// This should never happen
@@ -108,17 +114,17 @@ int main(const int argc, char* argv[]) try {
         new_path_val += kEnvVarPathSep + *old_val;
     }
 
-#if TARGET_OS == WINDOWS
     _putenv_s(kEnvVarName, new_path_val.c_str());
     SetDllDirectoryA(main_binaries_path.c_str());
-#else
-    setenv(kEnvVarName, new_path_val.c_str(), 1);
-#endif
 
     std::cout << "*** loading source2gen" << std::endl;
-    if (auto expr = loader::load_module("source2gen"); !expr.has_value()) {
-        throw std::runtime_error(expr.error().as_string().data());
+
+    std::string invoke_cmd = kExecutableName;
+    for (std::size_t i = 1; i < argc; ++i) {
+        invoke_cmd += " ";
+        invoke_cmd += argv[i];
     }
+    std::system(invoke_cmd.c_str());
 
     return 0;
 } catch (const std::runtime_error& error) {

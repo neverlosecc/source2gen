@@ -1,7 +1,7 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
-#include "shared/platform.h"
+#include "tools/platform.h"
 #include <expected>
 #include <string>
 #include <string_view>
