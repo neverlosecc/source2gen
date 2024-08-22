@@ -12,6 +12,8 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(FATAL_ERROR "source2gen: 32-bit targets are not supported")
 endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_CXX_STANDARD 23 CACHE STRING "Default C++ standard")
 message(STATUS "source2gen: C++ standard set to ${CMAKE_CXX_STANDARD}")
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require C++ standard")
@@ -59,38 +61,8 @@ if(NOT SOURCE2GEN_GAME IN_LIST SOURCE2GEN_SUPPORTED_GAMES)
     message(FATAL_ERROR "source2gen: Invalid value for SOURCE2GEN_GAME: ${SOURCE2GEN_GAME}")
 endif()
 
-add_library(source2gen SHARED)
+# This one should be included before we include any other projects
+add_subdirectory(vendor)
 
-file(GLOB_RECURSE source2gen_SOURCES "src/**.cpp")
-file(GLOB_RECURSE source2gen_HEADERS "include/**.h" "include/**.hpp")
-
-target_sources(source2gen PRIVATE ${source2gen_SOURCES} ${source2gen_HEADERS})
-
-target_include_directories(source2gen PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-
-if(MSVC)
-    target_compile_options(source2gen PRIVATE /bigobj)
-endif()
-
-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    target_compile_definitions(source2gen PRIVATE "source2gen_DEBUG" "_DEBUG")
-endif()
-
-if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    target_compile_definitions(source2gen PRIVATE "source2gen_RELEASE" "NDEBUG")
-endif()
-
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    target_compile_options(source2gen PRIVATE -Wno-nonportable-include-path -Wno-implicit-exception-spec-mismatch -Wno-invalid-offsetof -Wno-unknown-attributes)
-endif()
-
-target_compile_definitions(source2gen PRIVATE
-    "${SOURCE2GEN_GAME}"
-    "_CRT_SECURE_NO_WARNINGS"
-    "NOMINMAX"
-    "WIN32_LEAN_AND_MEAN"
-    "_WIN32_WINNT=0x601"
-)
+add_subdirectory(source2gen)
+add_subdirectory(source2gen-loader)

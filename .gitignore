@@ -83,6 +83,7 @@ Temporary Items
 [Bb]in/
 gen/
 out/
+/sdk/
 #  Uncomment the following line in case you need and you don't have the release build type files in your app
 # release/
 
@@ -1031,3 +1032,6 @@ bin/
 
 # VSCode Settings
 .vscode/settings.json
+
+# CLion
+.idea/**
