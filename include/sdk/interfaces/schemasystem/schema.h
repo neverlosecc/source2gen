@@ -138,8 +138,8 @@ enum {
     kSchemaType_GetSizeWithAlignOf = 3,
     kSchemaSystem_ValidateClasses = 35,
     kSchemaSystem_GetClassInfoBinaryName = 22,
-    kSchemaSystem_GetClassProjectName = kSchemaSystem_GetClassInfoBinaryName + 1,
-    kSchemaSystem_GetEnumBinaryName = kSchemaSystem_GetClassProjectName + 1,
+    kSchemaSystem_GetClassModuleName = kSchemaSystem_GetClassInfoBinaryName + 1,
+    kSchemaSystem_GetEnumBinaryName = kSchemaSystem_GetClassModuleName + 1,
     kSchemaSystem_GetEnumProjectName = kSchemaSystem_GetEnumBinaryName + 1,
     kSchemaSystemTypeScope_DeclaredClass = 14,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
@@ -1015,9 +1015,9 @@ public:
         }
     }
 
-    [[nodiscard]] std::string ScopedNameForClass(CSchemaClassBinding* pBinding) {
+    [[nodiscard]] std::string ScopedNameForClass(const CSchemaClassBinding* pBinding) {
         static CBufferStringGrowable<1024> szBuf;
-        Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*, CBufferString*)>(this, 17)(this, pBinding, &szBuf);
+        Virtual::Get<const char*(__thiscall*)(void*, const CSchemaClassBinding*, CBufferString*)>(this, 17)(this, pBinding, &szBuf);
         return szBuf.Get();
     }
 
@@ -1033,7 +1033,7 @@ public:
         }
     }
 
-    [[nodiscard]] std::string GetScopedNameForEnum(CSchemaEnumBinding* pBinding) {
+    [[nodiscard]] std::string ScopedNameForEnum(CSchemaEnumBinding* pBinding) {
         static CBufferStringGrowable<1024> szBuf;
         Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*, CBufferString*)>(this, 19)(this, pBinding, &szBuf);
         return szBuf.Get();
@@ -1043,16 +1043,17 @@ public:
         return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, kSchemaSystem_GetClassInfoBinaryName)(this, pBinding);
     }
 
-    [[nodiscard]] const char* GetClassProjectName(CSchemaClassBinding* pBinding) {
-        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, kSchemaSystem_GetClassProjectName)(this, pBinding);
+    [[nodiscard]] const char* GetClassModuleName(CSchemaClassBinding* pBinding) {
+        // Returns pBinding->m_pszModule
+        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, kSchemaSystem_GetClassModuleName)(this, pBinding);
     }
 
     [[nodiscard]] const char* GetEnumBinaryName(CSchemaEnumBinding* pBinding) {
         return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, kSchemaSystem_GetEnumBinaryName)(this, pBinding);
     }
 
-    [[nodiscard]] const char* GetEnumProjectName(CSchemaEnumBinding* pBinding) {
-        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, kSchemaSystem_GetEnumProjectName)(this, pBinding);
+    [[nodiscard]] const char* GetEnumProjectName(const CSchemaEnumBinding* pBinding) {
+        return Virtual::Get<const char*(__thiscall*)(void*, const CSchemaEnumBinding*)>(this, kSchemaSystem_GetEnumProjectName)(this, pBinding);
     }
 
     CSchemaClassBinding* ValidateClasses(CSchemaClassBinding** ppBinding) {
