@@ -34,6 +34,22 @@ namespace {
         auto operator<=>(const NameLookup&) const = default;
     };
 
+    struct BitfieldEntry {
+        std::string name{};
+        std::size_t size{};
+        // TOOD: document lifetime - asked es3n1n
+        std::vector<SchemaMetadataEntryData_t> metadata{};
+    };
+
+    struct ClassAssemblyState {
+        std::optional<std::size_t> last_field_size = std::nullopt;
+        std::optional<std::size_t> last_field_offset = std::nullopt;
+        bool assembling_bitfield = false;
+        std::vector<BitfieldEntry> bitfield = {};
+
+        std::ptrdiff_t collision_end_offset = 0ull; // @fixme: @es3n1n: todo proper collision fix and remove this var
+    };
+
     using namespace std::string_view_literals;
 
     // TOOD: move to a better place
@@ -186,7 +202,6 @@ namespace {
 
     void PrintClassInfo(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
         builder.comment(std::format("Registered alignment: {}", class_.GetRegisteredAlignment().transform(&to_hex_string).value_or("unknown")));
-        // TOOD: remove? this is expensive
         builder.comment(std::format("Alignment: {}", class_.GetFullAlignment().transform(&to_hex_string).value_or("unknown")));
         builder.comment(std::format("Size: {:#x}", class_.m_nSizeOf));
 
@@ -592,7 +607,9 @@ namespace {
         return result;
     }
 
-    // TOOD: needs documentation. duplicate of CSchemaClass::GetFullAlignment()
+    // TOOD: Create a "ShadowClass" map to store full alignment and standard-layout-class status?
+
+    /// @return For class types, returns @ref CSchemaClassInfo::GetFullAlignment(). Otherwise returns the immediately available size.
     [[nodiscard]]
     std::optional<int> GetFullAlignmentOfType(const CSchemaType& type) {
         if (const auto* class_ = type.m_pTypeScope->FindDeclaredClass(type.m_pszName); class_ != nullptr) {
@@ -601,25 +618,6 @@ namespace {
             return type.GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
         }
     }
-
-    // TOOD: Move up
-
-    struct BitfieldEntry {
-        std::string name{};
-        std::size_t size{};
-        // TOOD: document lifetime
-        std::vector<SchemaMetadataEntryData_t> metadata{};
-    };
-
-    struct ClassAssemblyState {
-        std::optional<std::size_t> last_field_size = std::nullopt;
-        std::optional<std::size_t> last_field_offset = std::nullopt;
-        bool assembling_bitfield = false;
-        std::vector<BitfieldEntry> bitfield = {};
-
-        std::ptrdiff_t collision_end_offset = 0ull; // @fixme: @es3n1n: todo proper collision fix and remove this var
-        // TOOD: inconsistent optional vs 0
-    };
 
     [[nodiscard]]
     ClassAssemblyState AssembleBitfield(codegen::generator_t& builder, ClassAssemblyState&& state, int expected_offset) {
@@ -700,7 +698,7 @@ namespace {
         // @note: @es3n1n: get parent name
         //
         const std::string parent_class_name = (class_parent != nullptr) ? MaybeWithModuleName(*class_parent->m_pTypeScope, class_parent->m_pszName) : "";
-        const std::ptrdiff_t parent_class_size = class_parent ? class_parent->m_nSizeOf : 0;
+        const std::optional<std::ptrdiff_t> parent_class_size = class_parent ? std::make_optional(class_parent->m_nSizeOf) : std::nullopt;
 
         if (!class_is_aligned) {
             builder.begin_multi_line_comment();
@@ -731,9 +729,10 @@ namespace {
         if (const auto* first_field = (class_.m_pFields == nullptr) ? nullptr : &class_.m_pFields[0]; first_field)
             first_field_offset = first_field->m_nSingleInheritanceOffset;
 
-        const auto class_size_without_parent = class_.m_nSizeOf - parent_class_size;
+        const auto class_size_without_parent = class_.m_nSizeOf - parent_class_size.value_or(0);
 
-        const auto expected_pad_size = first_field_offset.transform([&](auto e) { return e - parent_class_size; }).value_or(class_size_without_parent);
+        const auto expected_pad_size =
+            first_field_offset.transform([&](auto e) { return e - parent_class_size.value_or(0); }).value_or(class_size_without_parent);
 
         // @todo: @es3n1n: if for some mysterious reason this class describes fields
         // of the base class we should handle it too.
@@ -792,8 +791,7 @@ namespace {
 
             // @note: @es3n1n: insert padding if needed
             //
-            if (state.last_field_size.has_value() && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) &&
-                !state.assembling_bitfield) {
+            if (expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) && !state.assembling_bitfield) {
                 builder.access_modifier("public")
                     .struct_padding(expected_offset, field.m_nSingleInheritanceOffset - expected_offset, false, true)
                     .reset_tabs_count()
@@ -871,8 +869,8 @@ namespace {
 
             if (verbose) {
                 builder.reset_tabs_count()
-                    .comment(std::format("offset={:#x} size={:#x} alignment={}", field.m_nSingleInheritanceOffset, field_size,
-                                         field_alignment.transform(to_hex_string).value_or("unknown")),
+                    .comment(std::format("type.name=\"{}\" offset={:#x} size={:#x} alignment={}", std::string_view{field.m_pSchemaType->m_pszName},
+                                         field.m_nSingleInheritanceOffset, field_size, field_alignment.transform(to_hex_string).value_or("unknown")),
                              false)
                     .restore_tabs_count();
             } else {

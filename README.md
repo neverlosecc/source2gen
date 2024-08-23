@@ -49,7 +49,24 @@ to be provided by the user and expose all types listed in
 intend to access any of these types, you can use the dummy file
 [source2gen_user_types.hpp](sdk-static/source2gen_user_types.hpp).
 
-## Getting Started
+## Limitations
+
+### Disabled entities
+
+Under the following conditions, entities are either entirely omitted, or emitted
+as a comment and replaced with a dummy:
+
+- Overlapping fields: Fields that share memory with another field
+- Misaligned fields: Fields that cannot be placed at the correct in-class offset
+  because of their type's alignment requirements
+- Misaligned types: Class types that would exceed their correct size because
+  padding bytes would have to be inserted to meet alignment requirements
+- Fields with template types
+
+Some of these disabled entities can be made to work by using compiler-specific
+attributes.
+
+## Getting Started with Development
 
 These instructions will help you set up the project on your local machine for development and testing purposes.
 
