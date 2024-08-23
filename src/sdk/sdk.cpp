@@ -184,46 +184,46 @@ namespace {
         return value;
     };
 
-    void PrintClassInfo(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_info) {
-        builder.comment(std::format("Registered alignment: {}", class_info.GetRegisteredAlignment().transform(&to_hex_string).value_or("unknown")));
+    void PrintClassInfo(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
+        builder.comment(std::format("Registered alignment: {}", class_.GetRegisteredAlignment().transform(&to_hex_string).value_or("unknown")));
         // TOOD: remove? this is expensive
-        builder.comment(std::format("Alignment: {}", class_info.GetFullAlignment().transform(&to_hex_string).value_or("unknown")));
-        builder.comment(std::format("Size: {:#x}", class_info.m_nSizeOf));
+        builder.comment(std::format("Alignment: {}", class_.GetFullAlignment().transform(&to_hex_string).value_or("unknown")));
+        builder.comment(std::format("Size: {:#x}", class_.m_nSizeOf));
 
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
+        if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
             builder.comment("Has VTable");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_IS_ABSTRACT) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_IS_ABSTRACT) != 0)
             builder.comment("Is Abstract");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_HAS_TRIVIAL_CONSTRUCTOR) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_TRIVIAL_CONSTRUCTOR) != 0)
             builder.comment("Has Trivial Constructor");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR) != 0)
             builder.comment("Has Trivial Destructor");
 
 #if defined(CS2) || defined(DOTA2)
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_CONSTRUCT_ALLOWED) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_CONSTRUCT_ALLOWED) != 0)
             builder.comment("Construct allowed");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_CONSTRUCT_DISALLOWED) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_CONSTRUCT_DISALLOWED) != 0)
             builder.comment("Construct disallowed");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MConstructibleClassBase) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MConstructibleClassBase) != 0)
             builder.comment("MConstructibleClassBase");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MClassHasCustomAlignedNewDelete) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MClassHasCustomAlignedNewDelete) != 0)
             builder.comment("MClassHasCustomAlignedNewDelete");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MClassHasEntityLimitedDataDesc) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MClassHasEntityLimitedDataDesc) != 0)
             builder.comment("MClassHasEntityLimitedDataDesc");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MDisableDataDescValidation) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MDisableDataDescValidation) != 0)
             builder.comment("MDisableDataDescValidation");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MIgnoreTypeScopeMetaChecks) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MIgnoreTypeScopeMetaChecks) != 0)
             builder.comment("MIgnoreTypeScopeMetaChecks");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MNetworkNoBase) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MNetworkNoBase) != 0)
             builder.comment("MNetworkNoBase");
-        if ((class_info.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MNetworkAssumeNotNetworkable) != 0)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MNetworkAssumeNotNetworkable) != 0)
             builder.comment("MNetworkAssumeNotNetworkable");
 #endif
 
-        if (class_info.m_nStaticMetadataSize > 0)
+        if (class_.m_nStaticMetadataSize > 0)
             builder.comment("");
 
-        for (const auto& metadata : class_info.GetStaticMetadata()) {
+        for (const auto& metadata : class_.GetStaticMetadata()) {
             if (const auto value = GetMetadataValue(metadata); !value.empty())
                 builder.comment(std::format("static metadata: {} \"{}\"", metadata.m_szName, value));
             else
@@ -668,20 +668,25 @@ namespace {
         // @note: @es3n1n: get class info, assemble it
         //
         const auto* class_parent = class_.m_pBaseClasses ? class_.m_pBaseClasses->m_pClass : nullptr;
-        // TOOD: remove
-        const auto& class_info = class_;
-        // TOOD: use these 2 variables
         const auto class_size = class_.GetSize();
         const auto class_alignment = class_.GetFullAlignment();
-        // TOOD: use better default alignment x3
-        const auto aligned_size = class_size + (class_alignment.value_or(8) - (class_size % class_alignment.value_or(8))) % class_alignment.value_or(8);
         // Source2 has alignof(max_align_t)=8, i.e. every class whose size is a multiple of 8 is aligned.
         const auto class_is_aligned = (class_size % class_alignment.value_or(8)) == 0;
-        const auto is_struct = std::string_view{class_info.m_pszName}.ends_with("_t");
+        const auto is_struct = std::string_view{class_.m_pszName}.ends_with("_t");
 
         if (!class_is_aligned) {
-            const auto warning = std::format("Type {} is misaligned. Its size should be {:#x}, but with proper alignement it has size {:#x}.",
-                                             class_.GetName(), class_size, aligned_size);
+            const auto warning = [&]() {
+                if (class_alignment.has_value()) {
+                    // ceil size to next possible aligned size
+                    const auto aligned_size = class_size + (class_alignment.value() - (class_size % class_alignment.value())) % class_alignment.value();
+
+                    return std::format("Type {} is misaligned. Its size should be {:#x}, but with proper alignement it has size {:#x}.", class_.GetName(),
+                                       class_size, aligned_size);
+                } else {
+                    return std::format("Type {} appears to be misaligned. Its alignment is unknown and it is not aligned to max_align_t (8).",
+                                       class_.GetName());
+                }
+            }();
             warn(warning);
             builder.comment(warning);
             builder.comment("It has been replaced by a dummy. You can try uncommenting the struct below.");
@@ -690,7 +695,7 @@ namespace {
             builder.end_struct();
         }
 
-        PrintClassInfo(builder, class_info);
+        PrintClassInfo(builder, class_);
 
         // @note: @es3n1n: get parent name
         //
@@ -704,15 +709,18 @@ namespace {
         // @note: @es3n1n: start class
         //
         if (is_struct)
-            builder.begin_struct_with_base_type(class_info.m_pszName, parent_class_name, "");
+            builder.begin_struct_with_base_type(class_.m_pszName, parent_class_name, "");
         else
-            builder.begin_class_with_base_type(class_info.m_pszName, parent_class_name, "");
+            builder.begin_class_with_base_type(class_.m_pszName, parent_class_name, "");
 
         // @note: @es3n1n: field assembling state
         //
         // TOOD: inconsistent optional vs 0
         ClassAssemblyState state = {.last_field_size = parent_class_size};
 
+        /// If fields cannot be emitted, e.g. because of collisions, they're added to
+        /// this set so we can ignore them when asserting offsets.
+        std::unordered_set<std::string> skipped_fields{};
         std::list<std::pair<std::string, std::ptrdiff_t>> cached_fields{};
         std::list<cached_datamap_t> cached_datamap_fields{};
 
@@ -739,16 +747,21 @@ namespace {
         //
         builder.access_modifier("public");
 
-        for (const auto& field : class_info.GetFields()) {
+        for (const auto& field : class_.GetFields()) {
             // @fixme: @es3n1n: todo proper collision fix and remove this block
             if (state.collision_end_offset && field.m_nSingleInheritanceOffset < state.collision_end_offset) {
+                skipped_fields.emplace(field.m_pszName);
                 builder.comment(
                     std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field.m_pszName, field.m_nSingleInheritanceOffset));
                 continue;
             }
 
-            // fall back to size=1 because there are no 0-sized types
-            // TOOD: why do we get no size for some types?
+            if (!field.m_pSchemaType->GetSize().has_value()) {
+                std::cout << "MISSISG SIZE OF " << field.m_pSchemaType->m_pszName << std::endl;
+            }
+
+            // Fall back to size=1 because there are no 0-sized types.
+            // `RenderPrimitiveType_t` is the only type (in CS2 9035763) without size information.
             const auto field_size = field.m_pSchemaType->GetSize().value_or(1);
             const auto field_alignment = GetFullAlignmentOfType(*field.m_pSchemaType);
 
@@ -756,8 +769,6 @@ namespace {
             //
             const auto [type_name, array_sizes] = GetType(*field.m_pSchemaType);
             const auto var_info = field_parser::parse(type_name, field.m_pszName, array_sizes);
-
-            const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
 
             // Collect all bitfield entries and emit them later. We need to know
             // how large the bitfield is in order to choose the right type. We
@@ -772,6 +783,13 @@ namespace {
                 continue;
             }
 
+            if (verbose) {
+                builder.comment(std::format("last_field_offset={} last_field_size={}", state.last_field_offset.transform(&to_hex_string).value_or("none"),
+                                            state.last_field_size.transform(&to_hex_string).value_or("none")));
+            }
+
+            const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
+
             // @note: @es3n1n: insert padding if needed
             //
             if (state.last_field_size.has_value() && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) &&
@@ -784,9 +802,26 @@ namespace {
                     .access_modifier("public");
             }
 
-            // This is the end of a bitfield
+            // This is the first field after a bitfield, i.e. the active bitfield has ended
             if (!var_info.is_bitfield() && state.assembling_bitfield) {
                 state = AssembleBitfield(builder, std::move(state), expected_offset);
+
+                // TOOD: this is exact duplicate code
+                {
+                    const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
+
+                    // @note: @es3n1n: insert padding if needed
+                    //
+                    if (state.last_field_size.has_value() && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) &&
+                        !state.assembling_bitfield) {
+                        builder.access_modifier("public")
+                            .struct_padding(expected_offset, field.m_nSingleInheritanceOffset - expected_offset, false, true)
+                            .reset_tabs_count()
+                            .comment(std::format("{:#x}", expected_offset))
+                            .restore_tabs_count()
+                            .access_modifier("public");
+                    }
+                }
             }
 
             // @note: @es3n1n: dump metadata
@@ -810,7 +845,17 @@ namespace {
             // TOOD: use better default alignment
             if ((field.m_nSingleInheritanceOffset % field_alignment.value_or(8)) == 0) {
                 if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
-                    // HACKHACK: this is a hack to get the size of template types right
+                    // This is a workaround to get the size of template types right.
+                    // There are types that have non-type template parameters, e.g.
+                    // `CUtlLeanVectorFixedGrowable<int, 10>`. The non-type template parameter affects the size of the template type, but the schema system
+                    // doesn't store information about non-type template parameters. The schema system just says `CUtlLeanVectorFixedGrowable<int>`, which
+                    // is insufficient to generate a `CUtlLeanVectorFixedGrowable` with correct size.`
+                    // To still keep the rest of the class in order, we replace all template fields with char arrays.
+                    // We're applying this workaround to all template type, even those that don't have non-type template parameters, because we can't tell
+                    // them apart. So we're certainly commenting out more than is necessary.
+                    builder.comment(
+                        std::format("{} has a template type with potentially unknown template parameters. You can try uncommenting the field below.",
+                                    var_info.m_name));
                     builder.prop("char", std::format("{}[{:#x}]", var_info.m_name, field_size), false);
                     builder.comment(field.m_pSchemaType->m_pszName, false);
                 } else {
@@ -853,31 +898,31 @@ namespace {
             builder.struct_padding(last_field_end, end_pad, true, true);
         } else if (end_pad < 0) [[unlikely]] {
             throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
-                                                 -end_pad, last_field_end, class_.GetName(), class_.GetSize())};
+                                                 -end_pad, last_field_end, class_.GetName(), class_size)};
         }
 
         // @note: @es3n1n: dump static fields
         //
-        if (class_info.m_nStaticFieldsSize) {
-            if (class_info.m_nFieldSize)
+        if (class_.m_nStaticFieldsSize) {
+            if (class_.m_nFieldSize)
                 builder.next_line();
             builder.comment("Static fields:");
         }
 
         // The current class may be defined in multiple scopes. It doesn't matter which one we use, as all definitions are the same..
         // TODO: verify the above statement. Are static fields really shared between scopes?
-        const std::string scope_name{class_info.m_pTypeScope->BGetScopeName()};
+        const std::string scope_name{class_.m_pTypeScope->BGetScopeName()};
 
-        for (auto s = 0; s < class_info.m_nStaticFieldsSize; s++) {
-            auto static_field = &class_info.m_pStaticFields[s];
+        for (auto s = 0; s < class_.m_nStaticFieldsSize; s++) {
+            auto static_field = &class_.m_pStaticFields[s];
 
             auto [type, mod] = GetType(*static_field->m_pSchemaType);
             const auto var_info = field_parser::parse(type, static_field->m_pszName, mod);
-            builder.static_field_getter(var_info.m_type, var_info.m_name, scope_name, class_info.m_pszName, s);
+            builder.static_field_getter(var_info.m_type, var_info.m_name, scope_name, class_.m_pszName, s);
         }
 
-        if (class_info.m_pFieldMetadataOverrides && class_info.m_pFieldMetadataOverrides->m_iTypeDescriptionCount > 1) {
-            const auto& dm = class_info.m_pFieldMetadataOverrides;
+        if (class_.m_pFieldMetadataOverrides && class_.m_pFieldMetadataOverrides->m_iTypeDescriptionCount > 1) {
+            const auto& dm = class_.m_pFieldMetadataOverrides;
 
             for (std::uint64_t s = 0; s < dm->m_iTypeDescriptionCount; s++) {
                 auto* t = &dm->m_pTypeDescription[s];
@@ -907,7 +952,7 @@ namespace {
             }
 
             if (!cached_datamap_fields.empty()) {
-                if (class_info.m_nFieldSize)
+                if (class_.m_nFieldSize)
                     builder.next_line();
 
                 builder.comment("Datamap fields:");
@@ -917,25 +962,29 @@ namespace {
             }
         }
 
-        if (!class_info.m_nFieldSize && !class_info.m_nStaticMetadataSize)
+        if (!class_.m_nFieldSize && !class_.m_nStaticMetadataSize)
             builder.comment("No schema binary for binding");
 
         builder.end_block();
 
-        // TODO: when we have a CLI parse: make static_assert() generation optional because users might not care about errors in file they don't use
-        if (class_info.m_nBaseClassSize == 0) {
-            for (const auto& field : class_info.GetFields()) {
+        // TODO: this check is incomplete. we should also check if any of the class's fields is a non-standard-layout class. That's the case for e.g.
+        // soundsystem::CSosSoundEventGroupSchema
+        const bool is_standard_layout_class = (class_.m_nBaseClassSize == 0);
+
+        // TODO: when we have a CLI parser: allow users to generate assertions in non-standard-layout classes. Those assertions are
+        // conditionally-supported.
+        if (is_standard_layout_class) {
+            for (const auto& field :
+                 class_.GetFields() | std::ranges::views::filter([&](const auto& e) { return !skipped_fields.contains(e.m_pszName); })) {
                 if (field.m_pSchemaType->m_unTypeCategory == ETypeCategory::Schema_Bitfield) {
-                    builder.comment(std::format("Cannot assert offset of bitfield {}::{}", class_info.m_pszName, field.m_pszName));
+                    builder.comment(std::format("Cannot assert offset of bitfield {}::{}", class_.m_pszName, field.m_pszName));
                 } else {
-                    builder.static_assert_offset(class_info.m_pszName, field.m_pszName, field.m_nSingleInheritanceOffset);
+                    builder.static_assert_offset(class_.m_pszName, field.m_pszName, field.m_nSingleInheritanceOffset);
                 }
             }
         } else {
-            if (class_info.m_nFieldSize != 0) {
-                builder.comment(std::format("Cannot assert offsets of fields in {}. It is not a standard-layout class because it has a base class "
-                                            "with non-static data members.",
-                                            class_info.m_pszName));
+            if (class_.m_nFieldSize != 0) {
+                builder.comment(std::format("Cannot assert offsets of fields in {} because it is not a standard-layout class", class_.m_pszName));
             }
         }
 
@@ -944,7 +993,7 @@ namespace {
         }
 
         builder.next_line();
-        builder.static_assert_size(class_info.m_pszName, class_size);
+        builder.static_assert_size(class_.m_pszName, class_size);
     }
 
     void GenerateEnumSdk(std::string_view module_name, const CSchemaEnumBinding& enum_) {
