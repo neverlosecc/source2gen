@@ -46,6 +46,7 @@ namespace {
         std::optional<std::size_t> last_field_offset = std::nullopt;
         bool assembling_bitfield = false;
         std::vector<BitfieldEntry> bitfield = {};
+        std::int32_t bitfield_start = 0;
 
         std::ptrdiff_t collision_end_offset = 0ull; // @fixme: @es3n1n: todo proper collision fix and remove this var
     };
@@ -653,6 +654,26 @@ namespace {
         return state;
     }
 
+    /// Does not insert a pad if it would have size 0
+    void InsertPadUntil(codegen::generator_t::self_ref builder, const ClassAssemblyState& state, std::int32_t offset, bool verbose) {
+        if (verbose) {
+            builder.comment(std::format("last_field_offset={} last_field_size={}", state.last_field_offset.transform(&to_hex_string).value_or("none"),
+                                        state.last_field_size.transform(&to_hex_string).value_or("none")));
+        }
+
+        const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
+
+        // insert padding only if needed
+        if (expected_offset < static_cast<std::uint64_t>(offset) && !state.assembling_bitfield) {
+            builder.access_modifier("public")
+                .struct_padding(expected_offset, offset - expected_offset, false, true)
+                .reset_tabs_count()
+                .comment(std::format("{:#x}", expected_offset))
+                .restore_tabs_count()
+                .access_modifier("public");
+        }
+    }
+
     void AssembleClass(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
         // TODO: when we have a CLI parser: pass this property in from the outside
         const bool verbose = true;
@@ -713,7 +734,6 @@ namespace {
 
         // @note: @es3n1n: field assembling state
         //
-        // TOOD: inconsistent optional vs 0
         ClassAssemblyState state = {.last_field_size = parent_class_size};
 
         /// If fields cannot be emitted, e.g. because of collisions, they're added to
@@ -773,7 +793,11 @@ namespace {
             // how large the bitfield is in order to choose the right type. We
             // only know how large the bitfield is once we've reached its end.
             if (var_info.is_bitfield()) {
-                state.assembling_bitfield = true;
+                if (!state.assembling_bitfield) {
+                    state.assembling_bitfield = true;
+                    state.bitfield_start = field.m_nSingleInheritanceOffset;
+                }
+
                 state.bitfield.emplace_back(BitfieldEntry{
                     .name = var_info.formatted_name(),
                     .size = var_info.m_bitfield_size,
@@ -782,44 +806,17 @@ namespace {
                 continue;
             }
 
-            if (verbose) {
-                builder.comment(std::format("last_field_offset={} last_field_size={}", state.last_field_offset.transform(&to_hex_string).value_or("none"),
-                                            state.last_field_size.transform(&to_hex_string).value_or("none")));
-            }
+            // At this point, we're never still inside a bitfield. If `assembling_bitfield` is set, that means we're at the first field following a
+            // bitfield, but the bitfield has not been emitted yet.
+            // note: in CS2, there are no types with padding before a bitfield
+            InsertPadUntil(builder, state, state.assembling_bitfield ? state.bitfield_start : field.m_nSingleInheritanceOffset, verbose);
 
-            const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
+            // This is the first field after a bitfield, i.e. the active bitfield has ended. Emit the bitfield we have collected.
+            if (state.assembling_bitfield) {
+                state = AssembleBitfield(builder, std::move(state), state.last_field_offset.value_or(0) + state.last_field_size.value_or(0));
 
-            // @note: @es3n1n: insert padding if needed
-            //
-            if (expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) && !state.assembling_bitfield) {
-                builder.access_modifier("public")
-                    .struct_padding(expected_offset, field.m_nSingleInheritanceOffset - expected_offset, false, true)
-                    .reset_tabs_count()
-                    .comment(std::format("{:#x}", expected_offset))
-                    .restore_tabs_count()
-                    .access_modifier("public");
-            }
-
-            // This is the first field after a bitfield, i.e. the active bitfield has ended
-            if (!var_info.is_bitfield() && state.assembling_bitfield) {
-                state = AssembleBitfield(builder, std::move(state), expected_offset);
-
-                // TOOD: this is exact duplicate code
-                {
-                    const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
-
-                    // @note: @es3n1n: insert padding if needed
-                    //
-                    if (state.last_field_size.has_value() && expected_offset < static_cast<std::uint64_t>(field.m_nSingleInheritanceOffset) &&
-                        !state.assembling_bitfield) {
-                        builder.access_modifier("public")
-                            .struct_padding(expected_offset, field.m_nSingleInheritanceOffset - expected_offset, false, true)
-                            .reset_tabs_count()
-                            .comment(std::format("{:#x}", expected_offset))
-                            .restore_tabs_count()
-                            .access_modifier("public");
-                    }
-                }
+                // We need another pad here because the current loop iteration is already on a non-bitfield field which will get emitted right away.
+                InsertPadUntil(builder, state, field.m_nSingleInheritanceOffset, verbose);
             }
 
             // @note: @es3n1n: dump metadata
