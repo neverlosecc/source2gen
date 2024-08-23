@@ -665,12 +665,10 @@ namespace {
 
         // insert padding only if needed
         if (expected_offset < static_cast<std::uint64_t>(offset) && !state.assembling_bitfield) {
-            builder.access_modifier("public")
-                .struct_padding(expected_offset, offset - expected_offset, false, true)
+            builder.struct_padding(expected_offset, offset - expected_offset, false, true)
                 .reset_tabs_count()
                 .comment(std::format("{:#x}", expected_offset))
-                .restore_tabs_count()
-                .access_modifier("public");
+                .restore_tabs_count();
         }
     }
 
@@ -756,19 +754,15 @@ namespace {
         // @note: @es3n1n: start class
         //
         if (is_struct)
-            builder.begin_struct_with_base_type(class_.m_pszName, parent_class_name, "");
+            builder.begin_struct_with_base_type(class_.m_pszName, parent_class_name);
         else
-            builder.begin_class_with_base_type(class_.m_pszName, parent_class_name, "");
+            builder.begin_class_with_base_type(class_.m_pszName, parent_class_name);
 
         /// If fields cannot be emitted, e.g. because of collisions, they're added to
         /// this set so we can ignore them when asserting offsets.
         std::unordered_set<std::string> skipped_fields{};
         std::list<std::pair<std::string, std::ptrdiff_t>> cached_fields{};
         std::list<cached_datamap_t> cached_datamap_fields{};
-
-        // @note: @es3n1n: begin public members
-        //
-        builder.access_modifier("public");
 
         for (const auto& field : class_.GetFields()) {
             // Fall back to size=1 because there are no 0-sized types.
