@@ -727,29 +727,16 @@ namespace {
             builder.begin_multi_line_comment();
         }
 
-        // @note: @es3n1n: start class
-        //
-        if (is_struct)
-            builder.begin_struct_with_base_type(class_.m_pszName, parent_class_name, "");
-        else
-            builder.begin_class_with_base_type(class_.m_pszName, parent_class_name, "");
-
         // @note: @es3n1n: field assembling state
         //
         ClassAssemblyState state = {.last_field_size = parent_class_size};
 
-        /// If fields cannot be emitted, e.g. because of collisions, they're added to
-        /// this set so we can ignore them when asserting offsets.
-        std::unordered_set<std::string> skipped_fields{};
-        std::list<std::pair<std::string, std::ptrdiff_t>> cached_fields{};
-        std::list<cached_datamap_t> cached_datamap_fields{};
-
         // @note: @es3n1n: if we need to pad first field or if there's no fields in this class
         // and we need to properly pad it to make sure its size is the same as we expect it
         //
-        std::optional<std::ptrdiff_t> first_field_offset = std::nullopt;
-        if (const auto* first_field = (class_.m_pFields == nullptr) ? nullptr : &class_.m_pFields[0]; first_field)
-            first_field_offset = first_field->m_nSingleInheritanceOffset;
+        const auto* first_field = (class_.m_pFields == nullptr) ? nullptr : &class_.m_pFields[0];
+        const std::optional<std::ptrdiff_t> first_field_offset =
+            (first_field != nullptr) ? std::make_optional(first_field->m_nSingleInheritanceOffset) : std::nullopt;
 
         const auto class_size_without_parent = class_.m_nSizeOf - parent_class_size.value_or(0);
 
@@ -758,29 +745,32 @@ namespace {
 
         // @todo: @es3n1n: if for some mysterious reason this class describes fields
         // of the base class we should handle it too.
-        if (class_parent && first_field_offset.has_value() && first_field_offset.value() < class_parent->m_nSizeOf) {
-            builder.comment(
-                std::format("Collision detected({:#x}->{:#x}), output may be wrong.", first_field_offset.value_or(0), class_parent->m_nSizeOf));
-            state.collision_end_offset = class_parent->m_nSizeOf;
+        if ((class_parent != nullptr) && first_field_offset.has_value() && first_field_offset.value() < parent_class_size.value()) {
+            const auto warning = std::format("Collision detected: {} and its base {} have {:#x} overlapping byte(s)", class_.GetName(), parent_class_name,
+                                             parent_class_size.value() - first_field_offset.value());
+            warn(warning);
+            builder.comment(warning);
+            state.collision_end_offset = parent_class_size.value();
         }
+
+        // @note: @es3n1n: start class
+        //
+        if (is_struct)
+            builder.begin_struct_with_base_type(class_.m_pszName, parent_class_name, "");
+        else
+            builder.begin_class_with_base_type(class_.m_pszName, parent_class_name, "");
+
+        /// If fields cannot be emitted, e.g. because of collisions, they're added to
+        /// this set so we can ignore them when asserting offsets.
+        std::unordered_set<std::string> skipped_fields{};
+        std::list<std::pair<std::string, std::ptrdiff_t>> cached_fields{};
+        std::list<cached_datamap_t> cached_datamap_fields{};
 
         // @note: @es3n1n: begin public members
         //
         builder.access_modifier("public");
 
         for (const auto& field : class_.GetFields()) {
-            // @fixme: @es3n1n: todo proper collision fix and remove this block
-            if (state.collision_end_offset && field.m_nSingleInheritanceOffset < state.collision_end_offset) {
-                skipped_fields.emplace(field.m_pszName);
-                builder.comment(
-                    std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field.m_pszName, field.m_nSingleInheritanceOffset));
-                continue;
-            }
-
-            if (!field.m_pSchemaType->GetSize().has_value()) {
-                std::cout << "MISSISG SIZE OF " << field.m_pSchemaType->m_pszName << std::endl;
-            }
-
             // Fall back to size=1 because there are no 0-sized types.
             // `RenderPrimitiveType_t` is the only type (in CS2 9035763) without size information.
             const auto field_size = field.m_pSchemaType->GetSize().value_or(1);
@@ -790,6 +780,16 @@ namespace {
             //
             const auto [type_name, array_sizes] = GetType(*field.m_pSchemaType);
             const auto var_info = field_parser::parse(type_name, field.m_pszName, array_sizes);
+
+            // @fixme: @es3n1n: todo proper collision fix and remove this block
+            if (state.collision_end_offset && field.m_nSingleInheritanceOffset < state.collision_end_offset) {
+                skipped_fields.emplace(field.m_pszName);
+                // A warning has already been logged at the start of the class
+                builder.comment(
+                    std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field.m_pszName, field.m_nSingleInheritanceOffset));
+                builder.comment("", false).reset_tabs_count().prop(var_info.m_type, var_info.formatted_name()).restore_tabs_count();
+                continue;
+            }
 
             // Collect all bitfield entries and emit them later. We need to know
             // how large the bitfield is in order to choose the right type. We
@@ -863,7 +863,6 @@ namespace {
                         std::format("Property {}::{} is misaligned.", class_.GetName(), field.m_pszName) :
                         std::format("Property {}::{} appears to be misaligned. Its alignment is unknown and it is not aligned to max_align_t ({}).",
                                     class_.GetName(), field.m_pszName, source2_max_align);
-                // TOOD: use warn() for all errors
                 warn(warning);
                 builder.comment(warning);
                 builder.prop("char", std::format("{}[{:#x}]", var_info.m_name, field_size), true);
