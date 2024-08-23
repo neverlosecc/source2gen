@@ -1,23 +1,30 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
-#include <Include.h>
+#pragma once
 
-int main(int argc, char* argv[]) {
-    int exit_code = 1;
+#include "tools/platform.h"
+#include <cstddef>
+#include <cstdint>
 
-    if (source2_gen::Dump()) {
-        std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
-        std::cout << kPoweredByMessage << std::endl;
-        exit_code = 0;
-    }
-
-    /// Errors would be logged in the `source2_gen::Dump` itself
-    /// We don't want to call getch on linux as the program would be started within a terminal anyway.
-#if TARGET_OS == WINDOWS
-    (void)std::getchar();
+#ifdef _WIN32
+typedef std::uint32_t ThreadId_t;
+#else
+typedef std::uint64_t ThreadId_t;
 #endif
-    return exit_code;
-}
+
+constexpr auto kTtSizeofCriticalsection = 40;
+
+class CThreadMutex {
+public:
+    std::byte m_CriticalSection[kTtSizeofCriticalsection];
+
+    // Debugging (always herge to allow mixed debug/release builds w/o changing size)
+    ThreadId_t m_currentOwnerID;
+    std::uint16_t m_lockCount;
+    bool m_bTrace;
+    const char* m_pDebugName;
+};
+static_assert(sizeof(CThreadMutex) == platform_specific{.windows = 0x38, .linux = 0x40});
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

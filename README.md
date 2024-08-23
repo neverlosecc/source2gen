@@ -8,15 +8,13 @@ An example of such SDKs could be found at [source2sdk](https://github.com/neverl
 
 ## Usage
 
+Open the source2gen-loader binary, it will automatically(if supported) find the game path,
+and it will also set up the needed environment
+
 ### Windows
 
-TODO: how to run on windows? we need the user to set `PATH`. Hint: Perhaps we
-can use the registry to find the game path and set `PATH` automatically.
-
-```sh
-source2gen
-# view generated sdk
-dir .\sdk
+```commandline
+source2gen-loader.exe
 ```
 
 ### Linux
@@ -48,7 +46,7 @@ These instructions will help you set up the project on your local machine for de
 #### Windows
 
 - Visual Studio 2019 or newer
-- premake5
+- CMake
 
 #### Linux
 
@@ -69,41 +67,9 @@ Before building the project in Visual Studio, you will need to update the game d
 The default definition is `CS2`. \
 Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`.
 
-or
-
-You can use premake5 options and specify which game you want to dump:
-
-```bash
- --game=CS2          
- Choose a particular game for dumping source 2 sdk; one of:
-     ARTIFACT1        Artifact Classic
-     ARTIFACT2        Artifact Foundry
-     CS2              Counter-Strike 2
-     DESKJOB          Aperture Desk Job
-     DOTA2            Dota 2
-     HL_ALYX          Half-Life: Alyx
-     SBOX             S&BOX
-     THE_LAB_ROBOT_REPAIR Portal: Aperture Robot Repair
-     UNDERLORDS       Dota Underlords
-```
-
-or
-
 When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
 
 ### Building the project
-
-#### With premake5
-
-- Open a command prompt or terminal in the project's root directory.
-- Run the following command to generate the Visual Studio solution:
-
-```bash
-premake5 vs2019 --game=CS2
-```
-
-- Open the generated source2gen.sln file in Visual Studio.
-- Build the solution in the desired configuration (Debug, Release, or Dist).
 
 #### With CMake
 
@@ -111,7 +77,7 @@ premake5 vs2019 --game=CS2
 - Run the following sequence of commands to build the project:
 
 ```bash
-cmake -B build -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
 cmake --build build
 ```
 
@@ -128,9 +94,9 @@ This project is made possible by the contributions of various individuals and pr
 - **[anarh1st47](https://github.com/anarh1st47)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=anarh1st47)
 - **[praydog](https://github.com/praydog)** - the author of the original [Source2Gen](https://github.com/praydog/Source2Gen) project
 
-This project also utilizes the following open-source libraries:
+This project also utilizes the following open-source libraries/tools:
 
-- **[Premake](https://github.com/premake/premake-core)** - Build configuration tool
 - **[CMake](https://github.com/Kitware/CMake)** - Build tool
+- **[ValveFileVDF](https://github.com/TinyTinni/ValveFileVDF)** - VDF file parser
 
 If you've contributed to the project and would like to be listed here, please submit a [pull request](https://github.com/neverlosecc/source2gen/pulls) with your information added to the credits.

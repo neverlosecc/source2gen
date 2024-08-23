@@ -28,7 +28,23 @@ done
 if [ -z "${BINARY}" ]; then
   echo "source2gen binary not found. set LD_PRELOAD_PATH and run source2gen by hand."
   exit 1
-else
-  set -x
-  LD_LIBRARY_PATH="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/:${GAME_DIRECTORY}/game/csgo/bin/linuxsteamrt64/:${LD_LIBRARY_PATH:-}" "${BINARY}"
 fi
+
+find_second_bin_directory() {
+    local game_path="$1"
+
+    local found;found="$(find "${game_path}" -name libclient.so)"
+
+    if [ -z "${found}" ]; then
+      echo "Error: unable to find second bin directory" >&2
+      exit 1
+    else
+      dirname "${found}"
+    fi
+}
+
+FIRST_BIN_DIRECTORY="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/"
+SECOND_BIN_DIRECTORY=$(find_second_bin_directory "$GAME_DIRECTORY")
+
+set -x
+LD_LIBRARY_PATH="${FIRST_BIN_DIRECTORY}:${SECOND_BIN_DIRECTORY}:${LD_LIBRARY_PATH:-}" "${BINARY}"

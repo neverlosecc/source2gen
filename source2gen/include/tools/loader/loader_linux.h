@@ -1,61 +1,49 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
+#pragma once
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <dlfcn.h>
+#include <expected>
 #include <string>
-#include <windows.h>
+#include <string_view>
 
 #include "loader_shared.h"
 
 // keep in sync with get_module_file_name()
-#define LOADER_WINDOWS_GET_MODULE_FILE_NAME(name) name ".dll"
+#define LOADER_LINUX_GET_MODULE_FILE_NAME(name) "lib" name ".so"
 
-namespace loader::windows {
-    using module_handle_t = HMODULE;
+namespace loader::linux {
+    using module_handle_t = void*;
 
-    namespace detail {
-        inline ModuleLookupError win32_error(DWORD error = GetLastError()) {
-            LPSTR pBuffer = nullptr;
-
-            const auto size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error,
-                                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&pBuffer), 0, nullptr);
-
-            const auto result = ModuleLookupError::from_string(pBuffer);
-
-            LocalFree(pBuffer);
-            return result;
-        }
-    } // namespace detail
-
-    // keep in sync with LOADER_WINDOWS_GET_MODULE_FILE_NAME
+    // keep in sync with LOADER_LINUX_GET_MODULE_FILE_NAME
     [[nodiscard]] inline auto get_module_file_name(std::string name) -> std::string {
-        return name.append(".dll");
+        return name.insert(0, "lib").append(".so");
     }
 
     [[nodiscard]] inline auto find_module_handle(std::string_view name) -> module_handle_t {
-        return GetModuleHandleA(name.data());
+        return dlopen(name.data(), RTLD_LAZY | RTLD_NOLOAD);
     }
 
     [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, ModuleLookupError> {
-        auto result = LoadLibraryA(name.data());
-        if (result == reinterpret_cast<HINSTANCE>(0)) {
-            return std::unexpected(detail::win32_error());
+        if (auto* const handle = dlopen(name.data(), RTLD_LAZY)) {
+            return handle;
         }
-
-        return result;
+        return std::unexpected(ModuleLookupError::from_string(dlerror()));
     }
 
     template <typename Ty>
     [[nodiscard]] inline auto find_module_symbol(module_handle_t handle, std::string_view name) -> std::expected<Ty, ModuleLookupError> {
-        assert(handle != nullptr);
-        if (auto const h_module = GetProcAddress(handle, name.data())) {
-            return reinterpret_cast<Ty>(h_module);
+        assert(handle != nullptr && "If you need RTLD_DEFAULT, write a new function to avoid magic values. Most of the time when handle=nullptr, a "
+                                    "developer made a mistake and we want to catch that.");
+        auto* const result = dlsym(handle, name.data());
+        if (result == nullptr) {
+            return std::unexpected(ModuleLookupError::from_string(dlerror()));
         }
-
-        return std::unexpected(detail::win32_error());
+        return reinterpret_cast<Ty>(result);
     }
-} // namespace loader::windows
+} // namespace loader::linux
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

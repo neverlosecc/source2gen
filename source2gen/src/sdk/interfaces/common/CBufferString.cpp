@@ -1,31 +1,20 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
-#pragma once
+#include <cassert>
+#include <sdk/interfaces/common/CBufferString.h>
+#include <tools/loader/loader.h>
 
-#include "tools/platform.h"
-#include <cstddef>
-#include <cstdint>
+void CBufferString::MoveFrom(CBufferString& src) {
+    using func_t = void (*)(CBufferString*, CBufferString&);
+    static const auto func = []() -> func_t {
+        const auto module_handle = loader::find_module_handle("tier0");
+        const auto exported_fn = loader::find_module_symbol(module_handle, "?MoveFrom@CBufferString@@QEAAXAEAV1@@Z");
+        assert(exported_fn.has_value());
+        return reinterpret_cast<func_t>(*exported_fn);
+    }();
 
-#ifdef _WIN32
-typedef std::uint32_t ThreadId_t;
-#else
-typedef std::uint64_t ThreadId_t;
-#endif
-
-constexpr auto kTtSizeofCriticalsection = 40;
-
-class CThreadMutex {
-public:
-    std::byte m_CriticalSection[kTtSizeofCriticalsection];
-
-    // Debugging (always herge to allow mixed debug/release builds w/o changing size)
-    ThreadId_t m_currentOwnerID;
-    std::uint16_t m_lockCount;
-    bool m_bTrace;
-    const char* m_pDebugName;
-};
-// static_assert(sizeof(CThreadMutex) == 0x30 + sizeof(ThreadId_t) + sizeof(char*));
-static_assert(sizeof(CThreadMutex) == platform_specific{.windows = 0x38, .linux = 0x40});
+    return func(this, src);
+}
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

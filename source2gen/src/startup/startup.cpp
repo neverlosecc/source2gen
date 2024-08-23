@@ -2,6 +2,8 @@
 // See end of file for extended copyright information.
 #include <Include.h>
 #include <sdk/sdk.h>
+#include <tools/loader/loader.h>
+#include <tools/platform.h>
 
 #include <array>
 #include <fstream>

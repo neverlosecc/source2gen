@@ -2,6 +2,7 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include "tools/platform.h"
 #include <array>
 #include <cstdint>
 #include <limits>
@@ -9,7 +10,6 @@
 #include <sdk/interfaces/common/CBufferString.h>
 #include <sdk/interfaces/common/CUtlMap.h>
 #include <sdk/interfaces/common/CUtlTSHash.h>
-#include <tools/platform.h>
 #include <tools/virtual.h>
 #include <vector>
 
