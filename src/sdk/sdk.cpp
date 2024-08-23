@@ -675,6 +675,8 @@ namespace {
     }
 
     void AssembleClass(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
+        static constexpr std::size_t source2_max_align = 8;
+
         // TODO: when we have a CLI parser: pass this property in from the outside
         const bool verbose = true;
 
@@ -690,7 +692,7 @@ namespace {
         const auto class_size = class_.GetSize();
         const auto class_alignment = class_.GetFullAlignment();
         // Source2 has alignof(max_align_t)=8, i.e. every class whose size is a multiple of 8 is aligned.
-        const auto class_is_aligned = (class_size % class_alignment.value_or(8)) == 0;
+        const auto class_is_aligned = (class_size % class_alignment.value_or(source2_max_align)) == 0;
         const auto is_struct = std::string_view{class_.m_pszName}.ends_with("_t");
 
         if (!class_is_aligned) {
@@ -699,11 +701,11 @@ namespace {
                     // ceil size to next possible aligned size
                     const auto aligned_size = class_size + (class_alignment.value() - (class_size % class_alignment.value())) % class_alignment.value();
 
-                    return std::format("Type {} is misaligned. Its size should be {:#x}, but with proper alignement it has size {:#x}.", class_.GetName(),
+                    return std::format("Type {} is misaligned. Its size should be {:#x}, but with proper alignment it has size {:#x}.", class_.GetName(),
                                        class_size, aligned_size);
                 } else {
-                    return std::format("Type {} appears to be misaligned. Its alignment is unknown and it is not aligned to max_align_t (8).",
-                                       class_.GetName());
+                    return std::format("Type {} appears to be misaligned. Its alignment is unknown and it is not aligned to max_align_t ({}).",
+                                       class_.GetName(), source2_max_align);
                 }
             }();
             warn(warning);
@@ -837,8 +839,7 @@ namespace {
 
             // @note: @es3n1n: push prop
             //
-            // TOOD: use better default alignment
-            if ((field.m_nSingleInheritanceOffset % field_alignment.value_or(8)) == 0) {
+            if ((field.m_nSingleInheritanceOffset % field_alignment.value_or(source2_max_align)) == 0) {
                 if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
                     // This is a workaround to get the size of template types right.
                     // There are types that have non-type template parameters, e.g.
@@ -857,9 +858,14 @@ namespace {
                     builder.prop(var_info.m_type, var_info.formatted_name(), false);
                 }
             } else {
+                const auto warning =
+                    field_alignment.has_value() ?
+                        std::format("Property {}::{} is misaligned.", class_.GetName(), field.m_pszName) :
+                        std::format("Property {}::{} appears to be misaligned. Its alignment is unknown and it is not aligned to max_align_t ({}).",
+                                    class_.GetName(), field.m_pszName, source2_max_align);
                 // TOOD: use warn() for all errors
-                warn(std::format("property {}::{} is misaligned. it has been replaced with a byte array.", class_.GetName(), field.m_pszName));
-                builder.comment(std::format("property is misaligned, you can try marking {} as packed and uncommenting this property", class_.GetName()));
+                warn(warning);
+                builder.comment(warning);
                 builder.prop("char", std::format("{}[{:#x}]", var_info.m_name, field_size), true);
                 builder.comment("", false).reset_tabs_count().prop(var_info.m_type, var_info.formatted_name(), false).restore_tabs_count();
             }
