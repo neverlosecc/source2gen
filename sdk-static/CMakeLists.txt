@@ -1,4 +1,4 @@
-# TOOD: use meson
+# TOOD: use meson - but meson can't glob files
 
 cmake_minimum_required(VERSION 3.30)
 

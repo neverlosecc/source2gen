@@ -2,6 +2,7 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include "sdk/interfaceregs.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -348,6 +349,8 @@ enum class SchemaBuiltinType_t : std::uint32_t {
 
 constexpr auto kSchemaBuiltinTypeCount = static_cast<std::size_t>(SchemaBuiltinType_t::Schema_Builtin_count);
 
+class CSchemaType_DeclaredClass;
+
 class CSchemaType {
 public:
     [[nodiscard]] bool IsValid() {
@@ -393,6 +396,10 @@ public:
                    std::make_optional(std::make_pair(size, (alignment == 0xff) ? std::nullopt : std::make_optional(static_cast<int>(alignment)))) :
                    std::nullopt;
     }
+
+    /// @return @ref nullptr if this @ref GetTypeCategory() is not @ref ETypeCategory::Schema_DeclaredClass
+    CSchemaType_DeclaredClass* GetAsDeclaredClass();
+    const CSchemaType_DeclaredClass* GetAsDeclaredClass() const;
 
     // @todo: @og: find out to what class pointer points.
     [[nodiscard]] CSchemaType* GetRefClass() const;
@@ -460,12 +467,28 @@ static_assert(sizeof(CSchemaType_Builtin) == 0x28);
 
 class CSchemaType_DeclaredClass : public CSchemaType {
 public:
+    /// never @ref nullptr
     CSchemaClassInfo* m_pClassInfo;
     bool m_bGlobalPromotionRequired;
 };
 
 static_assert(offsetof(CSchemaType_DeclaredClass, m_pClassInfo) == 0x20);
 static_assert(sizeof(CSchemaType_DeclaredClass) == 0x30);
+
+inline CSchemaType_DeclaredClass* CSchemaType::GetAsDeclaredClass() {
+    if (GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+        return static_cast<CSchemaType_DeclaredClass*>(this);
+    } else {
+        return nullptr;
+    }
+}
+inline const CSchemaType_DeclaredClass* CSchemaType::GetAsDeclaredClass() const {
+    if (GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+        return static_cast<const CSchemaType_DeclaredClass*>(this);
+    } else {
+        return nullptr;
+    }
+}
 
 class CSchemaType_DeclaredEnum : public CSchemaType {
 public:
@@ -927,9 +950,10 @@ public:
 
             auto field_alignments =
                 this->GetFields() | std::ranges::views::transform([](const SchemaClassFieldData_t& e) {
-                    // TOOD: lookups by name are slow. I've seen some better way somewhere.
-                    if (const auto* class_ = e.m_pSchemaType->m_pTypeScope->FindDeclaredClass(e.m_pSchemaType->m_pszName); class_ != nullptr) {
-                        return class_->GetFullAlignment();
+                    if (const auto* class_ = e.m_pSchemaType->GetAsDeclaredClass(); class_ != nullptr) {
+                        assert(e.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass);
+                        assert(static_cast<CSchemaType_DeclaredClass*>(e.m_pSchemaType)->m_pClassInfo->GetName() == e.m_pSchemaType->m_pszName);
+                        return class_->m_pClassInfo->GetFullAlignment();
                     } else {
                         return e.m_pSchemaType->GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
                     }

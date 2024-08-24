@@ -613,8 +613,8 @@ namespace {
     /// @return For class types, returns @ref CSchemaClassInfo::GetFullAlignment(). Otherwise returns the immediately available size.
     [[nodiscard]]
     std::optional<int> GetFullAlignmentOfType(const CSchemaType& type) {
-        if (const auto* class_ = type.m_pTypeScope->FindDeclaredClass(type.m_pszName); class_ != nullptr) {
-            return class_->GetFullAlignment();
+        if (const auto* class_ = type.GetAsDeclaredClass(); class_ != nullptr) {
+            return class_->m_pClassInfo->GetFullAlignment();
         } else {
             return type.GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
         }
@@ -885,7 +885,6 @@ namespace {
 
         // pad the class end.
         const auto last_field_end = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
-        // TOOD: use aligned size?
         const auto end_pad = class_size - last_field_end;
 
         if (end_pad != 0) {
