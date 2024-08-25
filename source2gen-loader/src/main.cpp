@@ -25,6 +25,8 @@ namespace {
         546560
 #elif defined(THE_LAB_ROBOT_REPAIR)
         450390
+#elif defined(DEADLOCK)
+        1422450
 #else
     #error
 #endif

@@ -65,7 +65,7 @@ git clone --recurse-submodules https://github.com/neverlosecc/source2gen.git
 
 Before building the project in Visual Studio, you will need to update the game definition.
 The default definition is `CS2`. \
-Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`.
+Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`, `DEADLOCK`.
 
 When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
 

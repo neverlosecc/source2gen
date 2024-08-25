@@ -122,7 +122,7 @@ enum {
     #error unimplemented
 #elif defined(THE_LAB_ROBOT_REPAIR)
     #error unimplemented
-#elif defined(DOTA2) || defined(CS2)
+#elif defined(DOTA2) || defined(CS2) || defined(DEADLOCK)
 
 constexpr auto kSchemaSystemVersion = platform_specific{.windows = 2, .linux = 1}.get();
 constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x188, .linux = 0x188 + 0x68}.get();
@@ -184,7 +184,7 @@ using CSchemaClassBinding = CSchemaClassInfo;
 // @note: @og: now CSchemaEnumBinding is the same class\structure as CSchemaEnumInfoData\SchemaEnumInfoData_t
 using CSchemaEnumBinding = CSchemaEnumInfo;
 
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
 enum SchemaClassFlags_t {
     SCHEMA_CF1_HAS_VIRTUAL_MEMBERS = (1 << 0),
     SCHEMA_CF1_IS_ABSTRACT = (1 << 1),
@@ -385,7 +385,7 @@ public:
     [[nodiscard]] CSchemaType* GetRefClass();
 
     [[nodiscard]] ETypeCategory GetTypeCategory() const {
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
         return m_unTypeCategory;
 #else
         return Virtual::Get<ETypeCategory (*)(CSchemaType*)>(this, 0)(this);
@@ -393,7 +393,7 @@ public:
     }
 
     [[nodiscard]] EAtomicCategory GetAtomicCategory() const {
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
         return m_unAtomicCategory;
 #else
         return Virtual::Get<EAtomicCategory (*)(CSchemaType*)>(this, 1)(this);
@@ -406,7 +406,7 @@ public:
 
     CSchemaSystemTypeScope* m_pTypeScope; // 0x0010
 
-#if defined(CS2) || defined(DOTA2)
+#if defined(CS2) || defined(DOTA2) || defined(DEADLOCK)
     ETypeCategory m_unTypeCategory; // 0x0018
     EAtomicCategory m_unAtomicCategory; // 0x0019
     IF_LINUX(char _pad_0x20[0x02];)
@@ -755,7 +755,7 @@ public:
     char pad_0x28[0x08];
 #endif
 
-#if !defined(DOTA2) && !defined(CS2)
+#if !defined(DOTA2) && !defined(CS2) && !defined(DEADLOCK)
     CThreadFastMutex m_Mutex;
 #endif
 };
@@ -901,7 +901,7 @@ private:
     CSchemaPtrMap<TypeAndCountInfo_t, CSchemaType_FixedArray*> m_FixedArrays; // 0x0558
     CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields; // 0x0588
 
-#if !defined(DOTA2) && !defined(CS2)
+#if !defined(DOTA2) && !defined(CS2) && !defined(DEADLOCK)
     CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 
