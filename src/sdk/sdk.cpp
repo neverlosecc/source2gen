@@ -53,11 +53,6 @@ namespace {
 
     using namespace std::string_view_literals;
 
-    // TOOD: move to a better place
-    std::string to_hex_string(int i) {
-        return std::format("{:#x}", i);
-    }
-
     /**
      * Project structure is
      * <kOutDirName>
@@ -202,8 +197,8 @@ namespace {
     };
 
     void PrintClassInfo(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
-        builder.comment(std::format("Registered alignment: {}", class_.GetRegisteredAlignment().transform(&to_hex_string).value_or("unknown")));
-        builder.comment(std::format("Alignment: {}", class_.GetFullAlignment().transform(&to_hex_string).value_or("unknown")));
+        builder.comment(std::format("Registered alignment: {}", class_.GetRegisteredAlignment().transform(&util::to_hex_string).value_or("unknown")));
+        builder.comment(std::format("Alignment: {}", class_.GetFullAlignment().transform(&util::to_hex_string).value_or("unknown")));
         builder.comment(std::format("Size: {:#x}", class_.m_nSizeOf));
 
         if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
@@ -657,8 +652,9 @@ namespace {
     /// Does not insert a pad if it would have size 0
     void InsertPadUntil(codegen::generator_t::self_ref builder, const ClassAssemblyState& state, std::int32_t offset, bool verbose) {
         if (verbose) {
-            builder.comment(std::format("last_field_offset={} last_field_size={}", state.last_field_offset.transform(&to_hex_string).value_or("none"),
-                                        state.last_field_size.transform(&to_hex_string).value_or("none")));
+            builder.comment(std::format("last_field_offset={} last_field_size={}",
+                                        state.last_field_offset.transform(&util::to_hex_string).value_or("none"),
+                                        state.last_field_size.transform(&util::to_hex_string).value_or("none")));
         }
 
         const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
@@ -866,7 +862,8 @@ namespace {
             if (verbose) {
                 builder.reset_tabs_count()
                     .comment(std::format("type.name=\"{}\" offset={:#x} size={:#x} alignment={}", std::string_view{field.m_pSchemaType->m_pszName},
-                                         field.m_nSingleInheritanceOffset, field_size, field_alignment.transform(to_hex_string).value_or("unknown")),
+                                         field.m_nSingleInheritanceOffset, field_size,
+                                         field_alignment.transform(&util::to_hex_string).value_or("unknown")),
                              false)
                     .restore_tabs_count();
             } else {

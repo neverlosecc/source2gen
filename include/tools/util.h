@@ -2,6 +2,8 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include <concepts>
+#include <format>
 #include <string>
 #include <tools/loader/loader.h>
 
@@ -18,6 +20,15 @@ namespace util {
         }
 
         return std::to_string(num);
+    }
+
+    /// Useful for optional integers, e.g.
+    /// ```cpp
+    /// const std::optional<int> offset = try_get_offset();
+    /// std::cout << std::format("offset: {}\n", offset.transform(to_hex_string).value_or("unknown"));
+    /// ```
+    inline std::string to_hex_string(int i) {
+        return std::format("{:#x}", i);
     }
 } // namespace util
 

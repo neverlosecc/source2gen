@@ -350,6 +350,7 @@ enum class SchemaBuiltinType_t : std::uint32_t {
 constexpr auto kSchemaBuiltinTypeCount = static_cast<std::size_t>(SchemaBuiltinType_t::Schema_Builtin_count);
 
 class CSchemaType_DeclaredClass;
+class CSchemaType_DeclaredEnum;
 
 class CSchemaType {
 public:
@@ -398,8 +399,8 @@ public:
     }
 
     /// @return @ref nullptr if this @ref GetTypeCategory() is not @ref ETypeCategory::Schema_DeclaredClass
-    CSchemaType_DeclaredClass* GetAsDeclaredClass();
     const CSchemaType_DeclaredClass* GetAsDeclaredClass() const;
+    const CSchemaType_DeclaredEnum* GetAsDeclaredEnum() const;
 
     // @todo: @og: find out to what class pointer points.
     [[nodiscard]] CSchemaType* GetRefClass() const;
@@ -474,21 +475,6 @@ public:
 
 static_assert(offsetof(CSchemaType_DeclaredClass, m_pClassInfo) == 0x20);
 static_assert(sizeof(CSchemaType_DeclaredClass) == 0x30);
-
-inline CSchemaType_DeclaredClass* CSchemaType::GetAsDeclaredClass() {
-    if (GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
-        return static_cast<CSchemaType_DeclaredClass*>(this);
-    } else {
-        return nullptr;
-    }
-}
-inline const CSchemaType_DeclaredClass* CSchemaType::GetAsDeclaredClass() const {
-    if (GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
-        return static_cast<const CSchemaType_DeclaredClass*>(this);
-    } else {
-        return nullptr;
-    }
-}
 
 class CSchemaType_DeclaredEnum : public CSchemaType {
 public:
@@ -571,6 +557,22 @@ public:
     std::uint8_t m_unElementAlignment;
     CSchemaType* m_pElementType;
 };
+
+inline const CSchemaType_DeclaredClass* CSchemaType::GetAsDeclaredClass() const {
+    if (GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+        return static_cast<const CSchemaType_DeclaredClass*>(this);
+    } else {
+        return nullptr;
+    }
+}
+
+inline const CSchemaType_DeclaredEnum* CSchemaType::GetAsDeclaredEnum() const {
+    if (GetTypeCategory() == ETypeCategory::Schema_DeclaredEnum) {
+        return static_cast<const CSchemaType_DeclaredEnum*>(this);
+    } else {
+        return nullptr;
+    }
+}
 
 struct AtomicTypeInfo_T_t {
     int m_nAtomicID;
@@ -740,16 +742,16 @@ public:
         }
     }
 
-    [[nodiscard]] CSchemaType* FindSchemaTypeByName(const std::string_view szName) {
+    [[nodiscard]] const CSchemaType_Builtin* FindBuiltIn(const std::string_view szName) const {
         assert((std::strlen(szName.data()) == szName.size()) && "need a zero-terminated string");
 
         if constexpr (kSchemaSystemVersion == 2) {
-            CSchemaType* schema_type;
+            CSchemaType_Builtin* schema_type = nullptr;
 
-            Virtual::Get<void(__thiscall*)(void*, CSchemaType**, const char*)>(this, 4)(this, &schema_type, szName.data());
+            Virtual::Get<void(__thiscall*)(const void*, CSchemaType_Builtin**, const char*)>(this, 4)(this, &schema_type, szName.data());
             return schema_type;
         } else {
-            return Virtual::Get<CSchemaType*(__thiscall*)(void*, const char*)>(this, 4)(this, szName.data());
+            return Virtual::Get<CSchemaType_Builtin*(__thiscall*)(const void*, const char*)>(this, 4)(this, szName.data());
         }
     }
 
@@ -815,6 +817,9 @@ public:
     [[nodiscard]] CUtlMap<std::uint16_t, CSchemaType_DeclaredClass*>& GetDeclaredClasses() {
         return m_DeclaredClasses.m_Map;
     }
+    [[nodiscard]] const CUtlMap<std::uint16_t, CSchemaType_DeclaredClass*>& GetDeclaredClasses() const {
+        return m_DeclaredClasses.m_Map;
+    }
 
     [[nodiscard]] CUtlMap<std::uint16_t, CSchemaType_DeclaredEnum*>& GetDeclaredEnums() {
         return m_DeclaredEnums.m_Map;
@@ -822,7 +827,7 @@ public:
 
 private:
     void* vftable = nullptr;
-    std::array<char, 256> m_szName = {}; // 0x0008
+    std::array<char, 0x100> m_szName = {}; // 0x0008
     CSchemaSystemTypeScope* m_pGlobalTypeScope = nullptr; // 0x0108
     bool m_bBuiltinTypesInitialized = false; // 0x0110
     IF_LINUX(char _pad_0x114[0x04];)
@@ -836,25 +841,25 @@ private:
     CSchemaPtrMap<AtomicTypeInfo_TF_t, CSchemaType_Atomic_TF*> m_AtomicsTF; // 0x0408
 #endif
 
-    CSchemaPtrMap<AtomicTypeInfo_TT_t, CSchemaType_Atomic_TT*> m_AtomicsTT; // 0x0438
+    CSchemaPtrMap<AtomicTypeInfo_TT_t, CSchemaType_Atomic_TT*> m_AtomicsTT; // 0x0408
 
 #if defined(CS2_OLD)
     CSchemaPtrMap<AtomicTypeInfo_TTF_t, CSchemaType_Atomic_TTF*> m_AtomicsTTF; // 0x0468
 #endif
 
-    CSchemaPtrMap<AtomicTypeInfo_I_t, CSchemaType_Atomic_I*> m_AtomicsI; // 0x0498
-    CSchemaPtrMap<std::uint16_t, CSchemaType_DeclaredClass*> m_DeclaredClasses; // 0x04C8
-    CSchemaPtrMap<std::uint16_t, CSchemaType_DeclaredEnum*> m_DeclaredEnums; // 0x04F8
-    CSchemaPtrMap<int, const SchemaAtomicTypeInfo_t*> m_AtomicInfos; // 0x0528
-    CSchemaPtrMap<TypeAndCountInfo_t, CSchemaType_FixedArray*> m_FixedArrays; // 0x0558
-    CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields; // 0x0588
+    CSchemaPtrMap<AtomicTypeInfo_I_t, CSchemaType_Atomic_I*> m_AtomicsI; // 0x0438
+    CSchemaPtrMap<std::uint16_t, CSchemaType_DeclaredClass*> m_DeclaredClasses; // 0x0468
+    CSchemaPtrMap<std::uint16_t, CSchemaType_DeclaredEnum*> m_DeclaredEnums; // 0x0498
+    CSchemaPtrMap<int, const SchemaAtomicTypeInfo_t*> m_AtomicInfos; // 0x04C8
+    CSchemaPtrMap<TypeAndCountInfo_t, CSchemaType_FixedArray*> m_FixedArrays; // 0x04F8
+    CSchemaPtrMap<int, CSchemaType_Bitfield*> m_Bitfields; // 0x0528
 
 #if !defined(DOTA2) && !defined(CS2)
     CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 
-    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x05C0
-    CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings = {}; // 0x2E50
+    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x0560
+    CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings = {}; // 0x3600
 };
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
@@ -1115,8 +1120,8 @@ public:
 
 private:
     char pad_0x0000[kSchemaSystem_PAD0] = {}; // 0x0000
-    CUtlVector<CSchemaSystemTypeScope*> m_TypeScopes = {}; // SCHEMASYSTEM_TYPE_SCOPES_OFFSET
-    char pad_01A0[kSchemaSystem_PAD1] = {}; // 0x01A0
+    CUtlVector<CSchemaSystemTypeScope*> m_TypeScopes = {}; // linux: 0x01F0
+    char pad_0x01A0[kSchemaSystem_PAD1] = {}; // 0x01A0
     std::int32_t m_nRegistrations = 0; // 0x02C0
     std::int32_t m_nIgnored = 0; // 0x02C4
     std::int32_t m_nRedundant = 0; // 0x02C8
