@@ -1,4 +1,4 @@
-# TOOD: use meson - but meson can't glob files
+# TOOD: try using in a playground
 
 cmake_minimum_required(VERSION 3.30)
 
@@ -10,15 +10,10 @@ project(source2sdk
 
 file(GLOB_RECURSE source2sdk_headers "./**.hpp")
 
-add_library(${PROJECT_NAME} ${source2sdk_headers})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_library(${PROJECT_NAME} INTERFACE)
+target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-
-target_compile_options(${PROJECT_NAME} PRIVATE
-    "-Wfatal-errors"
-    "-pedantic-errors"
-)
 
 # Add a target that includes all headers of the generated library to check for compile-time errors
 

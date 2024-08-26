@@ -58,13 +58,13 @@ namespace {
      * <kOutDirName>
      * - CMakeLists.txt
      * - ...
-     * - <kSdkDirName>
-     *   - some_module
-     *     - some_header.hpp
+     * - include/
+     *   - <kSdkDirName>
+     *     - some_module
+     *       - some_header.hpp
      */
-    constexpr std::string_view kOutDirName = "sdk"sv;
-    /// Include directory
-    constexpr std::string_view kSdkDirName = "source2sdk"sv;
+    constexpr std::string_view kOutDirName = "sdk";
+    constexpr std::string_view kIncludeDirName = "source2sdk";
 
     constexpr uint32_t kMaxReferencesForClassEmbed = 2;
     constexpr std::size_t kMinFieldCountForClassEmbed = 2;
@@ -986,8 +986,13 @@ namespace {
         builder.static_assert_size(class_.m_pszName, class_size);
     }
 
+    [[nodiscard]]
+    std::filesystem::path GetFilePathForType(std::string_view module_name, std::string_view type_name) {
+        return std::format("{}/include/{}/{}/{}.hpp", kOutDirName, kIncludeDirName, module_name, DecayTypeName(type_name));
+    }
+
     void GenerateEnumSdk(std::string_view module_name, const CSchemaEnumBinding& enum_) {
-        const std::string out_file_path = std::format("{}/{}/{}/{}.hpp", kOutDirName, kSdkDirName, module_name, enum_.m_pszName);
+        const std::string out_file_path = GetFilePathForType(module_name, enum_.m_pszName);
 
         // @note: @es3n1n: init codegen
         //
@@ -1028,7 +1033,7 @@ namespace {
     }
 
     void GenerateClassSdk(std::string_view module_name, const CSchemaClassBinding& class_) {
-        const std::string out_file_path = std::format("{}/{}/{}/{}.hpp", kOutDirName, kSdkDirName, module_name, class_.m_pszName);
+        const std::string out_file_path = GetFilePathForType(module_name, class_.m_pszName);
 
         // @note: @es3n1n: init codegen
         //
@@ -1038,10 +1043,10 @@ namespace {
         const auto names = GetRequiredNamesForClass(class_);
 
         for (const auto& include : names | std::views::filter([](const auto& el) { return el.source == NameSource::include; })) {
-            builder.include(std::format("\"{}/{}/{}.hpp\"", kSdkDirName, include.module, include.type_name));
+            builder.include(std::format("\"{}/{}/{}.hpp\"", kIncludeDirName, include.module, include.type_name));
         }
 
-        builder.include(std::format("\"{}/source2gen_user_types.hpp\"", kSdkDirName));
+        builder.include(std::format("\"{}/source2gen_user_types.hpp\"", kIncludeDirName));
         builder.include("<cstddef>"); // for offsetof()
         builder.include("<cstdint>");
 
@@ -1091,7 +1096,7 @@ namespace sdk {
         std::cout << std::format("{}: Assembling module {} with {} enum(s) and {} class(es)", __FUNCTION__, module_name, enums.size(), classes.size())
                   << std::endl;
 
-        const std::filesystem::path out_directory_path = std::format("{}/{}/{}", kOutDirName, kSdkDirName, module_name);
+        const std::filesystem::path out_directory_path = std::format("{}/include/{}/{}", kOutDirName, kIncludeDirName, module_name);
 
         if (!std::filesystem::exists(out_directory_path))
             std::filesystem::create_directories(out_directory_path);
