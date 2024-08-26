@@ -196,9 +196,102 @@ namespace {
         return value;
     };
 
-    void PrintClassInfo(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
+    /// https://en.cppreference.com/w/cpp/language/classes#Standard-layout_class
+    /// Doesn't check for all requirements, but is strict enough for what we are doing.
+    [[nodiscard]] bool IsStandardLayoutClass(std::map<sdk::TypeIdentifier, bool>& cache, const CSchemaClassInfo& class_) {
+        const auto id = sdk::TypeIdentifier{.module = std::string{class_.GetModule()}, .name = std::string{class_.GetName()}};
+
+        if (const auto found = cache.find(id); found != cache.end()) {
+            return found->second;
+        }
+
+        // This is a simplification of the requirement "only one class in the hierarchy has non-static data members".
+        // We assume that every class has non-static data members (TODO: That's wrong).
+        if (class_.m_pBaseClasses != 0) {
+            return cache.emplace(id, false).first->second;
+        }
+
+        const auto has_non_standard_layout_field =
+            std::ranges::any_of(class_.GetFields() | std::ranges::views::transform([&](const SchemaClassFieldData_t& e) {
+                                    if (const auto* e_class = e.m_pSchemaType->GetAsDeclaredClass(); e_class != nullptr) {
+                                        return !IsStandardLayoutClass(cache, *e_class->m_pClassInfo);
+                                    } else {
+                                        // Everything that is not a class has no effect
+                                        return false;
+                                    }
+                                }),
+                                std::identity{});
+
+        if (has_non_standard_layout_field) {
+            return cache.emplace(id, false).first->second;
+        }
+
+        return cache.emplace(id, true).first->second;
+    }
+
+    /// Gets the alignment of a class by recursing through all of its fields.
+    /// Does not guess, the returned value is correct if set.
+    /// @param cache Used to look up and store alignment of fields
+    /// @return @ref GetRegisteredAlignment() if set. Otherwise tries to determine the alignment by recursing through all fields.
+    /// Returns @ref std::nullopt if one or more fields have unknown alignment.
+    [[nodiscard]] std::optional<int> GetClassAlignmentRecursive(std::map<sdk::TypeIdentifier, std::optional<int>>& cache, const CSchemaClassInfo& class_) {
+        const auto id = sdk::TypeIdentifier{.module = std::string{class_.GetModule()}, .name = std::string{class_.GetName()}};
+
+        if (const auto found = cache.find(id); found != cache.end()) {
+            return found->second;
+        }
+
+        return class_.GetRegisteredAlignment().or_else([&]() {
+            int base_alignment = 0;
+
+            if (class_.m_pBaseClasses != nullptr) {
+                if (const auto maybe_base_alignment = GetClassAlignmentRecursive(cache, *class_.m_pBaseClasses->m_pClass)) {
+                    base_alignment = maybe_base_alignment.value();
+                } else {
+                    // we have a base class, but it has unknown alignment
+                    return cache.emplace(id, std::nullopt).first->second;
+                }
+            }
+
+            auto field_alignments = class_.GetFields() | std::ranges::views::transform([&](const SchemaClassFieldData_t& e) {
+                                        if (const auto* e_class = e.m_pSchemaType->GetAsDeclaredClass(); e_class != nullptr) {
+                                            return GetClassAlignmentRecursive(cache, *e_class->m_pClassInfo);
+                                        } else {
+                                            return e.m_pSchemaType->GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
+                                        }
+                                    });
+
+            if (field_alignments.empty()) {
+                // This is an empty class. The generator will add a single pad with alignment 1.
+                return cache.emplace(id, std::make_optional((base_alignment == 0) ? 1 : base_alignment)).first->second;
+            } else if (std::ranges::all_of(field_alignments, &std::optional<int>::has_value)) {
+                int max_alignment = base_alignment;
+                for (const auto& e : field_alignments) {
+                    max_alignment = std::max(max_alignment, e.value());
+                }
+                return cache.emplace(id, std::make_optional(max_alignment)).first->second;
+            } else {
+                // there are fields with unknown alignment
+                return cache.emplace(id, std::nullopt).first->second;
+            }
+        });
+    }
+
+    /// @return For class types, returns @ref GetClassAlignmentRecursive(). Otherwise returns the immediately available size.
+    [[nodiscard]]
+    std::optional<int> GetAlignmentOfTypeRecursive(std::map<sdk::TypeIdentifier, std::optional<int>>& cache, const CSchemaType& type) {
+        if (const auto* class_ = type.GetAsDeclaredClass(); class_ != nullptr) {
+            return GetClassAlignmentRecursive(cache, *class_->m_pClassInfo);
+        } else {
+            return type.GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
+        }
+    }
+
+    void PrintClassInfo(sdk::GeneratorCache& cache, codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
         builder.comment(std::format("Registered alignment: {}", class_.GetRegisteredAlignment().transform(&util::to_hex_string).value_or("unknown")));
-        builder.comment(std::format("Alignment: {}", class_.GetFullAlignment().transform(&util::to_hex_string).value_or("unknown")));
+        builder.comment(
+            std::format("Alignment: {}", GetClassAlignmentRecursive(cache.class_alignment, class_).transform(&util::to_hex_string).value_or("unknown")));
+        builder.comment(std::format("Standard-layout class: {}", IsStandardLayoutClass(cache.class_has_standard_layout, class_)));
         builder.comment(std::format("Size: {:#x}", class_.m_nSizeOf));
 
         if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
@@ -603,18 +696,6 @@ namespace {
         return result;
     }
 
-    // TOOD: Create a "ShadowClass" map to store full alignment and standard-layout-class status?
-
-    /// @return For class types, returns @ref CSchemaClassInfo::GetFullAlignment(). Otherwise returns the immediately available size.
-    [[nodiscard]]
-    std::optional<int> GetFullAlignmentOfType(const CSchemaType& type) {
-        if (const auto* class_ = type.GetAsDeclaredClass(); class_ != nullptr) {
-            return class_->m_pClassInfo->GetFullAlignment();
-        } else {
-            return type.GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
-        }
-    }
-
     [[nodiscard]]
     ClassAssemblyState AssembleBitfield(codegen::generator_t& builder, ClassAssemblyState&& state, int expected_offset) {
         state.assembling_bitfield = false;
@@ -668,7 +749,7 @@ namespace {
         }
     }
 
-    void AssembleClass(codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
+    void AssembleClass(sdk::GeneratorCache& cache, codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
         static constexpr std::size_t source2_max_align = 8;
 
         // TODO: when we have a CLI parser: pass this property in from the outside
@@ -684,7 +765,7 @@ namespace {
         //
         const auto* class_parent = class_.m_pBaseClasses ? class_.m_pBaseClasses->m_pClass : nullptr;
         const auto class_size = class_.GetSize();
-        const auto class_alignment = class_.GetFullAlignment();
+        const auto class_alignment = GetClassAlignmentRecursive(cache.class_alignment, class_);
         // Source2 has alignof(max_align_t)=8, i.e. every class whose size is a multiple of 8 is aligned.
         const auto class_is_aligned = (class_size % class_alignment.value_or(source2_max_align)) == 0;
         const auto is_struct = std::string_view{class_.m_pszName}.ends_with("_t");
@@ -710,7 +791,7 @@ namespace {
             builder.end_struct();
         }
 
-        PrintClassInfo(builder, class_);
+        PrintClassInfo(cache, builder, class_);
 
         // @note: @es3n1n: get parent name
         //
@@ -764,7 +845,7 @@ namespace {
             // Fall back to size=1 because there are no 0-sized types.
             // `RenderPrimitiveType_t` is the only type (in CS2 9035763) without size information.
             const auto field_size = field.m_pSchemaType->GetSize().value_or(1);
-            const auto field_alignment = GetFullAlignmentOfType(*field.m_pSchemaType);
+            const auto field_alignment = GetAlignmentOfTypeRecursive(cache.class_alignment, *field.m_pSchemaType);
 
             // @note: @es3n1n: parsing type
             //
@@ -957,9 +1038,7 @@ namespace {
 
         builder.end_block();
 
-        // TODO: this check is incomplete. we should also check if any of the class's fields is a non-standard-layout class. That's the case for e.g.
-        // soundsystem::CSosSoundEventGroupSchema
-        const bool is_standard_layout_class = (class_.m_nBaseClassSize == 0);
+        const bool is_standard_layout_class = IsStandardLayoutClass(cache.class_has_standard_layout, class_);
 
         // TODO: when we have a CLI parser: allow users to generate assertions in non-standard-layout classes. Those assertions are
         // conditionally-supported.
@@ -1032,7 +1111,7 @@ namespace {
         }
     }
 
-    void GenerateClassSdk(std::string_view module_name, const CSchemaClassBinding& class_) {
+    void GenerateClassSdk(sdk::GeneratorCache& cache, std::string_view module_name, const CSchemaClassBinding& class_) {
         const std::string out_file_path = GetFilePathForType(module_name, class_.m_pszName);
 
         // @note: @es3n1n: init codegen
@@ -1069,7 +1148,7 @@ namespace {
 
         // @note: @es3n1n: assemble props
         //
-        AssembleClass(builder, class_);
+        AssembleClass(cache, builder, class_);
 
         builder.end_namespace();
 
@@ -1089,7 +1168,7 @@ namespace {
 } // namespace
 
 namespace sdk {
-    void GenerateTypeScopeSdk(std::string_view module_name, const std::unordered_set<const CSchemaEnumBinding*>& enums,
+    void GenerateTypeScopeSdk(GeneratorCache& cache, std::string_view module_name, const std::unordered_set<const CSchemaEnumBinding*>& enums,
                               const std::unordered_set<const CSchemaClassBinding*>& classes) {
         // @note: @es3n1n: print debug info
         //
@@ -1102,7 +1181,7 @@ namespace sdk {
             std::filesystem::create_directories(out_directory_path);
 
         std::ranges::for_each(enums, [=](const auto* el) { GenerateEnumSdk(module_name, *el); });
-        std::ranges::for_each(classes, [=](const auto* el) { GenerateClassSdk(module_name, *el); });
+        std::ranges::for_each(classes, [&](const auto* el) { GenerateClassSdk(cache, module_name, *el); });
     }
 } // namespace sdk
 

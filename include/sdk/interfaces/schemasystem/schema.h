@@ -937,49 +937,6 @@ public:
         return m_unAlignOf == std::numeric_limits<std::uint8_t>::max() ? std::nullopt : std::make_optional(static_cast<int>(m_unAlignOf));
     }
 
-    /// This function recurses through all members. That's expensive. Cache the result if possible.
-    /// @return @ref GetRegisteredAlignment() if set. Otherwise tries to determine the alignment.
-    /// Returns @ref std::nullopt if one or more fields have unknown alignment.
-    [[nodiscard]] std::optional<int> GetFullAlignment() const {
-        return GetRegisteredAlignment().or_else([this]() {
-            int base_alignment = 0;
-
-            if (this->m_pBaseClasses != nullptr) {
-                if (const auto maybe_base_alignment = this->m_pBaseClasses->m_pClass->GetFullAlignment()) {
-                    base_alignment = maybe_base_alignment.value();
-                } else {
-                    // we have a base class, but it has unknown alignment
-                    return std::optional<int>{};
-                }
-            }
-
-            auto field_alignments =
-                this->GetFields() | std::ranges::views::transform([](const SchemaClassFieldData_t& e) {
-                    if (const auto* class_ = e.m_pSchemaType->GetAsDeclaredClass(); class_ != nullptr) {
-                        assert(e.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass);
-                        assert(static_cast<CSchemaType_DeclaredClass*>(e.m_pSchemaType)->m_pClassInfo->GetName() == e.m_pSchemaType->m_pszName);
-                        return class_->m_pClassInfo->GetFullAlignment();
-                    } else {
-                        return e.m_pSchemaType->GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
-                    }
-                });
-
-            if (field_alignments.empty()) {
-                // This is an empty class. The generator will add a single pad with alignment 1.
-                return std::make_optional((base_alignment == 0) ? 1 : base_alignment);
-            } else if (std::ranges::all_of(field_alignments, &std::optional<int>::has_value)) {
-                int max_alignment = base_alignment;
-                for (const auto& e : field_alignments) {
-                    max_alignment = std::max(max_alignment, e.value());
-                }
-                return std::make_optional(max_alignment);
-            } else {
-                // there are fields with unknown alignment
-                return std::optional<int>{};
-            }
-        });
-    }
-
     // @note: @og: Copy instance from original to new created with all data from original, returns new_instance
     auto CopyInstance(void* instance, void* new_instance) const {
         return CallFunction<void*>(SchemaClassInfoFunctionIndex::kCreateInstance, instance, new_instance);
