@@ -205,10 +205,20 @@ namespace {
             return found->second;
         }
 
-        // This is a simplification of the requirement "only one class in the hierarchy has non-static data members".
-        // We assume that every class has non-static data members (TODO: That's wrong).
-        if (class_.m_pBaseClasses != 0) {
-            return cache.emplace(id, false).first->second;
+        // only one class in the hierarchy has non-static data members.
+        // assumes that source2 only has single inheritance.
+        {
+            const auto* pClass = &class_;
+            int classes_with_fields = 0;
+            do {
+                classes_with_fields += (pClass->m_nFieldSize != 0) ? 1 : 0;
+
+                if (classes_with_fields > 1) {
+                    return cache.emplace(id, false).first->second;
+                }
+
+                pClass = (pClass->m_pBaseClasses == nullptr) ? nullptr : pClass->m_pBaseClasses->m_pClass;
+            } while (pClass != nullptr);
         }
 
         const auto has_non_standard_layout_field =
@@ -1041,7 +1051,7 @@ namespace {
         const bool is_standard_layout_class = IsStandardLayoutClass(cache.class_has_standard_layout, class_);
 
         // TODO: when we have a CLI parser: allow users to generate assertions in non-standard-layout classes. Those assertions are
-        // conditionally-supported.
+        // conditionally-supported by compilers.
         if (is_standard_layout_class) {
             for (const auto& field :
                  class_.GetFields() | std::ranges::views::filter([&](const auto& e) { return !skipped_fields.contains(e.m_pszName); })) {
