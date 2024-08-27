@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <format>
+#include <optional>
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <string>
 #include <string_view>

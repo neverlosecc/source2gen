@@ -1,6 +1,7 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include <array>
 #include <cstdint>
 #include <set>
 #include <sstream>
@@ -183,8 +184,8 @@ namespace codegen {
         }
 
         // @todo: @es3n1n: add func params
-        self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name, const bool increment_tabs_count = true,
-                                const bool move_cursor_to_next_line = true) {
+        self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name,
+                                const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) {
             return begin_block(std::format("{}{} {}()", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
         }
 
@@ -293,8 +294,7 @@ namespace codegen {
             result.resize(name.size());
 
             for (std::size_t i = 0; i < name.size(); i++)
-                result[i] =
-                    std::ranges::find(kBlacklistedCharacters, name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
+                result[i] = std::ranges::find(kBlacklistedCharacters, name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
 
             return result;
         }

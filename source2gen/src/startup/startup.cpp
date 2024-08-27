@@ -8,6 +8,7 @@
 #include <array>
 #include <fstream>
 #include <iterator>
+#include <span>
 #include <string>
 #include <tools/loader/loader.h>
 #include <tools/platform.h>

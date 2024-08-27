@@ -7,6 +7,7 @@
 
 #include "tools/platform.h"
 #include "tools/virtual.h"
+#include <cstddef>
 
 class IMemAlloc {
 public:
