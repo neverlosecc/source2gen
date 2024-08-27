@@ -359,10 +359,8 @@ namespace {
         }
     };
 
-    /// Adds the module specifier to @p type_name, if @p type_name is declared in @p scope. Otherwise returns @p type_name unmodified.
-    std::string MaybeWithModuleName(const CSchemaSystemTypeScope& scope, const std::string_view type_name) {
+    [[nodiscard]] std::string EscapeTypeName(const std::string_view type_name) {
         // TODO: when we have a package manager: use a library
-        [[nodiscard]]
         const auto StringReplace = [](std::string str, std::string_view search, std::string_view replace) {
             const std::size_t pos = str.find(search);
             if (pos != std::string::npos) {
@@ -377,11 +375,15 @@ namespace {
         // "struct Player {}; struct Player__Hand{};".
         // But when used as a property, types expect `Hand` in `Player`, i.e. `Player::Hand m_hand;`
         // Instead of doing this hackery, we should probably declare nested classes as nested classes.
-        const auto escaped_type_name = StringReplace(std::string{type_name}, "::", "__");
+        return StringReplace(std::string{type_name}, "::", "__");
+    }
 
+    /// Adds the module specifier to @p type_name, if @p type_name is declared in @p scope. Otherwise returns @p type_name unmodified.
+    std::string MaybeWithModuleName(const CSchemaSystemTypeScope& scope, const std::string_view type_name) {
+        const auto escaped_type_name = EscapeTypeName(type_name);
         return GetModuleOfTypeInScope(scope, type_name)
             .transform([&](const auto module_name) { return std::format("{}::{}", module_name, escaped_type_name); })
-            .value_or(std::string{escaped_type_name});
+            .value_or(escaped_type_name);
     };
 
     /// Decomposes a templated type into its components, keeping template
@@ -587,9 +589,9 @@ namespace {
         // @note: @es3n1n: start class
         //
         if (is_struct)
-            builder.begin_struct_with_base_type(class_info.m_pszName, parent_class_name, "");
+            builder.begin_struct_with_base_type(EscapeTypeName(class_info.m_pszName), parent_class_name, "");
         else
-            builder.begin_class_with_base_type(class_info.m_pszName, parent_class_name, "");
+            builder.begin_class_with_base_type(EscapeTypeName(class_info.m_pszName), parent_class_name, "");
 
         // @note: @es3n1n: field assembling state
         //
