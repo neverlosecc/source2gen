@@ -819,7 +819,7 @@ namespace {
     }
 
     void GenerateEnumSdk(std::string_view module_name, const CSchemaEnumBinding& enum_) {
-        const std::string out_file_path = std::format("{}/{}/{}.hpp", kOutDirName, module_name, enum_.m_pszName);
+        const std::string out_file_path = util::EscapePath(std::format("{}/{}/{}.hpp", kOutDirName, module_name, enum_.m_pszName));
 
         // @note: @es3n1n: init codegen
         //
@@ -860,7 +860,7 @@ namespace {
     }
 
     void GenerateClassSdk(std::string_view module_name, const CSchemaClassBinding& class_) {
-        const std::filesystem::path out_file_path = std::format("{}/{}/{}.hpp", kOutDirName, module_name, class_.m_pszName);
+        const std::filesystem::path out_file_path = util::EscapePath(std::format("{}/{}/{}.hpp", kOutDirName, module_name, class_.m_pszName));
 
         // @note: @es3n1n: init codegen
         //
@@ -870,7 +870,7 @@ namespace {
         const auto names = GetRequiredNamesForClass(class_);
 
         for (const auto& include : names | std::views::filter([](const auto& el) { return el.source == NameSource::include; })) {
-            builder.include(std::format("\"{}/{}.hpp\"", include.module, include.type_name));
+            builder.include(std::format("\"{}/{}.hpp\"", include.module, util::EscapePath(include.type_name)));
         }
 
         builder.include("<cstdint>");

@@ -4,6 +4,7 @@
 
 #include <string>
 #include <tools/loader/loader.h>
+#include <tools/platform.h>
 
 namespace util {
     inline std::string PrettifyNum(int num) {
@@ -18,6 +19,16 @@ namespace util {
         }
 
         return std::to_string(num);
+    }
+
+    [[nodiscard]] inline std::string EscapePath(std::string_view path) {
+#if TARGET_OS == WINDOWS
+        std::string result(path);
+        std::ranges::replace(result, ':', '_');
+        return result;
+#else
+        return std::string(path);
+#endif
     }
 } // namespace util
 
