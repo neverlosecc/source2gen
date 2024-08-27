@@ -211,7 +211,9 @@ namespace {
             const auto* pClass = &class_;
             int classes_with_fields = 0;
             do {
-                classes_with_fields += (pClass->m_nFieldSize != 0) ? 1 : 0;
+                // also check size because not all members are registered with
+                // the schema system.
+                classes_with_fields += ((pClass->m_nSizeOf > 1) || (pClass->m_nFieldSize != 0)) ? 1 : 0;
 
                 if (classes_with_fields > 1) {
                     return cache.emplace(id, false).first->second;
@@ -719,7 +721,6 @@ namespace {
         builder.begin_bitfield_block(expected_offset);
 
         for (const auto& entry : state.bitfield) {
-            // TOOD: duplicate code
             for (const auto& field_metadata : entry.metadata) {
                 if (auto data = GetMetadataValue(field_metadata); data.empty())
                     builder.comment(std::format("metadata: {}", field_metadata.m_szName));
@@ -975,7 +976,10 @@ namespace {
         const auto last_field_end = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
         const auto end_pad = class_size - last_field_end;
 
-        if (end_pad != 0) {
+        // The `(class_size != 1)` check is here because of empty classes. If
+        // we generated a pad for empty classes, they'd no longer have standard-layout.
+        // The pad isn't necessary for such classes, because the compiler will make them have size=1.
+        if ((end_pad != 0) && (class_size != 1)) {
             builder.struct_padding(last_field_end, end_pad, true, true);
         } else if (end_pad < 0) [[unlikely]] {
             throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
