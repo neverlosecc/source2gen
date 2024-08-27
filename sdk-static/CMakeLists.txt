@@ -1,5 +1,3 @@
-# TOOD: try using in a playground
-
 cmake_minimum_required(VERSION 3.30)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS On)
@@ -12,8 +10,14 @@ file(GLOB_RECURSE source2sdk_headers "./**.hpp")
 
 add_library(${PROJECT_NAME} INTERFACE)
 target_include_directories(${PROJECT_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${source2sdk_headers}")
 
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+
+install(
+  DIRECTORY "${CMAKE_SOURCE_DIR}/include"
+  DESTINATION .
+)
 
 # Add a target that includes all headers of the generated library to check for compile-time errors
 
