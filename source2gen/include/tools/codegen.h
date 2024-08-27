@@ -125,10 +125,7 @@ namespace codegen {
             if (decrement_tabs_count)
                 dec_tabs_count(kTabsPerBlock);
 
-            push_line("};");
-            if (move_cursor_to_next_line)
-                next_line();
-
+            push_line("};", move_cursor_to_next_line);
             return *this;
         }
 
@@ -210,7 +207,7 @@ namespace codegen {
                 R"(*reinterpret_cast<{}*>(interfaces::g_schema->FindTypeScopeForModule("{}")->FindDeclaredClass("{}")->GetStaticFields()[{}]->m_pInstance))",
                 type_name, mod_name, decl_class, index);
             return_value(getter, false);
-            end_function(false, false);
+            end_function(false, true);
 
             // @note: @es3n1n: restore tabs count
             //
