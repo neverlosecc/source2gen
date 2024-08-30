@@ -79,7 +79,7 @@ namespace codegen {
          * supported per language.
          */
         [[nodiscard]]
-        virtual std::string get_file_extension() = 0;
+        virtual std::string get_file_extension() const = 0;
 
         /**
          * Can be used by implementations to generate language-specific

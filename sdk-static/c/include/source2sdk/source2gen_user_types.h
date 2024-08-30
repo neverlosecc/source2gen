@@ -1,114 +1,114 @@
 #pragma once
 
-template <class>
-using CAnimValue = char[0x08];
-using CAnimVariant = char[0x11];
+// template <class>
+// using CAnimValue = char[0x08];
+typedef char CAnimVariant[0x11];
 // size is a guess
-template <class T>
-using CAnimScriptParam = char[0x08];
-using CBufferString = char[0x10];
-using CColorGradient = char[0x18];
+// template <class T>
+// typedef  char CAnimScriptParam [0x08];
+typedef char CBufferString[0x10];
+typedef char CColorGradient[0x18];
 // size doesn't mapper. only used as a pointer
-template <class>
-using CCompressor = char[0x01];
-using CEntityHandle = char[0x04];
-using CEntityIndex = char[0x04];
-using CGlobalSymbol = char[0x08];
-using CKV3MemberNameWithStorage = char[0x38];
-using CNetworkedQuantizedFloat = char[0x08];
-using CParticleNamedValueRef = char[0x40];
-using CPiecewiseCurve = char[0x40];
-using CPlayerSlot = char[0x04];
-using CPulseValueFullType = char[0x10];
-using CResourceName = char[0xe0];
-using CSplitScreenSlot = char[0x04];
-using CTransform = char[0x20];
-using CUtlBinaryBlock = char[0x18];
-template <class, class>
-using CUtlHashtable = char[0x20];
-using CUtlStringTokenWithStorage = char[0x18];
-using CUtlStringToken = char[0x04];
-using CUtlString = char[0x08];
-using CUtlSymbolLarge = char[0x08];
-using CUtlSymbol = char[0x02];
-template <class>
-using CAnimGraphParamOptionalRef = char[0x20];
-template <class>
-using CAnimGraphParamRef = char[0x20];
-template <int N>
-using CBitVec = char[(N + 7) / 8];
-template <class>
-using CEntityOutputTemplate = char[0x28];
-template <class>
-using CHandle = char[0x04];
-template <class>
-using C_NetworkUtlVectorBase = char[0x18];
-template <class>
-using CNetworkUtlVectorBase = char[0x18];
+// template <class>
+// typedef  char CCompressor [0x01];
+typedef char CEntityHandle[0x04];
+typedef char CEntityIndex[0x04];
+typedef char CGlobalSymbol[0x08];
+typedef char CKV3MemberNameWithStorage[0x38];
+typedef char CNetworkedQuantizedFloat[0x08];
+typedef char CParticleNamedValueRef[0x40];
+typedef char CPiecewiseCurve[0x40];
+typedef char CPlayerSlot[0x04];
+typedef char CPulseValueFullType[0x10];
+typedef char CResourceName[0xe0];
+typedef char CSplitScreenSlot[0x04];
+typedef char CTransform[0x20];
+typedef char CUtlBinaryBlock[0x18];
+// template <class, class>
+// typedef  char CUtlHashtable [0x20];
+typedef char CUtlStringTokenWithStorage[0x18];
+typedef char CUtlStringToken[0x04];
+typedef char CUtlString[0x08];
+typedef char CUtlSymbolLarge[0x08];
+typedef char CUtlSymbol[0x02];
+// template <class>
+// typedef  char CAnimGraphParamOptionalRef [0x20];
+// template <class>
+// typedef  char CAnimGraphParamRef [0x20];
+// template <int N>
+// typedef  char CBitVec [(N + 7) / 8];
+// template <class>
+// // typedef  char CEntityOutputTemplate [0x28];
+// // template <class>
+// typedef  char CHandle [0x04];
+// template <class>
+// typedef  char C_NetworkUtlVectorBase [0x18];
+// template <class>
+// typedef  char CNetworkUtlVectorBase [0x18];
 // size unknown. only used in dynamic containers.
-using CSoundEventName = char[0x01];
-template <class>
-using CUtlLeanVector = char[0x10];
-template <class, class>
-using CUtlOrderedMap = char[0x28];
+typedef char CSoundEventName[0x01];
+// template <class>
+// typedef  char CUtlLeanVector [0x10];
+// template <class, class>
+// typedef  char CUtlOrderedMap [0x28];
 // size doesn't mapper. only used as a pointer
-template <class, class>
-using CUtlPair = char[0x01];
-template <class>
-using CUtlVector = char[0x18];
+// template <class, class>
+// typedef  char CUtlPair [0x01];
+// template <class>
+// typedef  char CUtlVector [0x18];
 // size is a guess that fits both occurences of this type in CS2
-template <class T>
-using CUtlVectorFixedGrowable = char[0x18 + ((sizeof(T) < 4) ? 4 : sizeof(T))];
-template <class T>
-using CUtlLeanVectorFixedGrowable = char[0x10 + ((sizeof(T) < 4) ? 4 : sizeof(T))];
-template <class>
-using C_UtlVectorEmbeddedNetworkVar = char[0x50];
-template <class>
-using CUtlVectorEmbeddedNetworkVar = char[0x50];
-using CUtlVectorSIMDPaddedVector = char[0x18];
-template <class>
-using CSmartPtr = char[0x08];
-template <class>
-using CResourceArray = char[0x08];
+// template <class T>
+// typedef  char CUtlVectorFixedGrowable [0x18 + ((sizeof(T) < 4) ? 4 : sizeof(T))];
+// template <class T>
+// typedef  char CUtlLeanVectorFixedGrowable [0x10 + ((sizeof(T) < 4) ? 4 : sizeof(T))];
+// template <class>
+// typedef  char C_UtlVectorEmbeddedNetworkVar [0x50];
+// template <class>
+// typedef  char CUtlVectorEmbeddedNetworkVar [0x50];
+typedef char CUtlVectorSIMDPaddedVector[0x18];
+// template <class>
+// typedef  char CSmartPtr [0x08];
+// template <class>
+// typedef  char CResourceArray [0x08];
 // size unknown
-using CResourceString = char[0x08];
-template <class>
-using CResourcePointer = char[0x08];
-template <class>
-using CResourceNameTyped = char[0xe0];
-template <class>
-using CStrongHandle = char[0x08];
-template <class>
-using CStrongHandleCopyable = char[0x08];
+typedef char CResourceString[0x08];
+// template <class>
+// typedef  char CResourcePointer [0x08];
+// template <class>
+// typedef  char CResourceNameTyped [0xe0];
+// template <class>
+// typedef  char CStrongHandle [0x08];
+// template <class>
+// typedef  char CStrongHandleCopyable [0x08];
 // size doesn't mapper. only used as a pointer
-using CStrongHandleVoid = char[0x08];
-template <class>
-using CVariantBase = char[0x10];
-template <class>
-using CWeakHandle = char[0x18];
-using Color = char[0x04];
-using DegreeEuler = char[0x0c];
-using FourVectors = char[0x30];
-using HSCRIPT = char[0x08];
-using KeyValues3 = char[0x10];
+typedef char CStrongHandleVoid[0x08];
+// template <class>
+// typedef  char CVariantBase [0x10];
+// template <class>
+// typedef  char CWeakHandle [0x18];
+typedef char Color[0x04];
+typedef char DegreeEuler[0x0c];
+typedef char FourVectors[0x30];
+typedef char HSCRIPT[0x08];
+typedef char KeyValues3[0x10];
 // size doesn't mapper. only used as a pointer
-using KeyValues = char[0x01];
-using QAngle = char[0x0c];
-using QuaternionStorage = char[0x10];
-using Quaternion = char[0x10];
-using RadianEuler = char[0x0c];
-using RenderInputLayoutField_t = char[0x04];
+typedef char KeyValues[0x01];
+typedef char QAngle[0x0c];
+typedef char QuaternionStorage[0x10];
+typedef char Quaternion[0x10];
+typedef char RadianEuler[0x0c];
+typedef char RenderInputLayoutField_t[0x04];
 // we don't have a field size for this type. uses the fallback of 1.
-using RenderPrimitiveType_t = char[0x01];
-using RotationVector = char[0x0c];
-template <class>
-using SphereBase_t = char[0x10];
-using Vector2D = char[0x08];
-using Vector4D = char[0x10];
-using VectorAligned = char[0x10];
-using Vector = char[0x0c];
-using WorldGroupId_t = char[0x04];
-using float32 = char[0x04];
-using fltx4 = char[0x10];
-using matrix3x4_t = char[0x30];
-using matrix3x4a_t = char[0x30];
+typedef char RenderPrimitiveType_t[0x01];
+typedef char RotationVector[0x0c];
+// template <class>
+// typedef  char SphereBase_t [0x10];
+typedef char Vector2D[0x08];
+typedef char Vector4D[0x10];
+typedef char VectorAligned[0x10];
+typedef char Vector[0x0c];
+typedef char WorldGroupId_t[0x04];
+typedef char float32[0x04];
+typedef char fltx4[0x10];
+typedef char matrix3x4_t[0x30];
+typedef char matrix3x4a_t[0x30];

@@ -37,14 +37,14 @@ namespace codegen {
             }
         }
 
-        std::string get_file_extension() override {
+        std::string get_file_extension() const override {
             return "hpp";
         }
 
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
-            include("source2gen_user_types", IncludeOptions{.local = true, .system = false});
+            include("source2gen/source2gen_user_types", IncludeOptions{.local = true, .system = false});
             include("cstdint", IncludeOptions{.local = false, .system = true});
 
             return *this;

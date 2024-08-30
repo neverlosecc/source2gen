@@ -1119,8 +1119,8 @@ namespace {
     }
 
     [[nodiscard]]
-    std::filesystem::path GetFilePathForType(std::string_view module_name, std::string_view type_name) {
-        return std::format("{}/include/{}/{}/{}.hpp", kOutDirName, kIncludeDirName, module_name, DecayTypeName(type_name));
+    std::filesystem::path GetFilePathForType(const codegen::IGenerator& generator, std::string_view module_name, std::string_view type_name) {
+        return std::format("{}/include/{}/{}/{}.{}", kOutDirName, kIncludeDirName, module_name, DecayTypeName(type_name), generator.get_file_extension());
     }
 
     void GenerateEnumSdk(const source2_gen::Options& options, std::string_view module_name, const CSchemaEnumBinding& enum_) {
@@ -1130,11 +1130,6 @@ namespace {
         auto& generator = *p_generator;
 
         generator.preamble();
-
-        generator.include("cstdint", codegen::IncludeOptions{
-                                         .local = false,
-                                         .system = true,
-                                     });
 
         // @note: @es3n1n: print banner
         //
@@ -1158,7 +1153,7 @@ namespace {
         if (!std::filesystem::exists(kOutDirName))
             std::filesystem::create_directories(kOutDirName);
 
-        const std::string out_file_path = GetFilePathForType(module_name, enum_.m_pszName);
+        const std::string out_file_path = GetFilePathForType(generator, module_name, enum_.m_pszName);
 
         std::ofstream f(out_file_path, std::ios::out);
         f << generator.str();
@@ -1174,8 +1169,6 @@ namespace {
 
     void GenerateClassSdk(const source2_gen::Options& options, sdk::GeneratorCache& cache, std::string_view module_name,
                           const CSchemaClassBinding& class_) {
-        const std::string out_file_path = GetFilePathForType(module_name, class_.m_pszName);
-
         // @note: @es3n1n: init codegen
         //
         auto p_generator = get_generator_for_language(options.emit_language);
@@ -1192,14 +1185,6 @@ namespace {
                                                                                                                .system = false,
                                                                                                            });
         }
-
-        // TOOD: bad includes
-        generator.include(std::format("{}/source2gen_user_types", kIncludeDirName), codegen::IncludeOptions{
-                                                                                        .local = true,
-                                                                                        .system = false,
-                                                                                    });
-        generator.include("cstddef", codegen::IncludeOptions{.local = false, .system = true}); // for offsetof()
-        generator.include("cstdint", codegen::IncludeOptions{.local = false, .system = true});
 
         for (const auto& forward_declaration : names | std::views::filter([](const auto& el) { return el.source == NameSource::forward_declaration; })) {
             generator.begin_namespace(std::format("source2sdk::{}", forward_declaration.module));
@@ -1226,6 +1211,7 @@ namespace {
 
         // @note: @es3n1n: write generated data to output file
         //
+        const std::string out_file_path = GetFilePathForType(generator, module_name, class_.m_pszName);
         std::ofstream f(out_file_path, std::ios::out);
         f << generator.str();
         if (!f.good()) {

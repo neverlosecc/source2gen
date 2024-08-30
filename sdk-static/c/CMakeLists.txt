@@ -30,7 +30,7 @@ set(generated_cpp_file "${CMAKE_BINARY_DIR}/all_headers.c")
 file(WRITE ${generated_cpp_file} ${generated_cpp_contents})
 
 add_library(${PROJECT_NAME}-compile-test ${generated_cpp_file})
-set_target_properties(${PROJECT_NAME}-compile-test PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(${PROJECT_NAME}-compile-test PROPERTIES LINKER_LANGUAGE C)
 target_link_libraries(${PROJECT_NAME}-compile-test ${PROJECT_NAME})
 
 target_compile_options(${PROJECT_NAME}-compile-test PRIVATE

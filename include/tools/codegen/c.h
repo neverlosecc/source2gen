@@ -25,14 +25,14 @@ namespace codegen {
             }
         }
 
-        std::string get_file_extension() override {
+        std::string get_file_extension() const override {
             return "h";
         }
 
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
-            include("source2gen_user_types", IncludeOptions{.local = true});
+            include("source2sdk/source2gen_user_types", IncludeOptions{.local = true});
             include("stdbool", IncludeOptions{.local = false});
             include("stdint", IncludeOptions{.local = false});
 
