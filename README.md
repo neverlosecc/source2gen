@@ -15,7 +15,7 @@ can use the registry to find the game path and set `PATH` automatically.
 
 ```sh
 source2gen
-copy .\sdk-static\source2gen_user_types.hpp .\sdk
+copy .\sdk-static\cpp\* .\sdk
 # view generated sdk
 dir .\sdk
 ```
@@ -24,7 +24,7 @@ dir .\sdk
 
 ```sh
 ./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/"
-cp -r ./sdk-static/* ./sdk
+cp -r ./sdk-static/cpp/* ./sdk
 # view generated sdk
 ls ./sdk
 ```

@@ -2,32 +2,19 @@
 
 #include "codegen.h"
 #include "detail/c_family.h"
+#include "tools/fnv.h"
 #include <cassert>
 #include <list>
+#include <set>
+#include <sstream>
 
 namespace codegen {
-    struct generator_c_t : public IGenerator {
-    public:
-        constexpr generator_c_t() = default;
-        ~generator_c_t() = default;
-        generator_c_t& operator=(const generator_c_t& v) {
-            if (this != &v) {
-                this->_stream = std::stringstream(v._stream.str());
-                /// \todo @es3n1n: Such stats counters should be moved to their own structure
-                this->_tabs_count = v._tabs_count;
-                this->_tabs_count_backup = v._tabs_count_backup;
-                this->_pads_count = v._pads_count;
-                this->_forward_decls = v._forward_decls;
-            }
-            return *this;
-        }
-
-    public:
-        std::string get_uint(std::size_t bits_count) override {
+    struct generator_c_t final : public IGenerator {
+        std::string get_uint(std::size_t bits_count) const override {
             return detail::c_family::get_uint(bits_count);
         }
 
-        std::optional<std::string> find_built_in(std::string_view source_name) override {
+        std::optional<std::string> find_built_in(std::string_view source_name) const override {
             const auto found =
                 std::ranges::find(detail::c_family::kNumericTypes, source_name, &decltype(detail::c_family::kNumericTypes)::value_type::first);
 
@@ -218,6 +205,7 @@ namespace codegen {
 
         self_ref forward_declaration(const std::string& text) override {
             // @note: @es3n1n: forward decl only once
+            // TOOD: use std::hash. repeats in cpp generator.
             const auto fwd_decl_hash = fnv32::hash_runtime(text.data());
             if (_forward_decls.contains(fwd_decl_hash))
                 return *this;

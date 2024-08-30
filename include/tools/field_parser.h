@@ -76,7 +76,9 @@ namespace field_parser {
     std::optional<std::string_view> type_name_to_cpp(std::string_view type_name);
 
     [[nodiscard]]
-    field_info_t parse(codegen::IGenerator& generator, const std::string& type_name, const std::string& name, const std::vector<std::size_t>& array_sizes);
+    field_info_t parse(const codegen::IGenerator& generator, const std::string& type_name, const std::string& name,
+                       const std::vector<std::size_t>& array_sizes);
+
     [[nodiscard]]
     field_info_t parse(fieldtype_t field_type, const std::string& name, std::size_t array_size);
 } // namespace field_parser

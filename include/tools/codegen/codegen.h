@@ -2,15 +2,10 @@
 // See end of file for extended copyright information.
 #pragma once
 
-#include <array>
 #include <cstdint>
-#include <set>
-#include <sstream>
+#include <optional>
 #include <string>
-#include <type_traits>
 #include <variant>
-
-#include "tools/fnv.h"
 
 namespace codegen {
     constexpr char kTabSym = '\t';
@@ -59,7 +54,7 @@ namespace codegen {
         /**
          * The fully qualified type name of the (unsigned) integer type with the given width.
          */
-        virtual std::string get_uint(std::size_t bits_count) = 0;
+        virtual std::string get_uint(std::size_t bits_count) const = 0;
 
         /**
          * Maps the following Source2 type names to the fully qualified type name in the target language.
@@ -77,7 +72,7 @@ namespace codegen {
          *
          * @return @ref std::nullopt if @p source_name is not listed above
          */
-        virtual std::optional<std::string> find_built_in(std::string_view source_name) = 0;
+        virtual std::optional<std::string> find_built_in(std::string_view source_name) const = 0;
 
         /**
          * @return Extension to be used for generated files. Only 1 extension is
@@ -140,10 +135,10 @@ namespace codegen {
         virtual self_ref comment(const std::string& text, bool move_cursor_to_next_line = true) = 0;
 
         /// Not to be used for inline comments
-        virtual self_ref begin_multi_line_comment(const bool move_cursor_to_next_line = true);
+        virtual self_ref begin_multi_line_comment(const bool move_cursor_to_next_line = true) = 0;
 
         /// Not to be used for inline comments
-        virtual self_ref end_multi_line_comment(const bool move_cursor_to_next_line = true);
+        virtual self_ref end_multi_line_comment(const bool move_cursor_to_next_line = true) = 0;
 
         virtual self_ref prop(Prop prop, bool move_cursor_to_next_line = true) = 0;
 

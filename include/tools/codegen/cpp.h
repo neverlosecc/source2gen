@@ -7,32 +7,21 @@
 
 #include "codegen.h"
 #include "detail/c_family.h"
+#include "tools/fnv.h"
+#include <cassert>
+#include <list>
+#include <set>
+#include <sstream>
 
 namespace codegen {
-    struct generator_cpp_t : public IGenerator {
+    struct generator_cpp_t final : public IGenerator {
         using self_ref = std::add_lvalue_reference_t<generator_cpp_t>;
 
-    public:
-        constexpr generator_cpp_t() = default;
-        ~generator_cpp_t() = default;
-        generator_cpp_t& operator=(const generator_cpp_t& v) {
-            if (this != &v) {
-                this->_stream = std::stringstream(v._stream.str());
-                /// \todo @es3n1n: Such stats counters should be moved to their own structure
-                this->_tabs_count = v._tabs_count;
-                this->_tabs_count_backup = v._tabs_count_backup;
-                this->_pads_count = v._pads_count;
-                this->_forward_decls = v._forward_decls;
-            }
-            return *this;
-        }
-
-    public:
-        std::string get_uint(std::size_t bits_count) override {
+        std::string get_uint(std::size_t bits_count) const override {
             return std::format("std::{}", detail::c_family::get_uint(bits_count));
         }
 
-        std::optional<std::string> find_built_in(std::string_view source_name) override {
+        std::optional<std::string> find_built_in(std::string_view source_name) const override {
             const auto found =
                 std::ranges::find(detail::c_family::kNumericTypes, source_name, &decltype(detail::c_family::kNumericTypes)::value_type::first);
 

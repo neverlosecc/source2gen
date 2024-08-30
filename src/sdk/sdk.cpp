@@ -611,7 +611,8 @@ namespace {
     }
 
     /// Adds module qualifiers and resolves built-in types
-    std::string ReassembleRetypedTemplate(const CSchemaSystemTypeScope& scope, const std::vector<std::variant<std::string, char>>& decomposed) {
+    std::string ReassembleRetypedTemplate(const codegen::IGenerator& generator, const CSchemaSystemTypeScope& scope,
+                                          const std::vector<std::variant<std::string, char>>& decomposed) {
         std::string result{};
 
         for (const auto& el : decomposed) {
@@ -620,7 +621,7 @@ namespace {
                     if constexpr (std::is_same_v<std::decay_t<decltype(e)>, char>) {
                         result += e;
                     } else {
-                        if (const auto built_in = field_parser::type_name_to_cpp(e)) {
+                        if (const auto built_in = generator.find_built_in(e)) {
                             result += built_in.value();
                         } else {
                             // e is a dirty name, e.g. "CPlayer*[10]". We need to add the module, but keep it dirty.
@@ -638,13 +639,13 @@ namespace {
     }
 
     /// @return {type_name, array_sizes} where type_name is a fully qualified name
-    std::pair<std::string, std::vector<std::size_t>> GetType(const CSchemaType& type) {
+    std::pair<std::string, std::vector<std::size_t>> GetType(const codegen::IGenerator& generator, const CSchemaType& type) {
         const auto [type_name, array_sizes] = ParseArray(type);
 
         assert(type_name.empty() == array_sizes.empty());
 
         const auto type_name_with_modules =
-            ReassembleRetypedTemplate(*type.m_pTypeScope, DecomposeTemplate(type_name.empty() ? type.m_pszName : type_name));
+            ReassembleRetypedTemplate(generator, *type.m_pTypeScope, DecomposeTemplate(type_name.empty() ? type.m_pszName : type_name));
 
         if (!type_name.empty() && !array_sizes.empty())
             return {type_name_with_modules, array_sizes};
@@ -885,7 +886,7 @@ namespace {
 
             // @note: @es3n1n: parsing type
             //
-            const auto [type_name, array_sizes] = GetType(*field.m_pSchemaType);
+            const auto [type_name, array_sizes] = GetType(generator, *field.m_pSchemaType);
             const auto var_info = field_parser::parse(generator, type_name, field.m_pszName, array_sizes);
 
             // @fixme: @es3n1n: todo proper collision fix and remove this block
@@ -1035,7 +1036,7 @@ namespace {
         for (auto s = 0; s < class_.m_nStaticFieldsSize; s++) {
             auto static_field = &class_.m_pStaticFields[s];
 
-            auto [type, mod] = GetType(*static_field->m_pSchemaType);
+            auto [type, mod] = GetType(generator, *static_field->m_pSchemaType);
             const auto var_info = field_parser::parse(generator, type, static_field->m_pszName, mod);
             generator.static_field_getter(var_info.m_type, var_info.m_name, scope_name, class_.m_pszName, s);
         }
@@ -1239,7 +1240,7 @@ namespace {
 } // namespace
 
 namespace sdk {
-    void GenerateTypeScopeSdk(const source2_gen::Options& options, GeneratorCache& cache, std::string_view module_name,
+    void GenerateTypeScopeSdk(source2_gen::Options options, GeneratorCache& cache, std::string_view module_name,
                               const std::unordered_set<const CSchemaEnumBinding*>& enums, const std::unordered_set<const CSchemaClassBinding*>& classes) {
         // @note: @es3n1n: print debug info
         //
