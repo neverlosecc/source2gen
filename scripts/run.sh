@@ -30,7 +30,11 @@ if [ -z "${BINARY}" ]; then
   echo "source2gen binary not found. set LD_PRELOAD_PATH and run source2gen by hand."
   exit 1
 else
+  export LD_LIBRARY_PATH="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/:${GAME_DIRECTORY}/game/csgo/bin/linuxsteamrt64/:${LD_LIBRARY_PATH:-}"
   set -x
-
-  LD_LIBRARY_PATH="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/:${GAME_DIRECTORY}/game/csgo/bin/linuxsteamrt64/:${LD_LIBRARY_PATH:-}" "${BINARY}" "${@}"
+  if [ -z "${DEBUGGER:-}" ]; then
+    "${BINARY}"
+  else
+    "${DEBUGGER}" -- "${BINARY}"
+  fi
 fi

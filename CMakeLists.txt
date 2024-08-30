@@ -69,6 +69,8 @@ file(GLOB_RECURSE source2gen_SOURCES "src/**.cpp")
 list(REMOVE_ITEM source2gen_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 file(GLOB_RECURSE source2gen_HEADERS "include/**.h" "include/**.hpp")
 
+# We build a library first, because we can link the library against tests.
+# main.cpp is compiled separately and also linked against the library.
 add_library(lib${PROJECT_NAME} ${source2gen_SOURCES})
 
 target_link_libraries(lib${PROJECT_NAME}

@@ -15,6 +15,7 @@ can use the registry to find the game path and set `PATH` automatically.
 
 ```sh
 source2gen
+copy .\sdk-static\source2gen_user_types.hpp .\sdk
 # view generated sdk
 dir .\sdk
 ```
@@ -23,6 +24,7 @@ dir .\sdk
 
 ```sh
 ./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/"
+cp -r ./sdk-static/* ./sdk
 # view generated sdk
 ls ./sdk
 ```
@@ -47,9 +49,33 @@ to be provided by the user and expose all types listed in
 types, you can use [types.hpp](sdk-filler/types.hpp) as
 "source2gen_user_types.hpp".
 
-TODO: document exact file/module name per language
+TOOD: document exact file/module name per language  
+TOOD: document language standard requirements
 
 ## Getting Started
+
+[source2gen_user_types.hpp](sdk-static/source2gen_user_types.hpp). If you don't
+intend to access any of these types, you can use the dummy file
+[source2gen_user_types.hpp](sdk-static/source2gen_user_types.hpp).
+
+## Limitations
+
+### Disabled entities
+
+Under the following conditions, entities are either entirely omitted, or emitted
+as a comment and replaced with a dummy:
+
+- Overlapping fields: Fields that share memory with another field
+- Misaligned fields: Fields that cannot be placed at the correct in-class offset
+  because of their type's alignment requirements
+- Misaligned types: Class types that would exceed their correct size because
+  padding bytes would have to be inserted to meet alignment requirements
+- Fields with template types
+
+Some of these disabled entities can be made to work by using compiler-specific
+attributes.
+
+## Getting Started with Development
 
 These instructions will help you set up the project on your local machine for development and testing purposes.
 
@@ -58,7 +84,7 @@ These instructions will help you set up the project on your local machine for de
 #### Windows
 
 - Visual Studio 2019 or newer
-- premake5
+- CMake
 - conan
 
 #### Linux
@@ -83,41 +109,9 @@ Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLO
 
 or
 
-You can use premake5 options and specify which game you want to dump:
-
-```bash
- --game=CS2          
- Choose a particular game for dumping source 2 sdk; one of:
-     ARTIFACT1        Artifact Classic
-     ARTIFACT2        Artifact Foundry
-     CS2              Counter-Strike 2
-     DESKJOB          Aperture Desk Job
-     DOTA2            Dota 2
-     HL_ALYX          Half-Life: Alyx
-     SBOX             S&BOX
-     THE_LAB_ROBOT_REPAIR Portal: Aperture Robot Repair
-     UNDERLORDS       Dota Underlords
-```
-
-or
-
 When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
 
 ### Building the project
-
-#### With premake5
-
-TOOD: how to use conan with premake?
-
-- Open a command prompt or terminal in the project's root directory.
-- Run the following command to generate the Visual Studio solution:
-
-```bash
-premake5 vs2019 --game=CS2
-```
-
-- Open the generated source2gen.sln file in Visual Studio.
-- Build the solution in the desired configuration (Debug, Release, or Dist).
 
 #### With CMake
 
@@ -145,7 +139,6 @@ This project is made possible by the contributions of various individuals and pr
 
 This project also utilizes the following open-source libraries:
 
-- **[Premake](https://github.com/premake/premake-core)** - Build configuration tool
 - **[CMake](https://github.com/Kitware/CMake)** - Build tool
 
 If you've contributed to the project and would like to be listed here, please submit a [pull request](https://github.com/neverlosecc/source2gen/pulls) with your information added to the credits.

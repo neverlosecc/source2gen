@@ -84,7 +84,7 @@ namespace codegen {
             return end_struct();
         }
 
-        self_ref begin_struct(const std::string& name, const std::string& access_modifier = "public") override {
+        self_ref begin_struct(std::string_view name, const std::string& access_modifier = "public") override {
             assert(!_current_class_or_enum.has_value() && "nested types are not supported");
             _current_class_or_enum = name;
 
@@ -94,7 +94,7 @@ namespace codegen {
         self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type,
                                              const std::string& access_modifier = "public") override {
             if (base_type.empty())
-                return begin_struct(std::cref(name), access_modifier);
+                return begin_struct(name, access_modifier);
             else {
                 assert(!_current_class_or_enum.has_value() && "nested types are not supported");
                 _current_class_or_enum = name;
@@ -184,8 +184,29 @@ namespace codegen {
             return *this;
         }
 
+        self_ref static_assert_size(std::string_view type_name, int expected_size, const bool move_cursor_to_next_line) override {
+            assert(expected_size > 0);
+
+            return push_line(std::format("static_assert(sizeof({}) == {:#x});", escape_name(type_name), expected_size));
+        }
+
+        self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, int expected_offset,
+                                      const bool move_cursor_to_next_line) override {
+            assert(expected_offset >= 0);
+
+            return push_line(std::format("static_assert(offsetof({}, {}) == {:#x});", escape_name(class_name), prop_name, expected_offset));
+        }
+
         self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) override {
             return push_line(std::format("// {}", text), move_cursor_to_next_line);
+        }
+
+        self_ref begin_multi_line_comment(const bool move_cursor_to_next_line = true) override {
+            return push_line("/*", move_cursor_to_next_line);
+        }
+
+        self_ref end_multi_line_comment(const bool move_cursor_to_next_line = true) override {
+            return push_line("*/", move_cursor_to_next_line);
         }
 
         self_ref prop(Prop prop, bool move_cursor_to_next_line = true) override {
@@ -294,7 +315,7 @@ namespace codegen {
             return *this;
         }
 
-        static std::string escape_name(const std::string& name) {
+        static std::string escape_name(std::string_view name) {
             std::string result;
             result.resize(name.size());
 

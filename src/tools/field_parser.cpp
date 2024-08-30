@@ -1,18 +1,49 @@
-// Copyright (C) 2024 neverlosecc
-// See end of file for extended copyright information.
-#include <algorithm>
-#include <bit>
-#include <Include.h>
-#include <sdk/interfaces/client/game/datamap_t.h>
+    // Copyright (C) 2024 neverlosecc
+    // See end of file for extended copyright information.
+<<<<<<< HEAD
+    #include <algorithm>
+    #include <bit>
+    #include <Include.h>
+=======
+    #include "tools/codegen.h"
+    #include "tools/field_parser.h"
+    >>>>>>> bdcd7e35d9e14995b0e833146384056536e810ad
+    #include <sdk/interfaces/client/game/datamap_t.h>
 
-namespace field_parser {
+    namespace field_parser {
     namespace detail {
         namespace {
             using namespace std::string_view_literals;
 
             constexpr std::string_view kBitfieldTypePrefix = "bitfield:"sv;
 
+            // @note: @es3n1n: a list of possible integral types for bitfields (would be used in `guess_bitfield_type`)
+            //
+            constexpr auto kBitfieldIntegralTypes = std::to_array<std::pair<std::size_t, std::string_view>>({
+                {8, "uint8_t"},
+                {16, "uint16_t"},
+                {32, "uint32_t"},
+                {64, "uint64_t"},
+            });
+
             // clang-format off
+<<<<<<< HEAD
+=======
+            constexpr auto kTypeNameToCpp = std::to_array<std::pair<std::string_view, std::string_view>>({
+                {"float32"sv, "float"sv},
+                {"float64"sv, "double"sv},
+
+                {"int8"sv, "int8_t"sv},
+                {"int16"sv, "int16_t"sv},
+                {"int32"sv, "int32_t"sv},
+                {"int64"sv, "int64_t"sv},
+
+                {"uint8"sv, "uint8_t"sv},
+                {"uint16"sv, "uint16_t"sv},
+                {"uint32"sv, "uint32_t"sv},
+                {"uint64"sv, "uint64_t"sv}
+            });
+>>>>>>> bdcd7e35d9e14995b0e833146384056536e810ad
 
             constexpr auto kDatamapToCpp = std::to_array<std::pair<fieldtype_t, std::string_view>>({
                 {fieldtype_t::FIELD_FLOAT32, "float"sv},
@@ -85,7 +116,11 @@ namespace field_parser {
 
             // @note: @es3n1n: saving parsed value
             result.m_bitfield_size = bitfield_size;
+<<<<<<< HEAD
             result.m_type = generator.get_uint(std::max(8u, std::bit_ceil(bitfield_size)));
+=======
+            result.m_type = guess_bitfield_type(bitfield_size);
+>>>>>>> bdcd7e35d9e14995b0e833146384056536e810ad
         }
 
         // @note: @es3n1n: we are assuming that this function would be executed right after
@@ -107,7 +142,7 @@ namespace field_parser {
             if (result.m_field_type == fieldtype_t::FIELD_UNUSED)
                 result.m_field_type = type_name;
 
-            // @note: @es3n1n: applying kTypeNameToCpp rules
+            // @note: @es3n1n: applying kDatamapToCpp rules
             for (auto& rule : kDatamapToCpp) {
                 if (result.m_field_type != rule.first)
                     continue;
@@ -118,7 +153,27 @@ namespace field_parser {
         }
     } // namespace detail
 
-    field_info_t parse(codegen::IGenerator& generator, const std::string& type_name, const std::string& name,
+    std::string guess_bitfield_type(const std::size_t bits_count) {
+        for (auto p : detail::kBitfieldIntegralTypes) {
+            if (bits_count > p.first)
+                continue;
+
+            return p.second.data();
+        }
+
+        throw std::runtime_error(std::format("{} : Unable to guess bitfield type with size {}", __FUNCTION__, bits_count));
+    }
+
+    std::optional<std::string_view> type_name_to_cpp(std::string_view type_name) {
+        if (const auto found = std::ranges::find(detail::kTypeNameToCpp, type_name, &decltype(detail::kTypeNameToCpp)::value_type::first);
+            found != detail::kTypeNameToCpp.end()) {
+            return found->second;
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    field_info_t parse(codegen::IGenerator & generator, const std::string& type_name, const std::string& name,
                        const std::vector<std::size_t>& array_sizes) {
         field_info_t result = {};
         result.m_name = name;
@@ -131,7 +186,7 @@ namespace field_parser {
         return result;
     }
 
-    field_info_t parse(const fieldtype_t& type_name, const std::string& name, const std::size_t& array_sizes) {
+    field_info_t parse(const fieldtype_t& field_type, const std::string& name, std::size_t array_sizes) {
         field_info_t result = {};
         result.m_name = name;
 

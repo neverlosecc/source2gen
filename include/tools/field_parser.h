@@ -2,19 +2,19 @@
 // See end of file for extended copyright information.
 #pragma once
 
-#include "tools/codegen/codegen.h"
+#include "codegen/codegen.h"
 #include <cstddef>
-#include <cstdint>
+#include <format>
+#include <sdk/interfaces/client/game/datamap_t.h>
 #include <string>
+#include <string_view>
 #include <vector>
-
-enum class fieldtype_t : uint8_t;
 
 namespace field_parser {
     class field_info_t {
     public:
         std::string m_type; // var type
-        fieldtype_t m_field_type = static_cast<fieldtype_t>(24); // var type
+        fieldtype_t m_field_type = fieldtype_t::FIELD_UNUSED; // var type
         std::string m_name; // var name
 
         // array sizes, for example {13, 37} for multi dimensional array "[13][37]"
@@ -68,8 +68,17 @@ namespace field_parser {
         }
     };
 
+    [[nodiscard]]
+    std::string guess_bitfield_type(std::size_t bits_count);
+
+    /// @return @ref std::nullopt if type_name is not a built-in type
+    [[nodiscard]]
+    std::optional<std::string_view> type_name_to_cpp(std::string_view type_name);
+
+    [[nodiscard]]
     field_info_t parse(codegen::IGenerator& generator, const std::string& type_name, const std::string& name, const std::vector<std::size_t>& array_sizes);
-    field_info_t parse(const fieldtype_t& type_name, const std::string& name, const std::size_t& array_sizes = 1);
+    [[nodiscard]]
+    field_info_t parse(fieldtype_t field_type, const std::string& name, std::size_t array_size);
 } // namespace field_parser
 
 // source2gen - Source2 games SDK generator

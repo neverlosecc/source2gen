@@ -172,8 +172,10 @@ namespace source2_gen {
 
         const std::unordered_map all_modules = collect_modules(std::span{type_scopes.m_pElements, static_cast<std::size_t>(type_scopes.m_Size)});
 
+        sdk::GeneratorCache cache{};
+
         for (const auto& [module_name, dump] : all_modules) {
-            sdk::GenerateTypeScopeSdk(options, module_name, dump.enums, dump.classes);
+            sdk::GenerateTypeScopeSdk(options, cache, module_name, dump.enums, dump.classes);
         }
 
         std::cout << std::format("Schema stats: {} registrations; {} were redundant; {} were ignored ({} bytes of ignored data)",

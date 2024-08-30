@@ -2,10 +2,13 @@
 // See end of file for extended copyright information.
 #pragma once
 #include "sdk/interfaces/common/CThreadSpinMutex.h"
+#include "sdk/interfaces/common/CThreadSpinRWLock.h"
 #include "sdk/interfaces/common/CUtlMemory.h"
 #include "sdk/interfaces/common/CUtlMemoryPoolBase.h"
+#include <climits>
 #include <cstdint>
 #include <type_traits>
+#include <vector>
 
 #if defined(CS2) || defined(DOTA2)
 constexpr auto kUtlTsHashVersion = 2;
@@ -273,7 +276,7 @@ inline std::vector<T> CUtlTSHashV2<T, Keytype, BucketCount, HashFuncs>::merge_wi
     std::vector<T> merged_list = allocated_list;
 
     for (const auto& item : un_allocated_list) {
-        if (std::find_if(allocated_list.begin(), allocated_list.end(), [&](const T& elem) { return pred(elem, item); }) == allocated_list.end()) {
+        if (std::ranges::find_if(allocated_list, [&](const T& elem) { return pred(elem, item); }) == allocated_list.end()) {
             merged_list.push_back(item);
         }
     }

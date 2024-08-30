@@ -1,10 +1,17 @@
 #pragma once
+#include <cassert>
+#include <set>
+#include <sstream>
+#include <string>
+#include <type_traits>
 
 #include "codegen.h"
 #include "detail/c_family.h"
 
 namespace codegen {
     struct generator_cpp_t : public IGenerator {
+        using self_ref = std::add_lvalue_reference_t<generator_cpp_t>;
+
     public:
         constexpr generator_cpp_t() = default;
         ~generator_cpp_t() = default;
@@ -92,14 +99,14 @@ namespace codegen {
             return end_block();
         }
 
-        self_ref begin_struct(const std::string& name, const std::string& access_modifier = "public") override {
+        self_ref begin_struct(std::string_view name, const std::string& access_modifier = "public") override {
             return begin_block(std::format("struct {}", escape_name(name)), access_modifier);
         }
 
         self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type,
                                              const std::string& access_modifier = "public") override {
             if (base_type.empty())
-                return begin_struct(std::cref(name), access_modifier);
+                return begin_struct(name, access_modifier);
 
             return begin_block(std::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
         }
@@ -163,8 +170,29 @@ namespace codegen {
             return *this;
         }
 
+        self_ref static_assert_size(std::string_view type_name, int expected_size, const bool move_cursor_to_next_line) override {
+            assert(expected_size > 0);
+
+            return push_line(std::format("static_assert(sizeof({}) == {:#x});", escape_name(type_name), expected_size));
+        }
+
+        self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, int expected_offset,
+                                      const bool move_cursor_to_next_line) override {
+            assert(expected_offset >= 0);
+
+            return push_line(std::format("static_assert(offsetof({}, {}) == {:#x});", escape_name(class_name), prop_name, expected_offset));
+        }
+
         self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) override {
             return push_line(std::format("// {}", text), move_cursor_to_next_line);
+        }
+
+        self_ref begin_multi_line_comment(const bool move_cursor_to_next_line = true) override {
+            return push_line("/*", move_cursor_to_next_line);
+        }
+
+        self_ref end_multi_line_comment(const bool move_cursor_to_next_line = true) override {
+            return push_line("*/", move_cursor_to_next_line);
         }
 
         self_ref prop(Prop prop, bool move_cursor_to_next_line = true) override {
@@ -278,7 +306,7 @@ namespace codegen {
             return *this;
         }
 
-        static std::string escape_name(const std::string& name) {
+        static std::string escape_name(const std::string_view name) {
             std::string result;
             result.resize(name.size());
 

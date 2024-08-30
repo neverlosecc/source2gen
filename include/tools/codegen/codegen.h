@@ -35,7 +35,9 @@ namespace codegen {
          */
         std::optional<std::ptrdiff_t> pad_offset{};
         std::variant<Bytes, Bits> size;
+        // TOOD: remove?
         bool is_private_field{false};
+        // TOOD: inconsistent. some functions have this as a separate parameter
         bool move_cursor_to_next_line{true};
     };
 
@@ -103,7 +105,7 @@ namespace codegen {
 
         virtual self_ref end_class() = 0;
 
-        virtual self_ref begin_struct(const std::string& name, const std::string& access_modifier = "public") = 0;
+        virtual self_ref begin_struct(std::string_view name, const std::string& access_modifier = "public") = 0;
 
         virtual self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type,
                                                      const std::string& access_modifier = "public") = 0;
@@ -130,7 +132,18 @@ namespace codegen {
         virtual self_ref static_field_getter(const std::string& type_name, const std::string& prop_name, const std::string& mod_name,
                                              const std::string& decl_class, const std::size_t index) = 0;
 
+        virtual self_ref static_assert_size(std::string_view type_name, int expected_size, const bool move_cursor_to_next_line = true) = 0;
+
+        virtual self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, int expected_offset,
+                                              const bool move_cursor_to_next_line = true) = 0;
+
         virtual self_ref comment(const std::string& text, bool move_cursor_to_next_line = true) = 0;
+
+        /// Not to be used for inline comments
+        virtual self_ref begin_multi_line_comment(const bool move_cursor_to_next_line = true);
+
+        /// Not to be used for inline comments
+        virtual self_ref end_multi_line_comment(const bool move_cursor_to_next_line = true);
 
         virtual self_ref prop(Prop prop, bool move_cursor_to_next_line = true) = 0;
 
