@@ -1,6 +1,7 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include <cassert>
 #include <sdk/interfaces/tier0/IMemAlloc.h>
 
 template <class T>

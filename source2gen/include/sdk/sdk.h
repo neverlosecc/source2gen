@@ -23,11 +23,13 @@
 #include <sdk/interfaceregs.h>
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <sdk/interfaces/schemasystem/schema.h>
+#include <unordered_set>
 
 namespace sdk {
     inline CSchemaSystem* g_schema = nullptr;
 
-    void GenerateTypeScopeSdk(CSchemaSystemTypeScope* current);
+    void GenerateTypeScopeSdk(std::string_view module_name, const std::unordered_set<const CSchemaEnumBinding*>& enums,
+                              const std::unordered_set<const CSchemaClassBinding*>& classes);
 } // namespace sdk
 
 // source2gen - Source2 games SDK generator

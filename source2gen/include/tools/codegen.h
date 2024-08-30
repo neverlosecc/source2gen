@@ -1,6 +1,7 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
+#include <array>
 #include <cstdint>
 #include <set>
 #include <sstream>
@@ -124,10 +125,7 @@ namespace codegen {
             if (decrement_tabs_count)
                 dec_tabs_count(kTabsPerBlock);
 
-            push_line("};");
-            if (move_cursor_to_next_line)
-                next_line();
-
+            push_line("};", move_cursor_to_next_line);
             return *this;
         }
 
@@ -183,8 +181,8 @@ namespace codegen {
         }
 
         // @todo: @es3n1n: add func params
-        self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name, const bool increment_tabs_count = true,
-                                const bool move_cursor_to_next_line = true) {
+        self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name,
+                                const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) {
             return begin_block(std::format("{}{} {}()", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
         }
 
@@ -209,7 +207,7 @@ namespace codegen {
                 R"(*reinterpret_cast<{}*>(interfaces::g_schema->FindTypeScopeForModule("{}")->FindDeclaredClass("{}")->GetStaticFields()[{}]->m_pInstance))",
                 type_name, mod_name, decl_class, index);
             return_value(getter, false);
-            end_function(false, false);
+            end_function(false, true);
 
             // @note: @es3n1n: restore tabs count
             //
@@ -293,8 +291,7 @@ namespace codegen {
             result.resize(name.size());
 
             for (std::size_t i = 0; i < name.size(); i++)
-                result[i] =
-                    std::ranges::find(kBlacklistedCharacters, name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
+                result[i] = std::ranges::find(kBlacklistedCharacters, name[i]) == std::end(kBlacklistedCharacters) ? name[i] : '_';
 
             return result;
         }

@@ -2,7 +2,9 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include <ranges>
 #include <string>
+#include <string_view>
 #include <tools/loader/loader.h>
 
 namespace util {
@@ -18,6 +20,12 @@ namespace util {
         }
 
         return std::to_string(num);
+    }
+
+    [[nodiscard]] inline std::string EscapePath(std::string_view path) {
+        std::string result(path);
+        std::ranges::replace(result, ':', '_');
+        return result;
     }
 } // namespace util
 

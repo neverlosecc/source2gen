@@ -1,6 +1,7 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
-#include <Include.h>
+#include "tools/field_parser.h"
+#include "tools/codegen.h"
 #include <sdk/interfaces/client/game/datamap_t.h>
 
 namespace field_parser {
@@ -123,7 +124,7 @@ namespace field_parser {
             if (result.m_field_type == fieldtype_t::FIELD_UNUSED)
                 result.m_field_type = type_name;
 
-            // @note: @es3n1n: applying kTypeNameToCpp rules
+            // @note: @es3n1n: applying kDatamapToCpp rules
             for (auto& rule : kDatamapToCpp) {
                 if (result.m_field_type != rule.first)
                     continue;
@@ -133,6 +134,15 @@ namespace field_parser {
             }
         }
     } // namespace detail
+
+    std::optional<std::string_view> type_name_to_cpp(std::string_view type_name) {
+        if (const auto found = std::ranges::find(detail::kTypeNameToCpp, type_name, &decltype(detail::kTypeNameToCpp)::value_type::first);
+            found != detail::kTypeNameToCpp.end()) {
+            return found->second;
+        } else {
+            return std::nullopt;
+        }
+    }
 
     field_info_t parse(const std::string& type_name, const std::string& name, const std::vector<std::size_t>& array_sizes) {
         field_info_t result = {};
