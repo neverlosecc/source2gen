@@ -2,9 +2,10 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include <ranges>
 #include <string>
+#include <string_view>
 #include <tools/loader/loader.h>
-#include <tools/platform.h>
 
 namespace util {
     inline std::string PrettifyNum(int num) {
@@ -22,13 +23,9 @@ namespace util {
     }
 
     [[nodiscard]] inline std::string EscapePath(std::string_view path) {
-#if TARGET_OS == WINDOWS
         std::string result(path);
         std::ranges::replace(result, ':', '_');
         return result;
-#else
-        return std::string(path);
-#endif
     }
 } // namespace util
 
