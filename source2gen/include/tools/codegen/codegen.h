@@ -107,11 +107,11 @@ namespace codegen {
 
         virtual self_ref end_struct() = 0;
 
-        virtual self_ref begin_namespace(const std::string& namespace_name) = 0;
+        virtual self_ref begin_namespace(std::string_view namespace_name) = 0;
 
         virtual self_ref end_namespace() = 0;
 
-        virtual self_ref begin_enum_class(const std::string& enum_name, const std::string& base_typename = "") = 0;
+        virtual self_ref begin_enum(const std::string& enum_name, const std::string& base_typename = "") = 0;
 
         virtual self_ref end_enum_class() = 0;
 

@@ -141,7 +141,7 @@ TEST(CodeGenC, Namespace) {
 TEST(CodeGenC, Enum) {
     auto builder = codegen::generator_c_t{};
 
-    builder.begin_enum_class("Choice");
+    builder.begin_enum("Choice");
     builder.enum_item("Chocolate", 7);
     builder.enum_item("Strawberries", 9);
     builder.end_enum_class();

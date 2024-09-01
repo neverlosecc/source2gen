@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.30)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS On)
+# Lowest standard we meet. Feel free to bump if we need a newer standard.
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(source2sdk
   LANGUAGES CXX

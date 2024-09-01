@@ -3,6 +3,8 @@
 #include "codegen.h"
 #include "detail/c_family.h"
 #include "tools/fnv.h"
+#include <absl/strings/str_join.h>
+#include <absl/strings/str_split.h>
 #include <cassert>
 #include <list>
 #include <set>
@@ -33,8 +35,9 @@ namespace codegen {
             push_line("#pragma once");
             push_line("");
             include("source2sdk/source2gen_user_types", IncludeOptions{.local = true});
-            include("stdbool", IncludeOptions{.local = false});
-            include("stdint", IncludeOptions{.local = false});
+            include("stdbool", IncludeOptions{.local = false, .system = true});
+            include("stddef", IncludeOptions{.local = false, .system = true});
+            include("stdint", IncludeOptions{.local = false, .system = true});
 
             return *this;
         }
@@ -75,7 +78,7 @@ namespace codegen {
             assert(!_current_class_or_enum.has_value() && "nested types are not supported");
             _current_class_or_enum = name;
 
-            return begin_block(std::format("struct {}", escape_name(name)));
+            return begin_block(std::format("struct {}", encode_current_namespace(escape_name(name))));
         }
 
         self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type,
@@ -120,12 +123,14 @@ namespace codegen {
             return *this;
         }
 
-        self_ref begin_namespace(const std::string& namespace_name) override {
+        self_ref begin_namespace(std::string_view namespace_name) override {
+            _namespaces.emplace_back(namespace_name);
             comment(std::format("namespace {}", namespace_name));
             return comment("{");
         }
 
         self_ref end_namespace() override {
+            _namespaces.pop_back();
             // This semicolon is unnecessary. We're keeping it for consistency
             // with the cpp generator, where it's also unnecessary, but not as
             // easy to remove.
@@ -133,10 +138,11 @@ namespace codegen {
             return push_line("");
         }
 
-        self_ref begin_enum_class(const std::string& enum_name, const std::string& base_typename = "") override {
+        self_ref begin_enum(const std::string& enum_name, const std::string& base_typename = "") override {
             assert(!_current_class_or_enum.has_value() && "nested types are not supported");
             _current_class_or_enum = enum_name;
-            return begin_block(std::format("enum {}{}", escape_name(enum_name), base_typename.empty() ? base_typename : (" : " + base_typename)));
+            return begin_block(std::format("enum {}{}", encode_current_namespace(escape_name(enum_name)),
+                                           base_typename.empty() ? base_typename : (" : " + base_typename)));
         }
 
         self_ref end_enum_class() override {
@@ -174,14 +180,14 @@ namespace codegen {
         self_ref static_assert_size(std::string_view type_name, int expected_size, const bool move_cursor_to_next_line) override {
             assert(expected_size > 0);
 
-            return push_line(std::format("static_assert(sizeof({}) == {:#x});", escape_name(type_name), expected_size));
+            return push_line(std::format("static_assert(sizeof(struct {}) == {:#x});", escape_name(type_name), expected_size));
         }
 
         self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, int expected_offset,
                                       const bool move_cursor_to_next_line) override {
             assert(expected_offset >= 0);
 
-            return push_line(std::format("static_assert(offsetof({}, {}) == {:#x});", escape_name(class_name), prop_name, expected_offset));
+            return push_line(std::format("static_assert(offsetof(struct {}, {}) == {:#x});", escape_name(class_name), prop_name, expected_offset));
         }
 
         self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) override {
@@ -303,6 +309,13 @@ namespace codegen {
             return *this;
         }
 
+        [[nodiscard]]
+        std::string encode_current_namespace(std::string_view name) {
+            // TOOD: double underscores are reserved for the implementation. they're added in other places by escape_name().
+            // TOOD: this is pretty expensive
+            return absl::StrJoin(std::list{_namespaces, {std::string{name}}} | std::views::join, "__");
+        }
+
         static std::string escape_name(std::string_view name) {
             std::string result;
             result.resize(name.size());
@@ -342,6 +355,7 @@ namespace codegen {
         std::size_t _tabs_count = 0, _tabs_count_backup = 0;
         std::size_t _pads_count = 0;
         std::optional<std::string> _current_class_or_enum{std::nullopt};
+        std::list<std::string> _namespaces{};
         std::list<StaticField> _static_fields{};
         std::set<fnv32::hash> _forward_decls = {};
     };

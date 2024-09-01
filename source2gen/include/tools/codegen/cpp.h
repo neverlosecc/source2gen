@@ -47,6 +47,7 @@ namespace codegen {
             push_line("#pragma once");
             push_line("");
             include("source2gen/source2gen_user_types", IncludeOptions{.local = true, .system = false});
+            include("cstddef", IncludeOptions{.local = false, .system = true});
             include("cstdint", IncludeOptions{.local = false, .system = true});
 
             return *this;
@@ -106,7 +107,7 @@ namespace codegen {
             return end_block();
         }
 
-        self_ref begin_namespace(const std::string& namespace_name) override {
+        self_ref begin_namespace(std::string_view namespace_name) override {
             return begin_block(std::format("namespace {}", namespace_name));
         }
 
@@ -114,7 +115,7 @@ namespace codegen {
             return end_block();
         }
 
-        self_ref begin_enum_class(const std::string& enum_name, const std::string& base_typename = "") override {
+        self_ref begin_enum(const std::string& enum_name, const std::string& base_typename = "") override {
             return begin_block(std::format("enum class {}{}", escape_name(enum_name), base_typename.empty() ? base_typename : (" : " + base_typename)));
         }
 

@@ -371,7 +371,28 @@ namespace {
     void AssembleEnum(codegen::IGenerator::self_ref generator, const CSchemaEnumBinding& schema_enum_binding) {
         // @note: @es3n1n: get type name by align size
         //
-        const auto underlying_type_name = generator.get_uint(schema_enum_binding.m_unAlignOf * 8);
+        const auto get_type_name = [&schema_enum_binding]() -> std::string {
+            std::string type_storage;
+
+            switch (schema_enum_binding.m_unAlignOf) {
+            case 1:
+                type_storage = "std::uint8_t";
+                break;
+            case 2:
+                type_storage = "std::uint16_t";
+                break;
+            case 4:
+                type_storage = "std::uint32_t";
+                break;
+            case 8:
+                type_storage = "std::uint64_t";
+                break;
+            default:
+                type_storage = "INVALID_TYPE";
+            }
+
+            return type_storage;
+        };
 
         // @note: @es3n1n: print meta info
         //
@@ -379,7 +400,7 @@ namespace {
 
         // @note: @es3n1n: begin enum class
         //
-        generator.begin_enum(schema_enum_binding.m_pszName, underlying_type_name);
+        generator.begin_enum(schema_enum_binding.m_pszName, get_type_name());
 
         // @note: @og: build max based on numeric_limits of unAlignOf
         //
@@ -488,8 +509,10 @@ namespace {
         }
     };
 
-    [[nodiscard]] std::string EscapeTypeName(const std::string_view type_name) {
+    /// Adds the module specifier to @p type_name, if @p type_name is declared in @p scope. Otherwise returns @p type_name unmodified.
+    std::string MaybeWithModuleName(const CSchemaSystemTypeScope& scope, const std::string_view type_name) {
         // TODO: when we have a package manager: use a library
+        [[nodiscard]]
         const auto StringReplace = [](std::string str, std::string_view search, std::string_view replace) {
             const std::size_t pos = str.find(search);
             if (pos != std::string::npos) {
@@ -504,15 +527,11 @@ namespace {
         // "struct Player {}; struct Player__Hand{};".
         // But when used as a property, types expect `Hand` in `Player`, i.e. `Player::Hand m_hand;`
         // Instead of doing this hackery, we should probably declare nested classes as nested classes.
-        return StringReplace(std::string{type_name}, "::", "__");
-    }
+        const auto escaped_type_name = StringReplace(std::string{type_name}, "::", "__");
 
-    /// Adds the module specifier to @p type_name, if @p type_name is declared in @p scope. Otherwise returns @p type_name unmodified.
-    std::string MaybeWithModuleName(const CSchemaSystemTypeScope& scope, const std::string_view type_name) {
-        const auto escaped_type_name = EscapeTypeName(type_name);
         return GetModuleOfTypeInScope(scope, type_name)
             .transform([&](const auto module_name) { return std::format("{}::{}", module_name, escaped_type_name); })
-            .value_or(escaped_type_name);
+            .value_or(std::string{escaped_type_name});
     };
 
     /// Decomposes a templated type into its components, keeping template
@@ -760,7 +779,7 @@ namespace {
                 .struct_padding(codegen::Padding{.pad_offset = expected_offset,
                                                  .size = codegen::Padding::Bytes{offset - expected_offset},
                                                  .is_private_field = false,
-                                                 .move_cursor_to_next_line = false})
+                                                 .move_cursor_to_next_line = true})
                 .reset_tabs_count()
                 .comment(std::format("{:#x}", expected_offset))
                 .restore_tabs_count();
@@ -771,7 +790,7 @@ namespace {
         static constexpr std::size_t source2_max_align = 8;
 
         // TODO: when we have a CLI parser: pass this property in from the outside
-        const bool verbose = false;
+        const bool verbose = true;
 
         struct cached_datamap_t {
             std::string type_;
@@ -867,7 +886,6 @@ namespace {
 
             // @note: @es3n1n: parsing type
             //
-            // type_name is fully qualified
             const auto [type_name, array_sizes] = GetType(generator, *field.m_pSchemaType);
             const auto var_info = field_parser::parse(generator, type_name, field.m_pszName, array_sizes);
 
@@ -945,13 +963,9 @@ namespace {
                     generator.comment(
                         std::format("{} has a template type with potentially unknown template parameters. You can try uncommenting the field below.",
                                     var_info.m_name));
-                    generator.comment("", false);
-                    generator.reset_tabs_count()
-                        .prop(codegen::Prop{.type_name = var_info.m_type, .name = var_info.formatted_name()}, true)
-                        .restore_tabs_count();
                     generator.prop(codegen::Prop{.type_name = "char", .name = std::format("{}[{:#x}]", var_info.m_name, field_size)}, false);
+                    generator.comment(field.m_pSchemaType->m_pszName, false);
                 } else {
-                    // This is the "all normal, all good" `prop()` call
                     generator.prop(codegen::Prop{.type_name = var_info.m_type, .name = var_info.formatted_name()}, false);
                 }
             } else {
@@ -1106,8 +1120,7 @@ namespace {
 
     [[nodiscard]]
     std::filesystem::path GetFilePathForType(const codegen::IGenerator& generator, std::string_view module_name, std::string_view type_name) {
-        return std::format("{}/include/{}/{}/{}.{}", kOutDirName, kIncludeDirName, module_name, EscapeTypeName(DecayTypeName(type_name)),
-                           generator.get_file_extension());
+        return std::format("{}/include/{}/{}/{}.{}", kOutDirName, kIncludeDirName, module_name, DecayTypeName(type_name), generator.get_file_extension());
     }
 
     void GenerateEnumSdk(const source2_gen::Options& options, std::string_view module_name, const CSchemaEnumBinding& enum_) {
@@ -1127,14 +1140,12 @@ namespace {
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();
 
-        generator.begin_namespace("source2sdk");
-        generator.begin_namespace(module_name);
+        generator.begin_namespace(std::format("source2sdk::{}", module_name));
 
         // @note: @es3n1n: assemble props
         //
         AssembleEnum(generator, enum_);
 
-        generator.end_namespace();
         generator.end_namespace();
 
         // @note: @es3n1n: write generated data to output file
@@ -1169,17 +1180,15 @@ namespace {
 
         for (const auto& include : names | std::views::filter([](const auto& el) { return el.source == NameSource::include; })) {
             // TOOD: bad include
-            generator.include(std::format("{}/{}/{}", kIncludeDirName, include.module, EscapeTypeName(include.type_name)), codegen::IncludeOptions{
-                                                                                                                               .local = true,
-                                                                                                                               .system = false,
-                                                                                                                           });
+            generator.include(std::format("{}/{}/{}", kIncludeDirName, include.module, include.type_name), codegen::IncludeOptions{
+                                                                                                               .local = true,
+                                                                                                               .system = false,
+                                                                                                           });
         }
 
         for (const auto& forward_declaration : names | std::views::filter([](const auto& el) { return el.source == NameSource::forward_declaration; })) {
-            generator.begin_namespace("source2sdk");
-            generator.begin_namespace(forward_declaration.module);
+            generator.begin_namespace(std::format("source2sdk::{}", forward_declaration.module));
             generator.forward_declaration(forward_declaration.type_name);
-            generator.end_namespace();
             generator.end_namespace();
         }
 
@@ -1192,14 +1201,12 @@ namespace {
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();
 
-        generator.begin_namespace("source2sdk");
-        generator.begin_namespace(module_name);
+        generator.begin_namespace(std::format("source2sdk::{}", module_name));
 
         // @note: @es3n1n: assemble props
         //
         AssembleClass(cache, generator, class_);
 
-        generator.end_namespace();
         generator.end_namespace();
 
         // @note: @es3n1n: write generated data to output file

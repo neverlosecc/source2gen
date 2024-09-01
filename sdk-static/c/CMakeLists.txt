@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.30)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS On)
+# Lowest standard we meet. Feel free to bump if we need a newer standard.
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
 
 project(source2sdk
   LANGUAGES C
