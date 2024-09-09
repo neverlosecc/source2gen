@@ -1088,7 +1088,7 @@ namespace {
     }
 
     void GenerateEnumSdk(std::string_view module_name, const CSchemaEnumBinding& enum_) {
-        const std::string out_file_path = GetFilePathForType(module_name, enum_.m_pszName);
+        const auto out_file_path = GetFilePathForType(module_name, enum_.m_pszName).string();
 
         // @note: @es3n1n: init codegen
         //
@@ -1129,7 +1129,7 @@ namespace {
     }
 
     void GenerateClassSdk(sdk::GeneratorCache& cache, std::string_view module_name, const CSchemaClassBinding& class_) {
-        const std::string out_file_path = GetFilePathForType(module_name, class_.m_pszName);
+        const auto out_file_path = GetFilePathForType(module_name, class_.m_pszName).string();
 
         // @note: @es3n1n: init codegen
         //

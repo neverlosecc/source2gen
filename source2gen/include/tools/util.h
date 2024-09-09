@@ -29,7 +29,7 @@ namespace util {
     /// const std::optional<int> offset = try_get_offset();
     /// std::cout << std::format("offset: {}\n", offset.transform(to_hex_string).value_or("unknown"));
     /// ```
-    inline std::string to_hex_string(int i) {
+    inline std::string to_hex_string(const std::uintptr_t i) {
         return std::format("{:#x}", i);
     }
 
