@@ -8,14 +8,13 @@
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <string>
 #include <string_view>
-#include <variant>
 #include <vector>
 
 namespace field_parser {
     class field_info_t {
     public:
         std::string m_type; // var type
-        fieldtype_t m_field_type = static_cast<fieldtype_t>(24); // var type
+        fieldtype_t m_field_type = fieldtype_t::FIELD_UNUSED; // var type
         std::string m_name; // var name
 
         // array sizes, for example {13, 37} for multi demensional array "[13][37]"
@@ -68,6 +67,9 @@ namespace field_parser {
             return m_name;
         }
     };
+
+    [[nodiscard]]
+    std::string guess_bitfield_type(std::size_t bits_count);
 
     /// @return @ref std::nullopt if type_name is not a built-in type
     [[nodiscard]]
