@@ -40,11 +40,11 @@ Linux.
 
 ### Using the generated SDK
 
-The sdk depends on a file/module called "source2gen_user_types". This file has
+The sdk depends on a file/module called `source2gen.hpp`. This file has
 to be provided by the user and expose all types listed in
-[source2gen_user_types.hpp](sdk-static/source2gen_user_types.hpp). If you don't
+[source2gen.hpp](sdk-static/include/source2sdk/source2gen.hpp). If you don't
 intend to access any of these types, you can use the dummy file
-[source2gen_user_types.hpp](sdk-static/source2gen_user_types.hpp).
+[source2gen.hpp](sdk-static/include/source2sdk/source2gen.hpp).
 
 ## Limitations
 
