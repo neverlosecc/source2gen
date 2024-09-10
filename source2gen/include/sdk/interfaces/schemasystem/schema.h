@@ -2,14 +2,20 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include "sdk/interfaceregs.h"
 #include "tools/platform.h"
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <optional>
+#include <ranges>
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <sdk/interfaces/common/CBufferString.h>
 #include <sdk/interfaces/common/CUtlMap.h>
 #include <sdk/interfaces/common/CUtlTSHash.h>
+#include <string_view>
+#include <tools/platform.h>
 #include <tools/virtual.h>
 #include <vector>
 
@@ -134,8 +140,8 @@ enum {
     kSchemaType_GetSizeWithAlignOf = 3,
     kSchemaSystem_ValidateClasses = 35,
     kSchemaSystem_GetClassInfoBinaryName = 22,
-    kSchemaSystem_GetClassProjectName = kSchemaSystem_GetClassInfoBinaryName + 1,
-    kSchemaSystem_GetEnumBinaryName = kSchemaSystem_GetClassProjectName + 1,
+    kSchemaSystem_GetClassModuleName = kSchemaSystem_GetClassInfoBinaryName + 1,
+    kSchemaSystem_GetEnumBinaryName = kSchemaSystem_GetClassModuleName + 1,
     kSchemaSystem_GetEnumProjectName = kSchemaSystem_GetEnumBinaryName + 1,
     kSchemaSystemTypeScope_DeclaredClass = 14,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
@@ -166,7 +172,7 @@ enum {
 };
 
 #else
-    #error No implementation defined, please re-generate project with premake5
+    #error No implementation defined, please set SOURCE2GEN_GAME and re-generate the project
 #endif
 
 class ISaveRestoreOps;
@@ -344,6 +350,9 @@ enum class SchemaBuiltinType_t : std::uint32_t {
 
 constexpr auto kSchemaBuiltinTypeCount = static_cast<std::size_t>(SchemaBuiltinType_t::Schema_Builtin_count);
 
+class CSchemaType_DeclaredClass;
+class CSchemaType_DeclaredEnum;
+
 class CSchemaType {
 public:
     [[nodiscard]] bool IsValid() {
@@ -361,8 +370,8 @@ public:
     }
 
     // @note: @og: gets size with align
-    [[nodiscard]] bool GetSizeWithAlignOf(int* nOutSize, std::uint8_t* unOutAlign) {
-        return reinterpret_cast<int (*)(void*, int*, std::uint8_t*)>(vftable[kSchemaType_GetSizeWithAlignOf])(this, nOutSize, unOutAlign);
+    [[nodiscard]] bool GetSizeWithAlignOf(int* nOutSize, std::uint8_t* unOutAlign) const {
+        return reinterpret_cast<int (*)(const void*, int*, std::uint8_t*)>(vftable[kSchemaType_GetSizeWithAlignOf])(this, nOutSize, unOutAlign);
     }
 
     [[nodiscard]] bool CanReinterpretAs(CSchemaType* pType) {
@@ -375,12 +384,24 @@ public:
     }
 
 public:
-    // @note: @og: wrapper around GetSizes, this one gets CSchemaClassInfo->m_nSizeOf
+    // @note: @og: wrapper around GetSizeWithAlignOf, this one gets CSchemaClassInfo->m_nSizeOf
     [[nodiscard]] std::optional<int> GetSize() {
-        std::uint8_t align_of = 0;
-        int result = 0;
-        return GetSizeWithAlignOf(&result, &align_of) ? std::make_optional(result) : std::nullopt;
+        return GetSizeAndAlignment().transform([](auto e) { return std::get<0>(e); });
     }
+
+    /// @return {size, alignment}
+    [[nodiscard]] std::optional<std::pair<int, std::optional<int>>> GetSizeAndAlignment() const {
+        std::uint8_t alignment = 0;
+        int size = 0;
+
+        return GetSizeWithAlignOf(&size, &alignment) ?
+                   std::make_optional(std::make_pair(size, (alignment == 0xff) ? std::nullopt : std::make_optional(static_cast<int>(alignment)))) :
+                   std::nullopt;
+    }
+
+    /// @return @ref nullptr if this @ref GetTypeCategory() is not @ref ETypeCategory::Schema_DeclaredClass
+    const CSchemaType_DeclaredClass* GetAsDeclaredClass() const;
+    const CSchemaType_DeclaredEnum* GetAsDeclaredEnum() const;
 
     // @todo: @og: find out to what class pointer points.
     [[nodiscard]] CSchemaType* GetRefClass() const;
@@ -448,9 +469,13 @@ static_assert(sizeof(CSchemaType_Builtin) == 0x28);
 
 class CSchemaType_DeclaredClass : public CSchemaType {
 public:
+    /// never @ref nullptr
     CSchemaClassInfo* m_pClassInfo;
     bool m_bGlobalPromotionRequired;
 };
+
+static_assert(offsetof(CSchemaType_DeclaredClass, m_pClassInfo) == 0x20);
+static_assert(sizeof(CSchemaType_DeclaredClass) == 0x30);
 
 class CSchemaType_DeclaredEnum : public CSchemaType {
 public:
@@ -499,6 +524,8 @@ public:
     std::uint16_t m_unElementSize;
 };
 
+static_assert(offsetof(CSchemaType_Atomic_CollectionOfT, m_pFn) == 0x38);
+
 class CSchemaType_Atomic_TF : public CSchemaType_Atomic_T {
 public:
     int m_nFuncPtrSize;
@@ -531,6 +558,22 @@ public:
     std::uint8_t m_unElementAlignment;
     CSchemaType* m_pElementType;
 };
+
+inline const CSchemaType_DeclaredClass* CSchemaType::GetAsDeclaredClass() const {
+    if (GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+        return static_cast<const CSchemaType_DeclaredClass*>(this);
+    } else {
+        return nullptr;
+    }
+}
+
+inline const CSchemaType_DeclaredEnum* CSchemaType::GetAsDeclaredEnum() const {
+    if (GetTypeCategory() == ETypeCategory::Schema_DeclaredEnum) {
+        return static_cast<const CSchemaType_DeclaredEnum*>(this);
+    } else {
+        return nullptr;
+    }
+}
 
 struct AtomicTypeInfo_T_t {
     int m_nAtomicID;
@@ -569,6 +612,8 @@ struct SchemaClassFieldData_t {
     std::int32_t m_nMetadataSize; // 0x0014
     SchemaMetadataEntryData_t* m_pMetadata; // 0x0018
 };
+
+static_assert(sizeof(SchemaClassFieldData_t) == 0x20);
 
 struct SchemaStaticFieldData_t {
     const char* m_pszName; // 0x0000
@@ -612,8 +657,9 @@ public:
     std::uint8_t m_unAlignOf; // 0x0022
 
     std::int8_t m_nBaseClassSize; // 0x0023
-    std::int16_t
-        m_nMultipleInheritanceDepth; // 0x0024 // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
+
+    // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
+    std::int16_t m_nMultipleInheritanceDepth; // 0x0024
     std::int16_t m_nSingleInheritanceDepth; // 0x0026
 
     SchemaClassFieldData_t* m_pFields; // 0x0028
@@ -707,8 +753,9 @@ public:
         return m_nSizeOf;
     }
 
-    [[nodiscard]] std::uint8_t GetAlignment() const {
-        return m_unAlignOf == std::numeric_limits<std::uint8_t>::max() ? 8 : m_unAlignOf;
+    /// @return Alignment as registered in the game
+    [[nodiscard]] std::optional<int> GetRegisteredAlignment() const {
+        return m_unAlignOf == std::numeric_limits<std::uint8_t>::max() ? std::nullopt : std::make_optional(static_cast<int>(m_unAlignOf));
     }
 
     // @note: @og: Copy instance from original to new created with all data from original, returns new_instance
@@ -953,9 +1000,9 @@ public:
         }
     }
 
-    [[nodiscard]] std::string ScopedNameForClass(CSchemaClassBinding* pBinding) {
+    [[nodiscard]] std::string ScopedNameForClass(const CSchemaClassBinding* pBinding) {
         static CBufferStringGrowable<1024> szBuf;
-        Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*, CBufferString*)>(this, 17)(this, pBinding, &szBuf);
+        Virtual::Get<const char*(__thiscall*)(void*, const CSchemaClassBinding*, CBufferString*)>(this, 17)(this, pBinding, &szBuf);
         return szBuf.Get();
     }
 
@@ -971,7 +1018,7 @@ public:
         }
     }
 
-    [[nodiscard]] std::string GetScopedNameForEnum(CSchemaEnumBinding* pBinding) {
+    [[nodiscard]] std::string ScopedNameForEnum(CSchemaEnumBinding* pBinding) {
         static CBufferStringGrowable<1024> szBuf;
         Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*, CBufferString*)>(this, 19)(this, pBinding, &szBuf);
         return szBuf.Get();
@@ -981,16 +1028,17 @@ public:
         return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, kSchemaSystem_GetClassInfoBinaryName)(this, pBinding);
     }
 
-    [[nodiscard]] const char* GetClassProjectName(CSchemaClassBinding* pBinding) {
-        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, kSchemaSystem_GetClassProjectName)(this, pBinding);
+    [[nodiscard]] const char* GetClassModuleName(CSchemaClassBinding* pBinding) {
+        // Returns pBinding->m_pszModule
+        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaClassBinding*)>(this, kSchemaSystem_GetClassModuleName)(this, pBinding);
     }
 
     [[nodiscard]] const char* GetEnumBinaryName(CSchemaEnumBinding* pBinding) {
         return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, kSchemaSystem_GetEnumBinaryName)(this, pBinding);
     }
 
-    [[nodiscard]] const char* GetEnumProjectName(CSchemaEnumBinding* pBinding) {
-        return Virtual::Get<const char*(__thiscall*)(void*, CSchemaEnumBinding*)>(this, kSchemaSystem_GetEnumProjectName)(this, pBinding);
+    [[nodiscard]] const char* GetEnumProjectName(const CSchemaEnumBinding* pBinding) {
+        return Virtual::Get<const char*(__thiscall*)(void*, const CSchemaEnumBinding*)>(this, kSchemaSystem_GetEnumProjectName)(this, pBinding);
     }
 
     CSchemaClassBinding* ValidateClasses(CSchemaClassBinding** ppBinding) {
@@ -1028,8 +1076,8 @@ public:
 
 private:
     char pad_0x0000[kSchemaSystem_PAD0] = {}; // 0x0000
-    CUtlVector<CSchemaSystemTypeScope*> m_TypeScopes = {}; // SCHEMASYSTEM_TYPE_SCOPES_OFFSET
-    char pad_01A0[kSchemaSystem_PAD1] = {}; // 0x01A0
+    CUtlVector<CSchemaSystemTypeScope*> m_TypeScopes = {}; // linux: 0x01F0
+    char pad_0x01A0[kSchemaSystem_PAD1] = {}; // 0x01A0
     std::int32_t m_nRegistrations = 0; // 0x02C0
     std::int32_t m_nIgnored = 0; // 0x02C4
     std::int32_t m_nRedundant = 0; // 0x02C8

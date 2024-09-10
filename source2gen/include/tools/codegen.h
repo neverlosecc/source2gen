@@ -2,6 +2,7 @@
 // See end of file for extended copyright information.
 #pragma once
 #include <array>
+#include <cassert>
 #include <cstdint>
 #include <set>
 #include <sstream>
@@ -11,36 +12,10 @@
 #include "tools/fnv.h"
 
 namespace codegen {
-    constexpr char kTabSym = '\t';
-    constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many \t characters shall we place per each block
+    constexpr char kSpaceSym = ' ';
+    constexpr char kIndentWidth = 4;
+    constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many (kSpaceSym * kIndentWidth) characters shall we place per each block
     constexpr std::array kBlacklistedCharacters = {':', ';', '\\', '/'};
-
-    // @note: @es3n1n: a list of possible integral types for bitfields (would be used in `guess_bitfield_type`)
-    //
-    // clang-format off
-    constexpr auto kBitfieldIntegralTypes = std::to_array<std::pair<std::size_t, std::string_view>>({
-        {8, "uint8_t"},
-        {16, "uint16_t"},
-        {32, "uint32_t"},
-        {64, "uint64_t"},
-
-        // @todo: @es3n1n: define uint128_t/uint256_t/... as custom structs in the very beginning of the file
-        {128, "uint128_t"},
-        {256, "uint256_t"},
-        {512, "uint512_t"},
-    });
-    // clang-format on
-
-    inline std::string guess_bitfield_type(const std::size_t bits_count) {
-        for (auto p : kBitfieldIntegralTypes) {
-            if (bits_count > p.first)
-                continue;
-
-            return p.second.data();
-        }
-
-        throw std::runtime_error(std::format("{} : Unable to guess bitfield type with size {}", __FUNCTION__, bits_count));
-    }
 
     struct generator_t {
         using self_ref = std::add_lvalue_reference_t<generator_t>;
@@ -82,6 +57,14 @@ namespace codegen {
             return pragma("warning(pop)");
         }
 
+        self_ref pack_push(const std::size_t alignment = 1) {
+            return pragma(std::format("pack(push, {})", alignment));
+        }
+
+        self_ref pack_pop() {
+            return pragma("pack(pop)");
+        }
+
         self_ref next_line() {
             return push_line("");
         }
@@ -103,8 +86,9 @@ namespace codegen {
             // @note: @es3n1n: we should reset tabs count if we aren't moving cursor to
             // the next line
             const auto backup_tabs_count = _tabs_count;
-            if (!move_cursor_to_next_line)
+            if (!move_cursor_to_next_line) {
                 _tabs_count = 0;
+            }
 
             push_line("{", move_cursor_to_next_line);
 
@@ -130,21 +114,21 @@ namespace codegen {
         }
 
         self_ref begin_class(const std::string& class_name, const std::string& access_modifier = "public") {
-            return begin_block(std::format("class {}", class_name), access_modifier);
+            return begin_block(std::format("class {}", escape_name(class_name)), access_modifier);
         }
 
         self_ref begin_class_with_base_type(const std::string& class_name, const std::string& base_type, const std::string& access_modifier = "public") {
             if (base_type.empty())
-                return begin_class(std::cref(class_name), access_modifier);
-
-            return begin_block(std::format("class {} : public {}", class_name, base_type), access_modifier);
+                return begin_class(class_name, access_modifier);
+            else
+                return begin_block(std::format("class {} : public {}", escape_name(class_name), base_type), access_modifier);
         }
 
         self_ref end_class() {
             return end_block();
         }
 
-        self_ref begin_namespace(const std::string& namespace_name) {
+        self_ref begin_namespace(const std::string_view namespace_name) {
             return begin_block(std::format("namespace {}", namespace_name));
         }
 
@@ -165,13 +149,13 @@ namespace codegen {
             return push_line(std::vformat(sizeof(T) >= 2 ? "{} = {:#x}," : "{} = {},", std::make_format_args(name, value)));
         }
 
-        self_ref begin_struct(const std::string& name, const std::string& access_modifier = "public") {
+        self_ref begin_struct(const std::string_view name, const std::string& access_modifier = "public") {
             return begin_block(std::format("struct {}", escape_name(name)), access_modifier);
         }
 
-        self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type, const std::string& access_modifier = "public") {
+        self_ref begin_struct_with_base_type(const std::string_view name, const std::string& base_type, const std::string& access_modifier = "public") {
             if (base_type.empty())
-                return begin_struct(std::cref(name), access_modifier);
+                return begin_struct(name, access_modifier);
 
             return begin_block(std::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
         }
@@ -183,7 +167,7 @@ namespace codegen {
         // @todo: @es3n1n: add func params
         self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name,
                                 const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) {
-            return begin_block(std::format("{}{} {}()", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
+            return begin_block(std::format("{}{} {}() ", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
         }
 
         self_ref end_function(const bool decrement_tabs_count = true, const bool move_cursor_to_next_line = true) {
@@ -215,6 +199,28 @@ namespace codegen {
             return *this;
         }
 
+        self_ref static_assert_size(std::string_view type_name, const std::size_t expected_size) {
+            assert(expected_size > 0);
+
+            return push_line(std::format("static_assert(sizeof({}) == {:#x});", escape_name(type_name), expected_size));
+        }
+
+        self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, const std::size_t expected_offset) {
+            assert(expected_offset >= 0);
+
+            return push_line(std::format("static_assert(offsetof({}, {}) == {:#x});", escape_name(class_name), prop_name, expected_offset));
+        }
+
+        /// Not to be used for inline comments. Doing so could break support for other laguages.
+        self_ref begin_multi_line_comment(const bool move_cursor_to_next_line = true) {
+            return push_line("/*", move_cursor_to_next_line);
+        }
+
+        /// Not to be used for inline comments. Doing so could break support for other laguages.
+        self_ref end_multi_line_comment(const bool move_cursor_to_next_line = true) {
+            return push_line("*/", move_cursor_to_next_line);
+        }
+
         self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) {
             return push_line(std::format("// {}", text), move_cursor_to_next_line);
         }
@@ -224,9 +230,9 @@ namespace codegen {
             return push_line(line, move_cursor_to_next_line);
         }
 
-        self_ref forward_declaration(const std::string& text) {
+        self_ref forward_declaration(const std::string& type_name) {
             // @note: @es3n1n: forward decl only once
-            const auto fwd_decl_hash = fnv32::hash_runtime(text.data());
+            const auto fwd_decl_hash = fnv32::hash_runtime(type_name.data());
             if (_forward_decls.contains(fwd_decl_hash))
                 return *this;
 
@@ -243,17 +249,30 @@ namespace codegen {
         }
 
         self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,
-                                const bool is_private_field = false, const std::size_t bitfield_size = 0ull) {
+                                const bool is_private_field = false, const int bitfield_size = 0) {
+            assert(bitfield_size >= 0);
+
+            const auto bytes = (bitfield_size == 0) ? padding_size : bitfield_size / 8;
+            const auto remaining_bits = bitfield_size % 8;
+
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
-            std::string type_name = bitfield_size ? guess_bitfield_type(bitfield_size) : "uint8_t";
+            std::string type_name = "std::uint8_t";
             if (is_private_field)
                 type_name = "[[maybe_unused]] " + type_name;
 
-            auto pad_name = pad_offset.has_value() ? std::format("__pad{:04x}", pad_offset.value()) : std::format("__pad{:d}", _pads_count++);
-            if (!bitfield_size)
-                pad_name = pad_name + std::format("[{:#x}]", padding_size);
+            auto pad_name = pad_offset.has_value() ? std::format("pad_{:#04x}", pad_offset.value()) : std::format("pad_{:d}", _pads_count++);
 
-            return prop(type_name, bitfield_size ? std::format("{}: {}", pad_name, bitfield_size) : pad_name, move_cursor_to_next_line);
+            if (bytes != 0) {
+                prop(type_name, std::format("{}[{:#x}]", pad_name, bytes), move_cursor_to_next_line);
+            }
+
+            if (remaining_bits != 0) {
+                auto remainder_pad_name =
+                    pad_offset.has_value() ? std::format("pad_{:#04x}", pad_offset.value() + bytes) : std::format("pad_{:d}", _pads_count++);
+                prop(type_name, std::format("{}: {}", remainder_pad_name, remaining_bits), move_cursor_to_next_line);
+            }
+
+            return *this;
         }
 
         self_ref begin_union(std::string name = "") {
@@ -267,13 +286,12 @@ namespace codegen {
             return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
         }
 
-        self_ref begin_bitfield_block() {
-            return begin_struct("", "");
+        self_ref begin_bitfield_block(std::ptrdiff_t offset) {
+            return comment(std::format("start of bitfield block at {:#x}", offset));
         }
 
         self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) {
-            dec_tabs_count(1);
-            return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
+            return comment(std::format("end of bitfield block{}", move_cursor_to_next_line ? "" : " "), move_cursor_to_next_line);
         }
 
     public:
@@ -283,15 +301,16 @@ namespace codegen {
 
     private:
         self_ref push_line(const std::string& line, bool move_cursor_to_next_line = true) {
-            for (std::size_t i = 0; i < _tabs_count; i++)
-                _stream << kTabSym;
-            _stream << line;
-            if (move_cursor_to_next_line)
+            _stream << std::string(_tabs_count * kIndentWidth, kSpaceSym) // insert spaces
+                    << line;
+
+            if (move_cursor_to_next_line) {
                 _stream << std::endl;
+            }
             return *this;
         }
 
-        static std::string escape_name(const std::string& name) {
+        static std::string escape_name(const std::string_view name) {
             std::string result;
             result.resize(name.size());
 
