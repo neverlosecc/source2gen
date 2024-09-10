@@ -847,7 +847,7 @@ namespace {
             // @note: @es3n1n: parsing type
             //
             const auto [type_name, array_sizes] = GetType(*field.m_pSchemaType);
-            const auto var_info = field_parser::parse(type_name, field.m_pszName, array_sizes);
+            auto var_info = field_parser::parse(type_name, field.m_pszName, array_sizes);
 
             // @fixme: @es3n1n: todo proper collision fix and remove this block
             if (state.collision_end_offset && field.m_nSingleInheritanceOffset < state.collision_end_offset) {
@@ -905,8 +905,16 @@ namespace {
             state.last_field_offset = field.m_nSingleInheritanceOffset;
             state.last_field_size = static_cast<std::size_t>(field_size);
 
-            // @note: @es3n1n: push prop
-            //
+            /// @note: @es3n1n: game bug:
+            ///     There are some classes that have literally no info about them in schema,
+            ///     for these fields we'll just insert a pad.
+            if (const auto e_class = field.m_pSchemaType->GetAsDeclaredClass(); e_class != nullptr && e_class->m_pClassInfo == nullptr) {
+                var_info.m_type = "std::uint8_t";
+                var_info.m_array_sizes.clear();
+                var_info.m_array_sizes.emplace_back(field_size);
+                builder.comment(std::format("game bug: prop with no declared class info ({})", e_class->m_pszName));
+            }
+
             if ((field.m_nSingleInheritanceOffset % field_alignment.value_or(source2_max_align)) == 0) {
                 if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
                     // This is a workaround to get the size of template types right.
