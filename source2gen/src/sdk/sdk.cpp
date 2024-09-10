@@ -212,16 +212,16 @@ namespace {
             } while (pClass != nullptr);
         }
 
-        const auto has_non_standard_layout_field =
-            std::ranges::any_of(class_.GetFields() | std::ranges::views::transform([&](const SchemaClassFieldData_t& e) {
-                                    if (const auto* e_class = e.m_pSchemaType->GetAsDeclaredClass(); e_class != nullptr) {
-                                        return !IsStandardLayoutClass(cache, *e_class->m_pClassInfo);
-                                    } else {
-                                        // Everything that is not a class has no effect
-                                        return false;
-                                    }
-                                }),
-                                std::identity{});
+        const auto has_non_standard_layout_field = std::ranges::any_of(
+            class_.GetFields() | std::ranges::views::transform([&](const SchemaClassFieldData_t& e) {
+                if (const auto* e_class = e.m_pSchemaType->GetAsDeclaredClass(); e_class != nullptr && e_class->m_pClassInfo != nullptr) {
+                    return !IsStandardLayoutClass(cache, *e_class->m_pClassInfo);
+                } else {
+                    // Everything that is not a class has no effect
+                    return false;
+                }
+            }),
+            std::identity{});
 
         if (has_non_standard_layout_field) {
             return cache.emplace(id, false).first->second;
@@ -281,7 +281,7 @@ namespace {
     /// @return For class types, returns @ref GetClassAlignmentRecursive(). Otherwise returns the immediately available size.
     [[nodiscard]]
     std::optional<int> GetAlignmentOfTypeRecursive(std::map<sdk::TypeIdentifier, std::optional<int>>& cache, const CSchemaType& type) {
-        if (const auto* class_ = type.GetAsDeclaredClass(); class_ != nullptr) {
+        if (const auto* class_ = type.GetAsDeclaredClass(); class_ != nullptr && class_->m_pClassInfo != nullptr) {
             return GetClassAlignmentRecursive(cache, *class_->m_pClassInfo);
         } else {
             return type.GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
