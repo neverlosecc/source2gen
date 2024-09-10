@@ -657,8 +657,9 @@ public:
     std::uint8_t m_unAlignOf; // 0x0022
 
     std::int8_t m_nBaseClassSize; // 0x0023
-    std::int16_t
-        m_nMultipleInheritanceDepth; // 0x0024 // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
+
+    // @note: @og: if there is no derived or base class, then it will be 1 otherwise derived class size + 1.
+    std::int16_t m_nMultipleInheritanceDepth; // 0x0024
     std::int16_t m_nSingleInheritanceDepth; // 0x0026
 
     SchemaClassFieldData_t* m_pFields; // 0x0028

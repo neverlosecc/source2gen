@@ -37,7 +37,7 @@ namespace {
     struct BitfieldEntry {
         std::string name{};
         std::size_t size{};
-        // TOOD: document lifetime - asked es3n1n
+        /// Lifetime of fields' pointers bound to the source2's @ref CSchemaClassInfo
         std::vector<SchemaMetadataEntryData_t> metadata{};
     };
 
