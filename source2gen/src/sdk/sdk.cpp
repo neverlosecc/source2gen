@@ -825,8 +825,8 @@ namespace {
             state.collision_end_offset = parent_class_size.value();
         }
 
-        // @note: @es3n1n: start class
-        //
+        /// Start the class
+        builder.pack_push(1); // we are aligning stuff ourselves
         if (is_struct)
             builder.begin_struct_with_base_type(class_.m_pszName, parent_class_name);
         else
@@ -1038,6 +1038,8 @@ namespace {
             builder.comment("No schema binary for binding");
 
         builder.end_block();
+        builder.pack_pop();
+        builder.next_line();
 
         const bool is_standard_layout_class = IsStandardLayoutClass(cache.class_has_standard_layout, class_);
 
@@ -1126,24 +1128,25 @@ namespace {
             builder.include(util::EscapePath(std::format("\"{}/{}/{}.hpp\"", kIncludeDirName, include.module, include.type_name)));
         }
 
-        builder.include(std::format("\"{}/source2gen_user_types.hpp\"", kIncludeDirName));
+        builder.include(std::format("\"{}/source2gen.hpp\"", kIncludeDirName));
         builder.include("<cstddef>"); // for offsetof()
         builder.include("<cstdint>");
 
-        for (const auto& forward_declaration : names | std::views::filter([](const auto& el) { return el.source == NameSource::forward_declaration; })) {
-            builder.begin_namespace(std::format("source2sdk::{}", forward_declaration.module));
-            builder.forward_declaration(forward_declaration.type_name);
-            builder.end_namespace();
-        }
-
-        // @note: @es3n1n: print banner
-        //
+        /// print banner
         builder.next_line()
             .comment("/////////////////////////////////////////////////////////////")
             .comment(std::format("Module: {}", module_name))
             .comment(std::string{kCreatedBySource2genMessage})
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();
+
+        /// Insert forward declarations
+        for (const auto& forward_declaration : names | std::views::filter([](const auto& el) { return el.source == NameSource::forward_declaration; })) {
+            builder.begin_namespace(std::format("source2sdk::{}", forward_declaration.module));
+            builder.forward_declaration(forward_declaration.type_name);
+            builder.end_namespace();
+            builder.next_line();
+        }
 
         builder.begin_namespace(std::format("source2sdk::{}", module_name));
 

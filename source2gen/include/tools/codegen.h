@@ -1,8 +1,8 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #pragma once
-#include <cassert>
 #include <array>
+#include <cassert>
 #include <cstdint>
 #include <set>
 #include <sstream>
@@ -12,8 +12,9 @@
 #include "tools/fnv.h"
 
 namespace codegen {
-    constexpr char kTabSym = '\t';
-    constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many \t characters shall we place per each block
+    constexpr char kSpaceSym = ' ';
+    constexpr char kIndentWidth = 4;
+    constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many (kSpaceSym * kIndentWidth) characters shall we place per each block
     constexpr std::array kBlacklistedCharacters = {':', ';', '\\', '/'};
 
     struct generator_t {
@@ -56,6 +57,14 @@ namespace codegen {
             return pragma("warning(pop)");
         }
 
+        self_ref pack_push(const std::size_t alignment = 1) {
+            return pragma(std::format("pack(push, {})", alignment));
+        }
+
+        self_ref pack_pop() {
+            return pragma("pack(pop)");
+        }
+
         self_ref next_line() {
             return push_line("");
         }
@@ -77,8 +86,9 @@ namespace codegen {
             // @note: @es3n1n: we should reset tabs count if we aren't moving cursor to
             // the next line
             const auto backup_tabs_count = _tabs_count;
-            if (!move_cursor_to_next_line)
+            if (!move_cursor_to_next_line) {
                 _tabs_count = 0;
+            }
 
             push_line("{", move_cursor_to_next_line);
 
@@ -157,7 +167,7 @@ namespace codegen {
         // @todo: @es3n1n: add func params
         self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name,
                                 const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) {
-            return begin_block(std::format("{}{} {}()", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
+            return begin_block(std::format("{}{} {}() ", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
         }
 
         self_ref end_function(const bool decrement_tabs_count = true, const bool move_cursor_to_next_line = true) {
@@ -189,14 +199,13 @@ namespace codegen {
             return *this;
         }
 
-        self_ref static_assert_size(std::string_view type_name, int expected_size, const bool move_cursor_to_next_line = true) {
+        self_ref static_assert_size(std::string_view type_name, const std::size_t expected_size) {
             assert(expected_size > 0);
 
             return push_line(std::format("static_assert(sizeof({}) == {:#x});", escape_name(type_name), expected_size));
         }
 
-        self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, int expected_offset,
-                                      const bool move_cursor_to_next_line = true) {
+        self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, const std::size_t expected_offset) {
             assert(expected_offset >= 0);
 
             return push_line(std::format("static_assert(offsetof({}, {}) == {:#x});", escape_name(class_name), prop_name, expected_offset));
@@ -246,7 +255,7 @@ namespace codegen {
             if (is_private_field)
                 type_name = "[[maybe_unused]] " + type_name;
 
-            auto pad_name = pad_offset.has_value() ? std::format("pad_0x{:04x}", pad_offset.value()) : std::format("pad_{:d}", _pads_count++);
+            auto pad_name = pad_offset.has_value() ? std::format("pad_{:#04x}", pad_offset.value()) : std::format("pad_{:d}", _pads_count++);
 
             if (bytes != 0) {
                 prop(type_name, std::format("{}[{:#x}]", pad_name, bytes), move_cursor_to_next_line);
@@ -254,7 +263,7 @@ namespace codegen {
 
             if (remaining_bits != 0) {
                 auto remainder_pad_name =
-                    pad_offset.has_value() ? std::format("pad_0x{:04x}", pad_offset.value() + bytes) : std::format("pad_{:d}", _pads_count++);
+                    pad_offset.has_value() ? std::format("pad_{:#04x}", pad_offset.value() + bytes) : std::format("pad_{:d}", _pads_count++);
                 prop(type_name, std::format("{}: {}", remainder_pad_name, remaining_bits), move_cursor_to_next_line);
             }
 
@@ -287,11 +296,12 @@ namespace codegen {
 
     private:
         self_ref push_line(const std::string& line, bool move_cursor_to_next_line = true) {
-            for (std::size_t i = 0; i < _tabs_count; i++)
-                _stream << kTabSym;
-            _stream << line;
-            if (move_cursor_to_next_line)
+            _stream << std::string(_tabs_count * kIndentWidth, kSpaceSym) // insert spaces
+                    << line;
+
+            if (move_cursor_to_next_line) {
                 _stream << std::endl;
+            }
             return *this;
         }
 
