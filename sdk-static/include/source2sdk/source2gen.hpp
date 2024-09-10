@@ -10,7 +10,7 @@ template <typename T>
 using CAnimScriptParam = char[0x08];
 using CBufferString = char[0x10];
 using CColorGradient = char[0x18];
-// size doesn't mapper. only used as a pointer
+// size doesn't matter. only used as a pointer
 template <typename>
 using CCompressor = char[0x01];
 using CEntityHandle = char[0x04];
@@ -26,7 +26,7 @@ using CResourceName = char[0xe0];
 using CSplitScreenSlot = char[0x04];
 using CTransform = char[0x20];
 using CUtlBinaryBlock = char[0x18];
-template <typename, class>
+template <typename, typename>
 using CUtlHashtable = char[0x20];
 using CUtlStringTokenWithStorage = char[0x18];
 using CUtlStringToken = char[0x04];
@@ -53,7 +53,7 @@ template <typename>
 using CUtlLeanVector = char[0x10];
 template <typename, class>
 using CUtlOrderedMap = char[0x28];
-// size doesn't mapper. only used as a pointer
+// size doesn't matter. only used as a pointer
 template <typename, class>
 using CUtlPair = char[0x01];
 template <typename>
@@ -82,18 +82,30 @@ template <typename>
 using CStrongHandle = char[0x08];
 template <typename>
 using CStrongHandleCopyable = char[0x08];
-// size doesn't mapper. only used as a pointer
+// size doesn't matter. only used as a pointer
 using CStrongHandleVoid = char[0x08];
 template <typename>
 using CVariantBase = char[0x10];
 template <typename>
 using CWeakHandle = char[0x18];
+using CSmartPropAttributeVector = char[0x40];
+using CSmartPropAttributeFloat = char[0x40];
+using CSmartPropAttributeBool = char[0x40];
+using CSmartPropAttributeColor = char[0x40];
+using CSmartPropAttributeInt = char[0x40];
+using CSmartPropAttributeModelName = char[0x40];
+using CSmartPropAttributeMaterialGroup = char[0x40];
+using CSmartPropAttributeVector2D = char[0x40];
+using CSmartPropVariableComparison = char[0x20];
+using CSmartPropAttributeAngles = char[0x40];
+using CSmartPropAttributeStateName = char[0x40];
+using CSmartPropAttributeVariableValue = char[0x40];
 using Color = char[0x04];
 using DegreeEuler = char[0x0c];
 using FourVectors = char[0x30];
 using HSCRIPT = char[0x08];
 using KeyValues3 = char[0x10];
-// size doesn't mapper. only used as a pointer
+// size doesn't matter. only used as a pointer
 using KeyValues = char[0x01];
 using QAngle = char[0x0c];
 using QuaternionStorage = char[0x10];
@@ -114,18 +126,6 @@ using float32 = char[0x04];
 using fltx4 = char[0x10];
 using matrix3x4_t = char[0x30];
 using matrix3x4a_t = char[0x30];
-using CSmartPropAttributeVector = char[0x40];
-using CSmartPropAttributeFloat = char[0x40];
-using CSmartPropAttributeBool = char[0x40];
-using CSmartPropAttributeColor = char[0x40];
-using CSmartPropAttributeInt = char[0x40];
-using CSmartPropAttributeModelName = char[0x40];
-using CSmartPropAttributeMaterialGroup = char[0x40];
-using CSmartPropAttributeVector2D = char[0x40];
-using CSmartPropVariableComparison = char[0x20];
-using CSmartPropAttributeAngles = char[0x40];
-using CSmartPropAttributeStateName = char[0x40];
-using CSmartPropAttributeVariableValue = char[0x40];
 
 // intentionally left undefined. if you want to access static fields, add your own sdk.
 namespace interfaces {
