@@ -10,6 +10,7 @@
 #include <type_traits>
 
 #include "tools/fnv.h"
+#include "tools/util.h"
 
 namespace codegen {
     constexpr char kSpaceSym = ' ';
@@ -238,9 +239,8 @@ namespace codegen {
 
             _forward_decls.insert(fwd_decl_hash);
 
-            // @fixme: split method to class_forward_declaration & struct_forward_declaration
-            // one for `struct uwu_t` and the other one for `class c_uwu`
-            return push_line(std::format("struct {};", type_name));
+            const auto item_type = util::IsStruct(type_name) ? "struct" : "class";
+            return push_line(std::format("{} {};", item_type, type_name));
         }
 
         self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,

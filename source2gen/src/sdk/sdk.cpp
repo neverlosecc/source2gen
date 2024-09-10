@@ -770,7 +770,7 @@ namespace {
         const auto class_alignment = GetClassAlignmentRecursive(cache.class_alignment, class_);
         // Source2 has alignof(max_align_t)=8, i.e. every class whose size is a multiple of 8 is aligned.
         const auto class_is_aligned = (class_size % class_alignment.value_or(source2_max_align)) == 0;
-        const auto is_struct = std::string_view{class_.m_pszName}.ends_with("_t");
+        const auto is_struct = util::IsStruct(class_.m_pszName);
 
         if (!class_is_aligned) {
             const auto warning = [&]() {
