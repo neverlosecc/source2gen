@@ -161,19 +161,13 @@ namespace {
             else if (!var_value.m_pszName && var_value.m_pszType)
                 value = var_value.m_pszType;
         } else if (std::ranges::find(string_class_metadata_entries, value_hash_name) != string_class_metadata_entries.end()) {
-            auto clean_string = [](const std::string_view& input) {
-                std::string result;
-                for (const char& ch : input) {
-                    if (std::isalpha(static_cast<unsigned char>(ch))) {
-                        result += ch;
-                    } else {
-                        break;
-                    }
-                }
-                return result;
-            };
+            /// Explicitly convert to std::string with the size as the string may not end with a nullterm
+            /// But if this string does contain a null terminator, we should properly handle this too
+            const auto& szValue = metadata_entry.m_pNetworkValue->m_szValue;
+            const auto null_pos = std::find(szValue.begin(), szValue.end(), 0x00);
+            const auto size = null_pos != szValue.end() ? std::distance(szValue.begin(), null_pos) : szValue.size();
 
-            value = clean_string(metadata_entry.m_pNetworkValue->m_szValue.data());
+            value = std::string(metadata_entry.m_pNetworkValue->m_szValue.data(), size);
         } else if (std::ranges::find(string_metadata_entries, value_hash_name) != string_metadata_entries.end()) {
             value = metadata_entry.m_pNetworkValue->m_pszValue;
         } else if (std::ranges::find(integer_metadata_entries, value_hash_name) != integer_metadata_entries.end()) {
@@ -1053,6 +1047,7 @@ namespace {
 
         // TODO: when we have a CLI parser: allow users to generate assertions in non-standard-layout classes. Those assertions are
         // conditionally-supported by compilers.
+        bool asserted_values = false;
         if (is_standard_layout_class) {
             for (const auto& field :
                  class_.GetFields() | std::ranges::views::filter([&](const auto& e) { return !skipped_fields.contains(e.m_pszName); })) {
@@ -1060,6 +1055,7 @@ namespace {
                     builder.comment(std::format("Cannot assert offset of bitfield {}::{}", class_.m_pszName, field.m_pszName));
                 } else {
                     builder.static_assert_offset(class_.m_pszName, field.m_pszName, field.m_nSingleInheritanceOffset);
+                    asserted_values = true;
                 }
             }
         } else {
@@ -1072,7 +1068,9 @@ namespace {
             builder.end_multi_line_comment();
         }
 
-        builder.next_line();
+        if (asserted_values) {
+            builder.next_line();
+        }
         builder.static_assert_size(class_.m_pszName, class_size);
     }
 
