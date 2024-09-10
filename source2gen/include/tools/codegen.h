@@ -10,6 +10,7 @@
 #include <type_traits>
 
 #include "tools/fnv.h"
+#include "tools/util.h"
 
 namespace codegen {
     constexpr char kSpaceSym = ' ';
@@ -238,14 +239,8 @@ namespace codegen {
 
             _forward_decls.insert(fwd_decl_hash);
 
-            // @note: @qbibubi: classes always start with 'C' or 'C_' and
-            // there are objecsts like 'CCSPlayerPawn` that have double 'C'
-            // at the beginning so there should not be any issues
-            const auto is_class = [](std::string_view name) -> bool {
-                return (name[0] == 'C');
-            };
-
-            return push_line(is_class(text) ? std::format("class {};", text) : std::format("struct {};", text));
+            const auto item_type = util::IsStruct(type_name) ? "struct" : "class";
+            return push_line(std::format("{} {};", item_type, type_name));
         }
 
         self_ref struct_padding(const std::optional<std::ptrdiff_t> pad_offset, const std::size_t padding_size, const bool move_cursor_to_next_line = true,

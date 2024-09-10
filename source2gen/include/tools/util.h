@@ -38,6 +38,10 @@ namespace util {
         std::ranges::replace(result, ':', '_');
         return result;
     }
+
+    [[nodiscard]] inline bool IsStruct(std::string_view name) {
+        return name.ends_with("_t");
+    }
 } // namespace util
 
 // source2gen - Source2 games SDK generator
