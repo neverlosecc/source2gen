@@ -154,11 +154,17 @@ namespace {
 
         if (std::ranges::find(var_name_string_class_metadata_entries, value_hash_name) != var_name_string_class_metadata_entries.end()) {
             const auto& var_value = metadata_entry.m_pNetworkValue->m_VarValue;
-            if (var_value.m_pszType && var_value.m_pszName)
+            const auto check_ptr = [](const char* ptr) -> bool {
+                /// @note: hotfix for the deadlock 14/09/24 update,
+                ///     where they filled some ptrs with -1 instead of nullptr
+                return ptr != nullptr && ptr != reinterpret_cast<const char*>(-1);
+            };
+
+            if (check_ptr(var_value.m_pszType) && check_ptr(var_value.m_pszName))
                 value = std::format("{} {}", var_value.m_pszType, var_value.m_pszName);
-            else if (var_value.m_pszName && !var_value.m_pszType)
+            else if (check_ptr(var_value.m_pszName) && !check_ptr(var_value.m_pszType))
                 value = var_value.m_pszName;
-            else if (!var_value.m_pszName && var_value.m_pszType)
+            else if (!check_ptr(var_value.m_pszName) && check_ptr(var_value.m_pszType))
                 value = var_value.m_pszType;
         } else if (std::ranges::find(string_class_metadata_entries, value_hash_name) != string_class_metadata_entries.end()) {
             /// Explicitly convert to std::string with the size as the string may not end with a nullterm
