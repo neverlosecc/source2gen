@@ -1,3 +1,6 @@
+TOOD: remove or test+document rust
+TOOD: remove sdk-manual. seems to be a development artifact
+
 # Source2Gen
 
 Source2Gen is a tool to generate Source 2 SDKs. \
@@ -12,6 +15,8 @@ Open the source2gen-loader binary, it will automatically(if supported) find the 
 and it will also set up the needed environment
 
 ### Windows
+
+TOOD: update windows instructions
 
 ```commandline
 source2gen-loader.exe
@@ -40,13 +45,15 @@ Linux.
 
 ### Using the generated SDK
 
+TOOD: "sdk-filler" doesn't exist. is it sdk-static?
+
 The sdk depends on a file/module called "source2gen_user_types". This file has
 to be provided by the user and expose all types listed in
 [types.hpp](sdk-filler/types.hpp). If you don't intend to access any of these
 types, you can use [types.hpp](sdk-filler/types.hpp) as
 "source2gen_user_types.hpp".
 
-TOOD: document exact file/module name per language  
+TOOD: document exact file/module name per language
 TOOD: document language standard requirements
 
 ## Getting Started
@@ -118,6 +125,14 @@ conan install --output-folder build --settings:host build_type=Release .
 cmake -S . -B build --preset conan-debug -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
 cmake --build build
 ```
+
+### How the C generator works
+
+- namespaces are encoded in names to avoid name conflicts
+- `enum` names are encoded in enumerator names to avoid name conflicts
+- `class` is emitted as `struct`
+- uses of `struct` types are prefixed with the "struct" keyword
+- uses of `enum` types are prefixed with the "struct" keyword
 
 ---
 

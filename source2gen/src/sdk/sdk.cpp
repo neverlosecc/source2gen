@@ -731,7 +731,7 @@ namespace {
                     generator.comment(std::format("metadata: {} \"{}\"", field_metadata.m_szName, data));
             }
 
-            generator.prop(codegen::Prop{.type_name = type_name, .name = entry.name}, true);
+            generator.prop(codegen::Prop{.type_name = type_name, .name = entry.name, .bitfield_size = entry.size}, true);
         }
 
         generator.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", exact_bitfield_size_bits)).restore_tabs_count();
@@ -848,10 +848,23 @@ namespace {
 
         // @note: @es3n1n: start class
         //
-        if (is_struct)
-            generator.begin_struct_with_base_type(class_.m_pszName, parent_class_name);
-        else
-            generator.begin_class_with_base_type(class_.m_pszName, parent_class_name);
+        if (is_struct) {
+            if (class_parent != nullptr) {
+                // TOOD: a: nope
+                // generator.begin_struct_with_base_type(class_.m_pszName, "source2sdk__" + parent_class_name);
+                generator.begin_struct_with_base_type(class_.m_pszName, parent_class_name);
+            } else {
+                generator.begin_struct(class_.m_pszName);
+            }
+        } else {
+            if (class_parent != nullptr) {
+                // TOOD: a: nope
+                // generator.begin_class_with_base_type(class_.m_pszName, "source2sdk__" + parent_class_name);
+                generator.begin_class_with_base_type(class_.m_pszName, parent_class_name);
+            } else {
+                generator.begin_class(class_.m_pszName);
+            }
+        }
 
         /// If fields cannot be emitted, e.g. because of collisions, they're added to
         /// this set so we can ignore them when asserting offsets.
@@ -894,7 +907,7 @@ namespace {
                 }
 
                 state.bitfield.emplace_back(BitfieldEntry{
-                    .name = var_info.formatted_name(),
+                    .name = var_info.m_name,
                     .size = var_info.m_bitfield_size,
                     .metadata = std::vector(field.m_pMetadata, field.m_pMetadata + field.m_nMetadataSize),
                 });
@@ -951,8 +964,34 @@ namespace {
                         .restore_tabs_count();
                     generator.prop(codegen::Prop{.type_name = "char", .name = std::format("{}[{:#x}]", var_info.m_name, field_size)}, false);
                 } else {
+                    // TOOD: HACKHACK: nope! we need this to access other types in <source2sdk/*>
+                    auto var_info_2 = var_info;
+                    // TOOD: a: we need this for the C generator
+                    if (false)
+                        if (var_info.m_type.contains("::") || var_info.m_type.contains("__")) {
+                            var_info_2.m_type = "source2sdk__" + var_info_2.m_type;
+
+                            if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_DeclaredEnum) {
+                                var_info_2.m_type = "enum " + var_info_2.m_type;
+                            } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+                                var_info_2.m_type = "struct " + var_info_2.m_type;
+                            } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_FixedArray) {
+                                auto* schema = reinterpret_cast<const CSchemaType_FixedArray*>(field.m_pSchemaType);
+                                switch (schema->m_pElementType->m_unTypeCategory) {
+                                case ETypeCategory::Schema_DeclaredEnum:
+                                    var_info_2.m_type = "enum " + var_info_2.m_type;
+                                    break;
+                                case ETypeCategory::Schema_DeclaredClass:
+                                case ETypeCategory::Schema_Ptr:
+                                    var_info_2.m_type = "struct " + var_info_2.m_type;
+                                    break;
+                                }
+                            } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_Ptr) {
+                                var_info_2.m_type = "struct " + var_info_2.m_type;
+                            }
+                        }
                     // This is the "all normal, all good" `prop()` call
-                    generator.prop(codegen::Prop{.type_name = var_info.m_type, .name = var_info.formatted_name()}, false);
+                    generator.prop(codegen::Prop{.type_name = var_info_2.m_type, .name = var_info.formatted_name()}, false);
                 }
             } else {
                 const auto warning =
@@ -1087,7 +1126,8 @@ namespace {
                 if (field.m_pSchemaType->m_unTypeCategory == ETypeCategory::Schema_Bitfield) {
                     generator.comment(std::format("Cannot assert offset of bitfield {}::{}", class_.m_pszName, field.m_pszName));
                 } else {
-                    generator.static_assert_offset(class_.m_pszName, field.m_pszName, field.m_nSingleInheritanceOffset);
+                    // TOOD: uncomment
+                    // generator.static_assert_offset(class_.m_pszName, field.m_pszName, field.m_nSingleInheritanceOffset);
                 }
             }
         } else {
@@ -1101,7 +1141,8 @@ namespace {
         }
 
         generator.next_line();
-        generator.static_assert_size(class_.m_pszName, class_size);
+        // TOOD: uncomment
+        // generator.static_assert_size(class_.m_pszName, class_size);
     }
 
     [[nodiscard]]

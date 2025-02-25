@@ -82,7 +82,7 @@ template <class>
 using CStrongHandle = char[0x08];
 template <class>
 using CStrongHandleCopyable = char[0x08];
-// size doesn't mapper. only used as a pointer
+// size doesn't matter. only used as a pointer
 using CStrongHandleVoid = char[0x08];
 template <class>
 using CVariantBase = char[0x10];

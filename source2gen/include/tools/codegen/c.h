@@ -6,6 +6,7 @@
 #include <absl/strings/str_join.h>
 #include <absl/strings/str_split.h>
 #include <cassert>
+#include <iostream> // TOOD: remove
 #include <list>
 #include <set>
 #include <sstream>
@@ -34,10 +35,10 @@ namespace codegen {
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
-            include("source2sdk/source2gen_user_types", IncludeOptions{.local = true});
-            include("stdbool", IncludeOptions{.local = false, .system = true});
-            include("stddef", IncludeOptions{.local = false, .system = true});
-            include("stdint", IncludeOptions{.local = false, .system = true});
+            include("source2gen/source2sdk/source2gen_user_types", IncludeOptions{.local = false});
+            // include("stdbool", IncludeOptions{.local = false, .system = true});
+            // include("stddef", IncludeOptions{.local = false, .system = true});
+            // include("stdint", IncludeOptions{.local = false, .system = true});
 
             return *this;
         }
@@ -83,21 +84,29 @@ namespace codegen {
 
         self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type,
                                              const std::string& access_modifier = "public") override {
-            if (base_type.empty())
-                return begin_struct(name, access_modifier);
-            else {
-                assert(!_current_class_or_enum.has_value() && "nested types are not supported");
-                _current_class_or_enum = name;
-            }
+            assert(!base_type.empty() && "use begin_struct() for structs with no base type");
+            assert(!_current_class_or_enum.has_value() && "nested types are not supported");
 
-            begin_block(std::format("struct {}", escape_name(name)));
-            return prop(Prop{.type_name = base_type, .name = "base"});
+            _current_class_or_enum = name;
+
+            begin_block(std::format("struct {}", encode_current_namespace(escape_name(name))));
+            // TOOD: let prop() add the "struct" prefix by adding it as a propety to Prop{}
+            return prop(Prop{.type_name = "struct " + base_type, .name = "base"});
         }
 
         self_ref end_struct() override {
             assert(_current_class_or_enum.has_value() && "called end_struct() without calling begin_struct()");
 
+            if (!_current_struct_has_properties) {
+                comment("This is an empty struct. There is no data in this struct. A pad has been generated for compliance with C.");
+                prop(Prop{.type_name = "char", .name = "pad_do_not_access"}, true);
+            }
+
             end_block();
+
+            // TOOD: remove _static_fields in C
+            _static_fields.clear();
+
             for (const auto& e : _static_fields) {
                 begin_function("static ", e.type_name, std::format("&{}_Get_{}", _current_class_or_enum.value(), e.prop_name), false, false);
 
@@ -119,6 +128,7 @@ namespace codegen {
 
             _static_fields.clear();
             _current_class_or_enum = std::nullopt;
+            _current_struct_has_properties = false;
 
             return *this;
         }
@@ -140,9 +150,11 @@ namespace codegen {
 
         self_ref begin_enum(const std::string& enum_name, const std::string& base_typename = "") override {
             assert(!_current_class_or_enum.has_value() && "nested types are not supported");
+            // TOOD: enable this assertion
+            // assert((base_typename.empty() || base_typename.contains("32")) && "C does not support enum base types");
+
             _current_class_or_enum = enum_name;
-            return begin_block(std::format("enum {}{}", encode_current_namespace(escape_name(enum_name)),
-                                           base_typename.empty() ? base_typename : (" : " + base_typename)));
+            return begin_block(std::format("enum {}", encode_current_namespace(escape_name(enum_name))));
         }
 
         self_ref end_enum_class() override {
@@ -203,6 +215,8 @@ namespace codegen {
         }
 
         self_ref prop(Prop prop, bool move_cursor_to_next_line = true) override {
+            _current_struct_has_properties = true;
+
             const auto line =
                 std::format("{} {}{};{}", escape_name(prop.type_name), escape_name(prop.name),
                             prop.bitfield_size.has_value() ? std::format(": {}", prop.bitfield_size.value()) : "", move_cursor_to_next_line ? "" : " ");
@@ -220,7 +234,7 @@ namespace codegen {
 
             // @fixme: split method to class_forward_declaration & struct_forward_declaration
             // one for `struct uwu_t` and the other one for `class c_uwu`
-            return push_line(std::format("struct {};", escape_name(text)));
+            return push_line(std::format("struct {};", encode_current_namespace(escape_name(text))));
         }
 
         self_ref struct_padding(Padding options) override {
@@ -228,8 +242,10 @@ namespace codegen {
 
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
             std::string type_name = is_bitfield ? detail::c_family::guess_bitfield_type(std::get<Padding::Bits>(options.size).value) : "uint8_t";
-            if (options.is_private_field)
-                type_name = "[[maybe_unused]] " + type_name;
+            if (options.is_private_field) {
+                // TOOD: add a C99 mode?
+                // type_name = "[[maybe_unused]] " + type_name;
+            }
 
             auto pad_name =
                 options.pad_offset.has_value() ? std::format("__pad{:04x}", options.pad_offset.value()) : std::format("__pad{:d}", _pads_count++);
@@ -355,6 +371,7 @@ namespace codegen {
         std::size_t _tabs_count = 0, _tabs_count_backup = 0;
         std::size_t _pads_count = 0;
         std::optional<std::string> _current_class_or_enum{std::nullopt};
+        bool _current_struct_has_properties = false;
         std::list<std::string> _namespaces{};
         std::list<StaticField> _static_fields{};
         std::set<fnv32::hash> _forward_decls = {};

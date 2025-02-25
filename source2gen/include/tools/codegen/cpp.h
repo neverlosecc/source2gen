@@ -46,7 +46,7 @@ namespace codegen {
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
-            include("source2gen/source2gen_user_types", IncludeOptions{.local = true, .system = false});
+            include("source2sdk/source2gen/source2gen_user_types", IncludeOptions{.local = false, .system = false});
             include("cstddef", IncludeOptions{.local = false, .system = true});
             include("cstdint", IncludeOptions{.local = false, .system = true});
 
@@ -76,7 +76,7 @@ namespace codegen {
         }
 
         self_ref begin_class(const std::string& class_name, const std::string& access_modifier = "public") override {
-            return begin_block(std::format("class {}", class_name), access_modifier);
+            return begin_block(std::format("class {}", escape_name(class_name)), access_modifier);
         }
 
         self_ref begin_class_with_base_type(const std::string& class_name, const std::string& base_type,
@@ -84,7 +84,7 @@ namespace codegen {
             if (base_type.empty())
                 return begin_class(std::cref(class_name), access_modifier);
 
-            return begin_block(std::format("class {} : public {}", class_name, base_type), access_modifier);
+            return begin_block(std::format("class {} : public {}", escape_name(class_name), base_type), access_modifier);
         }
 
         self_ref end_class() override {
@@ -228,12 +228,16 @@ namespace codegen {
         }
 
         self_ref begin_bitfield_block() override {
-            return begin_struct("", "");
+            return comment("start of bitfield block");
+            // TOOD: remove commented code
+            // return begin_struct("", "");
         }
 
         self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) override {
-            dec_tabs_count(1);
-            return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
+            // TOOD: remove commented code
+            // dec_tabs_count(1);
+            return comment("start of bitfield block", move_cursor_to_next_line);
+            // return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
         }
 
         self_ref restore_tabs_count() override {

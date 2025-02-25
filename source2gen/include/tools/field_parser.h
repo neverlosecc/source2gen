@@ -59,9 +59,6 @@ namespace field_parser {
         }
 
         [[nodiscard]] std::string formatted_name() const {
-            if (is_bitfield())
-                return std::format("{}: {}", m_name, m_bitfield_size);
-
             if (is_array())
                 return std::format("{}{}", m_name, formatted_array_sizes());
 
