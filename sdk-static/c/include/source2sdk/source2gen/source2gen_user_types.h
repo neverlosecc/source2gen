@@ -99,7 +99,9 @@ typedef char Quaternion[0x10];
 typedef char RadianEuler[0x0c];
 typedef char RenderInputLayoutField_t[0x04];
 // we don't have a field size for this type. uses the fallback of 1.
-typedef char RenderPrimitiveType_t[0x01];
+enum RenderPrimitiveType_t : char {
+    RenderPrimitiveType_t_unused,
+};
 typedef char RotationVector[0x0c];
 // template <class>
 // typedef  char SphereBase_t [0x10];

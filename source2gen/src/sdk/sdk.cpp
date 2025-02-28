@@ -511,7 +511,7 @@ namespace {
     std::string MaybeWithModuleName(const CSchemaSystemTypeScope& scope, const std::string_view type_name) {
         const auto escaped_type_name = EscapeTypeName(type_name);
         return GetModuleOfTypeInScope(scope, type_name)
-            .transform([&](const auto module_name) { return std::format("{}::{}", module_name, escaped_type_name); })
+            .transform([&](const auto module_name) { return std::format("source2sdk::{}::{}", module_name, escaped_type_name); })
             .value_or(escaped_type_name);
     };
 
@@ -591,7 +591,7 @@ namespace {
         std::abort();
     }
 
-    /// Adds module qualifiers and resolves built-in types
+    /// Adds module qualifiers and resolves built-in types.
     std::string ReassembleRetypedTemplate(const codegen::IGenerator& generator, const CSchemaSystemTypeScope& scope,
                                           const std::vector<std::variant<std::string, char>>& decomposed) {
         std::string result{};
@@ -964,32 +964,35 @@ namespace {
                         .restore_tabs_count();
                     generator.prop(codegen::Prop{.type_name = "char", .name = std::format("{}[{:#x}]", var_info.m_name, field_size)}, false);
                 } else {
-                    // TOOD: HACKHACK: nope! we need this to access other types in <source2sdk/*>
+                    // TOOD: HACKHACK: nope! these prefixes are language-specific!
                     auto var_info_2 = var_info;
-                    // TOOD: a: we need this for the C generator
-                    if (false)
-                        if (var_info.m_type.contains("::") || var_info.m_type.contains("__")) {
-                            var_info_2.m_type = "source2sdk__" + var_info_2.m_type;
-
-                            if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_DeclaredEnum) {
+                    // TOOD: why do we only apply the type prefixes to entities in the source2sdk namespace?
+                    if (true || var_info.m_type.starts_with("source2sdk::")) {
+                        if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_DeclaredEnum) {
+                            var_info_2.m_type = "enum " + var_info_2.m_type;
+                        } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+                            var_info_2.m_type = "struct " + var_info_2.m_type;
+                        } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_FixedArray) {
+                            auto* schema = reinterpret_cast<const CSchemaType_FixedArray*>(field.m_pSchemaType);
+                            switch (schema->m_pElementType->m_unTypeCategory) {
+                            case ETypeCategory::Schema_DeclaredEnum:
                                 var_info_2.m_type = "enum " + var_info_2.m_type;
-                            } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+                                break;
+                            case ETypeCategory::Schema_DeclaredClass:
+                            case ETypeCategory::Schema_Ptr:
                                 var_info_2.m_type = "struct " + var_info_2.m_type;
-                            } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_FixedArray) {
-                                auto* schema = reinterpret_cast<const CSchemaType_FixedArray*>(field.m_pSchemaType);
-                                switch (schema->m_pElementType->m_unTypeCategory) {
-                                case ETypeCategory::Schema_DeclaredEnum:
-                                    var_info_2.m_type = "enum " + var_info_2.m_type;
-                                    break;
-                                case ETypeCategory::Schema_DeclaredClass:
-                                case ETypeCategory::Schema_Ptr:
+                                break;
+                            }
+                        } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_Ptr) {
+                            if (const auto ref_class = field.m_pSchemaType->GetRefClass(); ref_class != nullptr) {
+                                // there are only pointers to structs/classes in source2, not to enums
+                                if (ref_class->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
                                     var_info_2.m_type = "struct " + var_info_2.m_type;
-                                    break;
                                 }
-                            } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_Ptr) {
-                                var_info_2.m_type = "struct " + var_info_2.m_type;
                             }
                         }
+                    }
+
                     // This is the "all normal, all good" `prop()` call
                     generator.prop(codegen::Prop{.type_name = var_info_2.m_type, .name = var_info.formatted_name()}, false);
                 }

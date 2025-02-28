@@ -101,7 +101,8 @@ using Quaternion = char[0x10];
 using RadianEuler = char[0x0c];
 using RenderInputLayoutField_t = char[0x04];
 // we don't have a field size for this type. uses the fallback of 1.
-using RenderPrimitiveType_t = char[0x01];
+enum RenderPrimitiveType_t : char {
+};
 using RotationVector = char[0x0c];
 template <class>
 using SphereBase_t = char[0x10];

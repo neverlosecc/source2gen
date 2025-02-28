@@ -1,5 +1,4 @@
 TOOD: remove or test+document rust
-TOOD: remove sdk-manual. seems to be a development artifact
 
 # Source2Gen
 

@@ -77,6 +77,7 @@ namespace field_parser {
             return result;
         }
 
+        /// only sets @p result.m_type if @p type_name indicates that this field is a bitfield
         void parse_bitfield(const codegen::IGenerator& generator, field_info_t& result, const std::string& type_name) {
             // @note: @es3n1n: in source2 schema, every bitfield var name would start with the "bitfield:" prefix
             // so if there's no such prefix we would just skip the bitfield parsing.
@@ -97,13 +98,14 @@ namespace field_parser {
         }
 
         // @note: @es3n1n: we are assuming that this function would be executed right after
-        // the bitfield/array parsing and the type would be already set if item is a bitfield
+        // @ref parse_bitfield() and the type would be already set if item is a bitfield
         // or array
         //
         void parse_type(const codegen::IGenerator& generator, field_info_t& result, const std::string& type_name) {
             if (const auto found = generator.find_built_in(type_name); found.has_value()) {
                 result.m_type = found.value();
             } else {
+                // result.m_type may already be set if parse_bitfield() identified a bitfield
                 if (result.m_type.empty()) {
                     result.m_type = type_name;
                 }

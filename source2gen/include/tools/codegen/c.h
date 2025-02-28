@@ -35,10 +35,11 @@ namespace codegen {
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
-            include("source2gen/source2sdk/source2gen_user_types", IncludeOptions{.local = false});
-            // include("stdbool", IncludeOptions{.local = false, .system = true});
-            // include("stddef", IncludeOptions{.local = false, .system = true});
-            // include("stdint", IncludeOptions{.local = false, .system = true});
+            include("source2sdk/source2gen/source2gen_user_types", IncludeOptions{.local = false});
+            // TOOD: might need to remove these includes to make ida work
+            include("stdbool", IncludeOptions{.local = false, .system = true});
+            include("stddef", IncludeOptions{.local = false, .system = true});
+            include("stdint", IncludeOptions{.local = false, .system = true});
 
             return *this;
         }
