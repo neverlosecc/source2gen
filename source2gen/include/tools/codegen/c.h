@@ -80,6 +80,10 @@ namespace codegen {
             assert(!_current_class_or_enum.has_value() && "nested types are not supported");
             _current_class_or_enum = name;
 
+            // calling encode_current_namespace() here is not ideal because the
+            // user has no way of knowing (other than reassembling) what the
+            // generated type is actually called in case they want to refer to
+            // it later.
             return begin_block(std::format("struct {}", encode_current_namespace(escape_name(name))));
         }
 
@@ -218,8 +222,23 @@ namespace codegen {
         self_ref prop(Prop prop, bool move_cursor_to_next_line = true) override {
             _current_struct_has_properties = true;
 
+            const auto type_category_prefix = [&]() -> std::string_view {
+                switch (prop.type_category) {
+                    using enum TypeCategory;
+                case built_in:
+                    return "";
+                case class_or_struct:
+                    return "struct ";
+                case union_:
+                    return "union ";
+                case enum_:
+                    return "enum ";
+                }
+                return "";
+            }();
+
             const auto line =
-                std::format("{} {}{};{}", escape_name(prop.type_name), escape_name(prop.name),
+                std::format("{}{} {}{};{}", type_category_prefix, escape_name(prop.type_name), escape_name(prop.name),
                             prop.bitfield_size.has_value() ? std::format(": {}", prop.bitfield_size.value()) : "", move_cursor_to_next_line ? "" : " ");
             return push_line(line, move_cursor_to_next_line);
         }

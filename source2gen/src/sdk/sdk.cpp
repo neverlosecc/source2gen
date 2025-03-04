@@ -307,6 +307,43 @@ namespace {
         }
     }
 
+    [[nodiscard]]
+    codegen::TypeCategory GetTypeCategory(const SchemaClassFieldData_t& field) {
+        using enum codegen::TypeCategory;
+
+        // these cases and sub-cases aren't exactly correct, but they do the job.
+        // we can improve the classification when we need more details.
+        switch (field.m_pSchemaType->GetTypeCategory()) {
+        case ETypeCategory::Schema_DeclaredEnum:
+            return enum_;
+        case ETypeCategory::Schema_DeclaredClass:
+            return class_or_struct;
+        case ETypeCategory::Schema_FixedArray: {
+            auto* schema = reinterpret_cast<const CSchemaType_FixedArray*>(field.m_pSchemaType);
+            switch (schema->m_pElementType->m_unTypeCategory) {
+            case ETypeCategory::Schema_DeclaredEnum:
+                return enum_;
+            case ETypeCategory::Schema_DeclaredClass:
+            case ETypeCategory::Schema_Ptr:
+                return class_or_struct;
+            default:
+                return built_in;
+            }
+        }
+        case ETypeCategory::Schema_Ptr: {
+            if (const auto ref_class = field.m_pSchemaType->GetRefClass(); ref_class != nullptr) {
+                // there are only pointers to structs/classes in source2, not to enums
+                if (ref_class->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+                    return class_or_struct;
+                }
+            }
+            return built_in;
+        }
+        default:
+            return built_in;
+        }
+    }
+
     void PrintClassInfo(sdk::GeneratorCache& cache, codegen::IGenerator::self_ref generator, const CSchemaClassBinding& class_) {
         generator.comment(std::format("Registered alignment: {}", class_.GetRegisteredAlignment().transform(&util::to_hex_string).value_or("unknown")));
         generator.comment(
@@ -850,16 +887,12 @@ namespace {
         //
         if (is_struct) {
             if (class_parent != nullptr) {
-                // TOOD: a: nope
-                // generator.begin_struct_with_base_type(class_.m_pszName, "source2sdk__" + parent_class_name);
                 generator.begin_struct_with_base_type(class_.m_pszName, parent_class_name);
             } else {
                 generator.begin_struct(class_.m_pszName);
             }
         } else {
             if (class_parent != nullptr) {
-                // TOOD: a: nope
-                // generator.begin_class_with_base_type(class_.m_pszName, "source2sdk__" + parent_class_name);
                 generator.begin_class_with_base_type(class_.m_pszName, parent_class_name);
             } else {
                 generator.begin_class(class_.m_pszName);
@@ -892,7 +925,7 @@ namespace {
                     std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field.m_pszName, field.m_nSingleInheritanceOffset));
                 generator.comment("", false)
                     .reset_tabs_count()
-                    .prop(codegen::Prop{.type_name = var_info.m_type, .name = var_info.formatted_name()})
+                    .prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()})
                     .restore_tabs_count();
                 continue;
             }
@@ -960,41 +993,17 @@ namespace {
                                     var_info.m_name));
                     generator.comment("", false);
                     generator.reset_tabs_count()
-                        .prop(codegen::Prop{.type_name = var_info.m_type, .name = var_info.formatted_name()}, true)
+                        .prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()},
+                              true)
                         .restore_tabs_count();
-                    generator.prop(codegen::Prop{.type_name = "char", .name = std::format("{}[{:#x}]", var_info.m_name, field_size)}, false);
+                    generator.prop(codegen::Prop{.type_category = codegen::TypeCategory::built_in,
+                                                 .type_name = "char",
+                                                 .name = std::format("{}[{:#x}]", var_info.m_name, field_size)},
+                                   false);
                 } else {
-                    // TOOD: HACKHACK: nope! these prefixes are language-specific!
-                    auto var_info_2 = var_info;
-                    // TOOD: why do we only apply the type prefixes to entities in the source2sdk namespace?
-                    if (true || var_info.m_type.starts_with("source2sdk::")) {
-                        if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_DeclaredEnum) {
-                            var_info_2.m_type = "enum " + var_info_2.m_type;
-                        } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
-                            var_info_2.m_type = "struct " + var_info_2.m_type;
-                        } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_FixedArray) {
-                            auto* schema = reinterpret_cast<const CSchemaType_FixedArray*>(field.m_pSchemaType);
-                            switch (schema->m_pElementType->m_unTypeCategory) {
-                            case ETypeCategory::Schema_DeclaredEnum:
-                                var_info_2.m_type = "enum " + var_info_2.m_type;
-                                break;
-                            case ETypeCategory::Schema_DeclaredClass:
-                            case ETypeCategory::Schema_Ptr:
-                                var_info_2.m_type = "struct " + var_info_2.m_type;
-                                break;
-                            }
-                        } else if (field.m_pSchemaType->GetTypeCategory() == ETypeCategory::Schema_Ptr) {
-                            if (const auto ref_class = field.m_pSchemaType->GetRefClass(); ref_class != nullptr) {
-                                // there are only pointers to structs/classes in source2, not to enums
-                                if (ref_class->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
-                                    var_info_2.m_type = "struct " + var_info_2.m_type;
-                                }
-                            }
-                        }
-                    }
-
                     // This is the "all normal, all good" `prop()` call
-                    generator.prop(codegen::Prop{.type_name = var_info_2.m_type, .name = var_info.formatted_name()}, false);
+                    generator.prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()},
+                                   false);
                 }
             } else {
                 const auto warning =
@@ -1004,10 +1013,13 @@ namespace {
                                     class_.GetName(), field.m_pszName, source2_max_align);
                 warn(warning);
                 generator.comment(warning);
-                generator.prop(codegen::Prop{.type_name = "char", .name = std::format("{}[{:#x}]", var_info.m_name, field_size)}, true);
+                generator.prop(codegen::Prop{.type_category = codegen::TypeCategory::built_in,
+                                             .type_name = "char",
+                                             .name = std::format("{}[{:#x}]", var_info.m_name, field_size)},
+                               true);
                 generator.comment("", false)
                     .reset_tabs_count()
-                    .prop(codegen::Prop{.type_name = var_info.m_type, .name = var_info.formatted_name()}, false)
+                    .prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()}, false)
                     .restore_tabs_count();
             }
 
@@ -1064,8 +1076,8 @@ namespace {
         for (auto s = 0; s < class_.m_nStaticFieldsSize; s++) {
             auto static_field = &class_.m_pStaticFields[s];
 
-            auto [type, mod] = GetType(generator, *static_field->m_pSchemaType);
-            const auto var_info = field_parser::parse(generator, type, static_field->m_pszName, mod);
+            auto [type_name, mod] = GetType(generator, *static_field->m_pSchemaType);
+            const auto var_info = field_parser::parse(generator, type_name, static_field->m_pszName, mod);
             generator.static_field_getter(var_info.m_type, var_info.m_name, scope_name, class_.m_pszName, s);
         }
 
@@ -1129,8 +1141,8 @@ namespace {
                 if (field.m_pSchemaType->m_unTypeCategory == ETypeCategory::Schema_Bitfield) {
                     generator.comment(std::format("Cannot assert offset of bitfield {}::{}", class_.m_pszName, field.m_pszName));
                 } else {
-                    // TOOD: uncomment
-                    // generator.static_assert_offset(class_.m_pszName, field.m_pszName, field.m_nSingleInheritanceOffset);
+                    generator.static_assert_offset(MaybeWithModuleName(*class_.m_pTypeScope, class_.m_pszName), field.m_pszName,
+                                                   field.m_nSingleInheritanceOffset);
                 }
             }
         } else {

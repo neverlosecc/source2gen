@@ -14,7 +14,7 @@
 namespace field_parser {
     class field_info_t {
     public:
-        std::string m_type; // var type
+        std::string m_type; // fully qualified name
         fieldtype_t m_field_type = fieldtype_t::FIELD_UNUSED; // var type
         std::string m_name; // var name
 

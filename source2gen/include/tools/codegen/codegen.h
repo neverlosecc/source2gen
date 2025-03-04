@@ -11,7 +11,23 @@ namespace codegen {
     constexpr char kTabSym = '\t';
     constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many \t characters shall we place per each block
 
+    /// used to add type specifier prefixes
+    /// e.g. "struct" in "struct CBaseEntity entity;" for the C generator
+    enum class TypeCategory {
+        /// char, int, etc.
+        built_in,
+        class_or_struct,
+        union_,
+        enum_,
+    };
+
+    // Properties of this struct are not perfectly language-agnostic.
+    // We encode array syntax in `name` for example.
+    // That's dirty but keeps the design simple.
     struct Prop {
+        /// most underlying type, e.g. a "struct**" is "struct"
+        TypeCategory type_category{};
+        /// fully qualified
         std::string type_name{};
         std::string name{};
         std::optional<int> bitfield_size{};

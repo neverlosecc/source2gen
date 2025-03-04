@@ -127,11 +127,13 @@ cmake --build build
 
 ### How the C generator works
 
-- namespaces are encoded in names to avoid name conflicts
+the `codegen::IGenerator` interface is mostly (but not completely) language-agnostic
+to allow generation of C and C++.
+
+- namespace/module names are encoded in names to avoid name conflicts
 - `enum` names are encoded in enumerator names to avoid name conflicts
-- `class` is emitted as `struct`
-- uses of `struct` types are prefixed with the "struct" keyword
-- uses of `enum` types are prefixed with the "struct" keyword
+- `class` is emitted as `struct` (C doesn't have `class`)
+- uses of `struct`, `union`, `enum` types are prefixed with the "struct", "union", "enum" keyword respectively (see `codegen::TypeCategory`)
 
 ---
 
