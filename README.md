@@ -147,6 +147,7 @@ to allow generation of C and C++.
 - `enum` names are encoded in enumerator names to avoid name conflicts
 - `class` is emitted as `struct` (C doesn't have `class`)
 - uses of `struct`, `union`, `enum` types are prefixed with the "struct", "union", "enum" keyword respectively (see `codegen::TypeCategory`)
+- emission of static fields is disabled for C, as the only currently known use case of C is to generate IDA headers
 
 ---
 

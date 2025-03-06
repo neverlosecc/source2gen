@@ -1,7 +1,10 @@
 #pragma once
+#include <absl/strings/str_join.h>
+#include <absl/strings/str_split.h>
 #include <array>
 #include <cassert>
 #include <cstdint>
+
 #include <set>
 #include <sstream>
 #include <string>
@@ -41,6 +44,10 @@ namespace codegen {
 
         std::string get_file_extension() const override {
             return "hpp";
+        }
+
+        std::string escape_type_name(std::string_view name) const override {
+            return escape_name(name);
         }
 
         self_ref preamble() override {
@@ -204,7 +211,7 @@ namespace codegen {
 
             // @fixme: split method to class_forward_declaration & struct_forward_declaration
             // one for `struct uwu_t` and the other one for `class c_uwu`
-            return push_line(std::format("struct {};", text));
+            return push_line(std::format("struct {};", escape_name(text)));
         }
 
         self_ref struct_padding(Padding options) override {
@@ -216,7 +223,7 @@ namespace codegen {
                 type_name = "[[maybe_unused]] " + type_name;
 
             auto pad_name =
-                options.pad_offset.has_value() ? std::format("__pad{:04x}", options.pad_offset.value()) : std::format("__pad{:d}", _pads_count++);
+                options.pad_offset.has_value() ? std::format("_pad{:04x}", options.pad_offset.value()) : std::format("_pad{:d}", _pads_count++);
 
             if (!is_bitfield)
                 pad_name = pad_name + std::format("[{:#x}]", std::get<Padding::Bytes>(options.size).value);
@@ -302,6 +309,10 @@ namespace codegen {
                 result[i] = std::ranges::find(detail::c_family::kBlacklistedCharacters, name[i]) == std::end(detail::c_family::kBlacklistedCharacters) ?
                                 name[i] :
                                 '_';
+
+            // collapse multiple underscores into one
+            // because names containing double underscores are reserved in C++
+            result = absl::StrJoin(absl::StrSplit(result, '_', absl::SkipWhitespace{}), "_");
 
             return result;
         }

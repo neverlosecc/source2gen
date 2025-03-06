@@ -98,6 +98,14 @@ namespace codegen {
         virtual std::string get_file_extension() const = 0;
 
         /**
+         * @param name Name of a type, e.g. of a struct, without qualifiers.
+         * @return Escaped name, e.g. with underscores instead of spaces, that
+         * can be used to generate types.
+         */
+        [[nodiscard]]
+        virtual std::string escape_type_name(std::string_view name) const = 0;
+
+        /**
          * Can be used by implementations to generate language-specific
          * preambles, such as header guards in C.
          */

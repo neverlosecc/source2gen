@@ -31,6 +31,10 @@ namespace codegen {
             return "h";
         }
 
+        std::string escape_type_name(std::string_view name) const override {
+            return escape_name(name);
+        }
+
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
@@ -107,29 +111,6 @@ namespace codegen {
 
             end_block();
 
-            // TOOD: document removal of _static_fields in C
-            _static_fields.clear();
-
-            for (const auto& e : _static_fields) {
-                begin_function("static ", e.type_name, std::format("&{}_Get_{}", _current_class_or_enum.value(), e.prop_name), false, false);
-
-                // @note: @es3n1n: reset tabs count temporary
-                //
-                const auto backup_tabs_count = _tabs_count;
-                _tabs_count = 0;
-
-                const auto getter = std::format(
-                    R"(*({}*)(interfaces::g_schema->FindTypeScopeForModule("{}")->FindDeclaredClass("{}")->GetStaticFields()[{}]->m_pInstance))",
-                    e.type_name, e.mod_name, e.decl_class, e.index);
-                return_value(getter, false);
-                end_function(false, false);
-
-                // @note: @es3n1n: restore tabs count
-                //
-                _tabs_count = backup_tabs_count;
-            }
-
-            _static_fields.clear();
             _current_class_or_enum = std::nullopt;
             _current_struct_has_properties = false;
 
@@ -183,10 +164,10 @@ namespace codegen {
             return push_line(std::format("return {};", value), move_cursor_to_next_line);
         }
 
-        self_ref static_field_getter(const std::string& type_name, const std::string& prop_name, const std::string& mod_name,
-                                     const std::string& decl_class, const std::size_t index) override {
-            _static_fields.emplace_back(
-                StaticField{.type_name{type_name}, .prop_name{prop_name}, .mod_name{mod_name}, .decl_class{decl_class}, .index{index}});
+        self_ref static_field_getter([[maybe_unused]] const std::string& type_name, [[maybe_unused]] const std::string& prop_name,
+                                     [[maybe_unused]] const std::string& mod_name, [[maybe_unused]] const std::string& decl_class,
+                                     [[maybe_unused]] const std::size_t index) override {
+            // not implemented
             return *this;
         }
 
@@ -260,7 +241,7 @@ namespace codegen {
             std::string type_name = is_bitfield ? detail::c_family::guess_bitfield_type(std::get<Padding::Bits>(options.size).value) : "uint8_t";
 
             auto pad_name =
-                options.pad_offset.has_value() ? std::format("__pad{:04x}", options.pad_offset.value()) : std::format("__pad{:d}", _pads_count++);
+                options.pad_offset.has_value() ? std::format("_pad{:04x}", options.pad_offset.value()) : std::format("_pad{:d}", _pads_count++);
             if (!is_bitfield)
                 pad_name = pad_name + std::format("[{:#x}]", std::get<Padding::Bytes>(options.size).value);
 
@@ -340,7 +321,7 @@ namespace codegen {
         std::string encode_current_namespace(std::string_view name) {
             // TOOD: double underscores are reserved for the implementation. they're added in other places by escape_name().
             // TOOD: this is pretty expensive
-            return absl::StrJoin(std::list{_namespaces, {std::string{name}}} | std::views::join, "__");
+            return absl::StrJoin(std::list{_namespaces, {std::string{name}}} | std::views::join, "_");
         }
 
         static std::string escape_name(std::string_view name) {
@@ -351,6 +332,10 @@ namespace codegen {
                 result[i] = std::ranges::find(detail::c_family::kBlacklistedCharacters, name[i]) == std::end(detail::c_family::kBlacklistedCharacters) ?
                                 name[i] :
                                 '_';
+
+            // collapse multiple underscores into one
+            // because names containing double underscores are reserved in C
+            result = absl::StrJoin(absl::StrSplit(result, '_'), "_");
 
             return result;
         }
@@ -384,7 +369,6 @@ namespace codegen {
         std::optional<std::string> _current_class_or_enum{std::nullopt};
         bool _current_struct_has_properties = false;
         std::list<std::string> _namespaces{};
-        std::list<StaticField> _static_fields{};
         std::set<fnv32::hash> _forward_decls = {};
     };
 } // namespace codegen

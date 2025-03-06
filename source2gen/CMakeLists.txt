@@ -1,3 +1,6 @@
+find_package(absl)
+find_package(argparse)
+
 file(GLOB_RECURSE source2gen_SOURCES "src/**.cpp")
 list(REMOVE_ITEM source2gen_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 file(GLOB_RECURSE source2gen_HEADERS "include/**.h" "include/**.hpp")
@@ -12,6 +15,7 @@ target_include_directories(lib${PROJECT_NAME} PUBLIC
 
 target_link_libraries(lib${PROJECT_NAME}
   argparse::argparse
+  abseil::abseil
 )
 
 if(MSVC)

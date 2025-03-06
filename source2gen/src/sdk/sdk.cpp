@@ -9,6 +9,7 @@
 #include "tools/codegen/cpp.h"
 #include "tools/field_parser.h"
 #include "tools/util.h"
+#include <absl/strings/str_replace.h>
 #include <cstdlib>
 
 #include <algorithm>
@@ -526,28 +527,20 @@ namespace {
         }
     };
 
-    [[nodiscard]] std::string EscapeTypeName(const std::string_view type_name) {
-        // TODO: when we have a package manager: use a library
-        const auto StringReplace = [](std::string str, std::string_view search, std::string_view replace) {
-            const std::size_t pos = str.find(search);
-            if (pos != std::string::npos) {
-                str.replace(pos, search.length(), replace);
-            }
-            return str;
-        };
-
+    /// @param type_name Unqualified
+    [[nodiscard]] std::string EscapeTypeName(const codegen::IGenerator& generator, const std::string_view type_name) {
         // This is a hack to support nested types.
         // When we define nested types, they're not actually nested, but contain their outer class' name in their name,
         // e.g. "struct Player { struct Hand {}; };" is emitted as
         // "struct Player {}; struct Player__Hand{};".
         // But when used as a property, types expect `Hand` in `Player`, i.e. `Player::Hand m_hand;`
         // Instead of doing this hackery, we should probably declare nested classes as nested classes.
-        return StringReplace(std::string{type_name}, "::", "__");
+        return absl::StrReplaceAll(generator.escape_type_name(type_name), {{"::", "_"}});
     }
 
     /// Adds the module specifier to @p type_name, if @p type_name is declared in @p scope. Otherwise returns @p type_name unmodified.
-    std::string MaybeWithModuleName(const CSchemaSystemTypeScope& scope, const std::string_view type_name) {
-        const auto escaped_type_name = EscapeTypeName(type_name);
+    std::string MaybeWithModuleName(const codegen::IGenerator& generator, const CSchemaSystemTypeScope& scope, const std::string_view type_name) {
+        const auto escaped_type_name = EscapeTypeName(generator, type_name);
         return GetModuleOfTypeInScope(scope, type_name)
             .transform([&](const auto module_name) { return std::format("source2sdk::{}::{}", module_name, escaped_type_name); })
             .value_or(escaped_type_name);
@@ -645,7 +638,7 @@ namespace {
                         } else {
                             // e is a dirty name, e.g. "CPlayer*[10]". We need to add the module, but keep it dirty.
                             const auto type_name = DecayTypeName(e);
-                            const auto type_name_with_module = MaybeWithModuleName(scope, type_name);
+                            const auto type_name_with_module = MaybeWithModuleName(generator, scope, type_name);
                             const auto dirty_type_name_with_module = std::string{e}.replace(e.find(type_name), type_name.length(), type_name_with_module);
                             result += dirty_type_name_with_module;
                         }
@@ -851,7 +844,8 @@ namespace {
 
         // @note: @es3n1n: get parent name
         //
-        const std::string parent_class_name = (class_parent != nullptr) ? MaybeWithModuleName(*class_parent->m_pTypeScope, class_parent->m_pszName) : "";
+        const std::string parent_class_name =
+            (class_parent != nullptr) ? MaybeWithModuleName(generator, *class_parent->m_pTypeScope, class_parent->m_pszName) : "";
         const std::optional<std::ptrdiff_t> parent_class_size = class_parent ? std::make_optional(class_parent->m_nSizeOf) : std::nullopt;
 
         if (!class_is_aligned) {
@@ -1137,7 +1131,7 @@ namespace {
                 if (field.m_pSchemaType->m_unTypeCategory == ETypeCategory::Schema_Bitfield) {
                     generator.comment(std::format("Cannot assert offset of bitfield {}::{}", class_.m_pszName, field.m_pszName));
                 } else {
-                    generator.static_assert_offset(MaybeWithModuleName(*class_.m_pTypeScope, class_.m_pszName), field.m_pszName,
+                    generator.static_assert_offset(MaybeWithModuleName(generator, *class_.m_pTypeScope, class_.m_pszName), field.m_pszName,
                                                    field.m_nSingleInheritanceOffset);
                 }
             }
@@ -1152,12 +1146,12 @@ namespace {
         }
 
         generator.next_line();
-        generator.static_assert_size(MaybeWithModuleName(*class_.m_pTypeScope, class_.m_pszName), class_size);
+        generator.static_assert_size(MaybeWithModuleName(generator, *class_.m_pTypeScope, class_.m_pszName), class_size);
     }
 
     [[nodiscard]]
     std::filesystem::path GetFilePathForType(const codegen::IGenerator& generator, std::string_view module_name, std::string_view type_name) {
-        return std::format("{}/include/{}/{}/{}.{}", kOutDirName, kIncludeDirName, module_name, EscapeTypeName(DecayTypeName(type_name)),
+        return std::format("{}/include/{}/{}/{}.{}", kOutDirName, kIncludeDirName, module_name, EscapeTypeName(generator, DecayTypeName(type_name)),
                            generator.get_file_extension());
     }
 
@@ -1219,10 +1213,11 @@ namespace {
         const auto names = GetRequiredNamesForClass(class_);
 
         for (const auto& include : names | std::views::filter([](const auto& el) { return el.source == NameSource::include; })) {
-            generator.include(std::format("{}/{}/{}", kIncludeDirName, include.module, EscapeTypeName(include.type_name)), codegen::IncludeOptions{
-                                                                                                                               .local = true,
-                                                                                                                               .system = false,
-                                                                                                                           });
+            generator.include(std::format("{}/{}/{}", kIncludeDirName, include.module, EscapeTypeName(generator, include.type_name)),
+                              codegen::IncludeOptions{
+                                  .local = true,
+                                  .system = false,
+                              });
         }
 
         for (const auto& forward_declaration : names | std::views::filter([](const auto& el) { return el.source == NameSource::forward_declaration; })) {

@@ -12,7 +12,9 @@ namespace field_parser {
         namespace {
             using namespace std::string_view_literals;
 
-            constexpr std::string_view kBitfieldTypePrefix = "bitfield:"sv;
+            // The real prefix is "bitfield:", but we're escaping names
+            // before parsing them
+            constexpr std::string_view kBitfieldTypePrefix = "bitfield_"sv;
 
             // @note: @es3n1n: a list of possible integral types for bitfields (would be used in `guess_bitfield_type`)
             //
