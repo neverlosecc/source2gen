@@ -6,7 +6,9 @@
 #include <string>
 #include <string_view>
 
+#if defined(_MSC_VER)
 #pragma warning(disable:4715)
+#endif
 
 #include "loader_shared.h"
 #if TARGET_OS == WINDOWS

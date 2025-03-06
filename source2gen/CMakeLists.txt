@@ -31,9 +31,8 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR
     ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang" OR
     ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
     target_compile_options(lib${PROJECT_NAME} PRIVATE
-        # TOOD: uncomment
-        # -Wall
-        # -Wextra
+        -Wall
+        -Wextra
         -pedantic-errors
         -Wno-address-of-packed-member
         $<$<NOT:$<CXX_COMPILER_ID:GNU>>:-Wno-implicit-exception-spec-mismatch>

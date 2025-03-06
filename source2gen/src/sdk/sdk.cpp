@@ -749,7 +749,7 @@ namespace {
     }
 
     [[nodiscard]]
-    ClassAssemblyState AssembleBitfield(codegen::IGenerator& generator, ClassAssemblyState&& state, int expected_offset) {
+    ClassAssemblyState AssembleBitfield(codegen::IGenerator& generator, ClassAssemblyState&& state) {
         state.assembling_bitfield = false;
 
         std::size_t exact_bitfield_size_bits = 0;
@@ -868,11 +868,6 @@ namespace {
         const std::optional<std::ptrdiff_t> first_field_offset =
             (first_field != nullptr) ? std::make_optional(first_field->m_nSingleInheritanceOffset) : std::nullopt;
 
-        const auto class_size_without_parent = class_.m_nSizeOf - parent_class_size.value_or(0);
-
-        const auto expected_pad_size =
-            first_field_offset.transform([&](auto e) { return e - parent_class_size.value_or(0); }).value_or(class_size_without_parent);
-
         // @todo: @es3n1n: if for some mysterious reason this class describes fields
         // of the base class we should handle it too.
         if ((class_parent != nullptr) && first_field_offset.has_value() && first_field_offset.value() < parent_class_size.value()) {
@@ -954,7 +949,7 @@ namespace {
 
             // This is the first field after a bitfield, i.e. the active bitfield has ended. Emit the bitfield we have collected.
             if (state.assembling_bitfield) {
-                state = AssembleBitfield(generator, std::move(state), state.last_field_offset.value_or(0) + state.last_field_size.value_or(0));
+                state = AssembleBitfield(generator, std::move(state));
 
                 // We need another pad here because the current loop iteration is already on a non-bitfield field which will get emitted right away.
                 InsertPadUntil(generator, state, field.m_nSingleInheritanceOffset, verbose);
@@ -1041,7 +1036,7 @@ namespace {
         // @note: @es3n1n: if struct ends with bitfield we should end bitfield before ending the class
         //
         if (state.assembling_bitfield) {
-            state = AssembleBitfield(generator, std::move(state), state.last_field_offset.value_or(0) + state.last_field_size.value_or(0));
+            state = AssembleBitfield(generator, std::move(state));
         }
 
         // pad the class end.
@@ -1056,7 +1051,7 @@ namespace {
                                                       .size = codegen::Padding::Bytes{end_pad},
                                                       .is_private_field = true,
                                                       .move_cursor_to_next_line = true});
-        } else if (end_pad < 0) [[unlikely]] {
+        } else if (static_cast<std::size_t>(class_size) < last_field_end) [[unlikely]] {
             throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
                                                  -end_pad, last_field_end, class_.GetName(), class_size)};
         }
@@ -1156,8 +1151,7 @@ namespace {
         }
 
         generator.next_line();
-        // TOOD: uncomment
-        // generator.static_assert_size(class_.m_pszName, class_size);
+        generator.static_assert_size(MaybeWithModuleName(*class_.m_pTypeScope, class_.m_pszName), class_size);
     }
 
     [[nodiscard]]

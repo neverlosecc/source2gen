@@ -51,7 +51,7 @@ namespace codegen::detail::c_family {
     // TOOD: remove?
     [[nodiscard]]
     inline std::string guess_bitfield_type(const std::size_t bits_count) {
-        for (const auto p : kBitfieldIntegralTypes) {
+        for (const auto& p : kBitfieldIntegralTypes) {
             if (bits_count > p.first)
                 continue;
 

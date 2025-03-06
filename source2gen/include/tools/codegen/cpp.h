@@ -165,14 +165,14 @@ namespace codegen {
         self_ref static_assert_size(std::string_view type_name, int expected_size, const bool move_cursor_to_next_line) override {
             assert(expected_size > 0);
 
-            return push_line(std::format("static_assert(sizeof({}) == {:#x});", type_name, expected_size));
+            return push_line(std::format("static_assert(sizeof({}) == {:#x});", type_name, expected_size), move_cursor_to_next_line);
         }
 
         self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, int expected_offset,
                                       const bool move_cursor_to_next_line) override {
             assert(expected_offset >= 0);
 
-            return push_line(std::format("static_assert(offsetof({}, {}) == {:#x});", class_name, prop_name, expected_offset));
+            return push_line(std::format("static_assert(offsetof({}, {}) == {:#x});", class_name, prop_name, expected_offset), move_cursor_to_next_line);
         }
 
         self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) override {

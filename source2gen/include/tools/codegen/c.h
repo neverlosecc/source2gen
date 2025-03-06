@@ -59,7 +59,7 @@ namespace codegen {
 
         // @todo: @es3n1n: `self_ref prev_line()`
 
-        self_ref access_modifier(const std::string& modifier) override {
+        self_ref access_modifier([[maybe_unused]] const std::string& modifier) override {
             return *this;
         }
 
@@ -76,7 +76,7 @@ namespace codegen {
             return end_struct();
         }
 
-        self_ref begin_struct(std::string_view name, const std::string& access_modifier = "public") override {
+        self_ref begin_struct(std::string_view name, [[maybe_unused]] const std::string& access_modifier = "public") override {
             assert(!_current_class_or_enum.has_value() && "nested types are not supported");
             _current_class_or_enum = name;
 
@@ -88,7 +88,7 @@ namespace codegen {
         }
 
         self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type,
-                                             const std::string& access_modifier = "public") override {
+                                             [[maybe_unused]] const std::string& access_modifier = "public") override {
             assert(!base_type.empty() && "use begin_struct() for structs with no base type");
             assert(!_current_class_or_enum.has_value() && "nested types are not supported");
 
@@ -195,14 +195,15 @@ namespace codegen {
         self_ref static_assert_size(std::string_view type_name, int expected_size, const bool move_cursor_to_next_line) override {
             assert(expected_size > 0);
 
-            return push_line(std::format("static_assert(sizeof(struct {}) == {:#x});", escape_name(type_name), expected_size));
+            return push_line(std::format("static_assert(sizeof(struct {}) == {:#x});", escape_name(type_name), expected_size), move_cursor_to_next_line);
         }
 
         self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, int expected_offset,
                                       const bool move_cursor_to_next_line) override {
             assert(expected_offset >= 0);
 
-            return push_line(std::format("static_assert(offsetof(struct {}, {}) == {:#x});", escape_name(class_name), prop_name, expected_offset));
+            return push_line(std::format("static_assert(offsetof(struct {}, {}) == {:#x});", escape_name(class_name), prop_name, expected_offset),
+                             move_cursor_to_next_line);
         }
 
         self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) override {

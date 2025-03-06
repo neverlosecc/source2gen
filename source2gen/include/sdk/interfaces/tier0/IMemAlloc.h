@@ -2,8 +2,10 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable:4191)
+#endif
 
 #include "tools/platform.h"
 #include "tools/virtual.h"
@@ -40,7 +42,9 @@ public:
 
 extern IMemAlloc* GetMemAlloc();
 
+#if defined(_MSC_VER)
 #pragma warning(pop)
+#endif
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc
