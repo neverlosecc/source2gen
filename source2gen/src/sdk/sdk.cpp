@@ -458,7 +458,7 @@ namespace {
 
         // @note: @es3n1n: we are done with this enum
         //
-        generator.end_enum_class();
+        generator.end_enum();
     }
 
     /// @return {type_name, array_sizes}

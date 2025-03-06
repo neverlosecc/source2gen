@@ -1,5 +1,5 @@
 file(GLOB_RECURSE source2gen_SOURCES "src/**.cpp")
-list(REMOVE_ITEM source2gen_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
+list(REMOVE_ITEM source2gen_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 file(GLOB_RECURSE source2gen_HEADERS "include/**.h" "include/**.hpp")
 
 # We build a library first, because we can link the library against tests.

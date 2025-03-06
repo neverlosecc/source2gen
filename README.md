@@ -34,7 +34,7 @@ You can also invoke source2gen directly , e.g. for debugging, by running
 
 ```sh
 LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
-  source2gen
+  ./build/source2gen
 ```
 
 Source2Gen for Linux support is currently in an alpha state. There will be
@@ -123,6 +123,19 @@ When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
 conan install --output-folder build --settings:host build_type=Release .
 cmake -S . -B build --preset conan-debug -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
 cmake --build build
+```
+
+### Running tests
+
+```bash
+LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
+  ./build/bin/source2gen-test
+```
+
+On Linux, there are tests to check if the generated SDK can be compiled
+
+```bash
+./scripts/test-cpp.sh ~/games/cs2/
 ```
 
 ### How the C generator works

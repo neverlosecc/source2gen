@@ -46,6 +46,7 @@ else
   FIRST_BIN_DIRECTORY="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/"
   SECOND_BIN_DIRECTORY=$(find_second_bin_directory "$GAME_DIRECTORY")
   export LD_LIBRARY_PATH="${FIRST_BIN_DIRECTORY}:${SECOND_BIN_DIRECTORY}:${LD_LIBRARY_PATH:-}"
+  echo "setting LD_LIBRARY_PATH to ${LD_LIBRARY_PATH}"
   set -x
   if [ -z "${DEBUGGER:-}" ]; then
     "${BINARY}" "${@}"

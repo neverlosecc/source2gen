@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.30)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS On)
 # Lowest standard we meet. Feel free to bump if we need a newer standard.
+# Need C23 for enums with fixed underlying types
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)

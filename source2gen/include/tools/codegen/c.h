@@ -109,7 +109,7 @@ namespace codegen {
 
             end_block();
 
-            // TOOD: remove _static_fields in C
+            // TOOD: document removal of _static_fields in C
             _static_fields.clear();
 
             for (const auto& e : _static_fields) {
@@ -155,14 +155,12 @@ namespace codegen {
 
         self_ref begin_enum(const std::string& enum_name, const std::string& base_typename = "") override {
             assert(!_current_class_or_enum.has_value() && "nested types are not supported");
-            // TOOD: enable this assertion
-            // assert((base_typename.empty() || base_typename.contains("32")) && "C does not support enum base types");
-
             _current_class_or_enum = enum_name;
-            return begin_block(std::format("enum {}", encode_current_namespace(escape_name(enum_name))));
+            return begin_block(std::format("enum {}{}", encode_current_namespace(escape_name(enum_name)),
+                                           base_typename.empty() ? base_typename : (" : " + base_typename)));
         }
 
-        self_ref end_enum_class() override {
+        self_ref end_enum() override {
             _current_class_or_enum = std::nullopt;
             return end_block();
         }
@@ -279,12 +277,11 @@ namespace codegen {
         }
 
         self_ref begin_bitfield_block() override {
-            return begin_block(std::format("struct ", ""));
+            return comment("start of bitfield block");
         }
 
         self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) override {
-            dec_tabs_count(1);
-            return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
+            return comment("end of bitfield block", move_cursor_to_next_line);
         }
 
         self_ref restore_tabs_count() override {

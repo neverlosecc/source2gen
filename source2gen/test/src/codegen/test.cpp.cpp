@@ -12,7 +12,8 @@ TEST(CodeGenCpp, Simple) {
 
     EXPECT_EQ(builder.str(), "#pragma once\n"
                              "\n"
-                             "#include \"source2gen_user_types.hpp\"\n"
+                             "#include <source2sdk/source2gen/source2gen_user_types.hpp>\n"
+                             "#include <cstddef>\n"
                              "#include <cstdint>\n"
                              "\n"
                              "// it's a-me\n"
@@ -31,8 +32,7 @@ TEST(CodeGenCpp, Class) {
                              "{\n"
                              "public:\n"
                              "private:\n"
-                             "};\n"
-                             "\n");
+                             "};\n");
 }
 
 TEST(CodeGenCpp, ClassWithBase) {
@@ -50,7 +50,7 @@ TEST(CodeGenCpp, ClassContents) {
 
     builder.begin_class("Test", "public");
     builder.static_field_getter("int", "power", "tier0", "Game", 19);
-    builder.prop(codegen::Prop{.type_name = "int", .name = "up"});
+    builder.prop(codegen::Prop{.type_category = codegen::TypeCategory::built_in, .type_name = "int", .name = "up"});
     builder.end_class();
 
     EXPECT_EQ(builder.str(), "class Test\n"
@@ -60,9 +60,7 @@ TEST(CodeGenCpp, ClassContents) {
                              "*reinterpret_cast<int*>(interfaces::g_schema->FindTypeScopeForModule(\"tier0\")->FindDeclaredClass(\"Game\")->"
                              "GetStaticFields()[19]->m_pInstance);};\n"
                              "\tint up;\n"
-                             "};\n"
-                             "\n"
-                             "");
+                             "};\n");
 }
 
 TEST(CodeGenCpp, Struct) {
@@ -74,8 +72,7 @@ TEST(CodeGenCpp, Struct) {
     EXPECT_EQ(builder.str(), "struct Test\n"
                              "{\n"
                              "public:\n"
-                             "};\n"
-                             "\n");
+                             "};\n");
 }
 
 TEST(CodeGenCpp, StructWithBase) {
@@ -111,8 +108,7 @@ TEST(CodeGenCpp, StructWithContents) {
                              "public:\n"
                              "\tuint8_t __pad0100[0x200];\n"
                              "\tuint8_t __pad0300: 7;\n"
-                             "};\n"
-                             "\n");
+                             "};\n");
 }
 
 TEST(CodeGenCpp, Namespace) {
@@ -124,7 +120,7 @@ TEST(CodeGenCpp, Namespace) {
     EXPECT_EQ(builder.str(), "namespace sourcesdk\n"
                              "{\n"
                              "};\n" // this semicolon is unnecessary in C++
-                             "\n");
+    );
 }
 
 TEST(CodeGenCpp, Enum) {
@@ -133,14 +129,13 @@ TEST(CodeGenCpp, Enum) {
     builder.begin_enum("Choice");
     builder.enum_item("Chocolate", 7);
     builder.enum_item("Strawberries", 9);
-    builder.end_enum_class();
+    builder.end_enum();
 
     EXPECT_EQ(builder.str(), "enum class Choice\n"
                              "{\n"
                              "\tChocolate = 0x7,\n"
                              "\tStrawberries = 0x9,\n"
-                             "};\n"
-                             "\n");
+                             "};\n");
 }
 
 TEST(CodeGenCpp, Function) {
@@ -154,7 +149,7 @@ TEST(CodeGenCpp, Function) {
                              "{\n"
                              "\treturn 1234;\n"
                              "};\n" // this semicolon is unnecessary in C++
-                             "\n");
+    );
 }
 
 TEST(CodeGenCpp, BitfieldBlock) {
@@ -163,5 +158,6 @@ TEST(CodeGenCpp, BitfieldBlock) {
     builder.begin_bitfield_block();
     builder.end_bitfield_block(true);
 
-    EXPECT_EQ(builder.str(), "struct \n{\n};\n");
+    EXPECT_EQ(builder.str(), "// start of bitfield block\n"
+                             "// end of bitfield block\n");
 }

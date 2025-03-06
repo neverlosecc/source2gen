@@ -12,8 +12,9 @@ TEST(CodeGenC, Simple) {
 
     EXPECT_EQ(builder.str(), "#pragma once\n"
                              "\n"
-                             "#include \"source2gen_user_types.h\"\n"
+                             "#include <source2sdk/source2gen/source2gen_user_types.h>\n"
                              "#include <stdbool.h>\n"
+                             "#include <stddef.h>\n"
                              "#include <stdint.h>\n"
                              "\n"
                              "// it's a-me\n"
@@ -30,6 +31,8 @@ TEST(CodeGenC, Class) {
 
     EXPECT_EQ(builder.str(), "struct Test\n"
                              "{\n"
+                             "\t// This is an empty struct. There is no data in this struct. A pad has been generated for compliance with C.\n"
+                             "\tchar pad_do_not_access;\n"
                              "};\n"
                              "\n");
 }
@@ -41,7 +44,7 @@ TEST(CodeGenC, ClassWithBase) {
 
     EXPECT_EQ(builder.str(), "struct Player\n"
                              "{\n"
-                             "\tEntity base;\n");
+                             "\tstruct Entity base;\n");
 }
 
 TEST(CodeGenC, ClassContents) {
@@ -53,15 +56,12 @@ TEST(CodeGenC, ClassContents) {
     builder.prop(codegen::Prop{.type_name = "uint8_t", .name = "down", .bitfield_size = 7});
     builder.end_class();
 
-    EXPECT_EQ(builder.str(),
-              "struct Test\n"
-              "{\n"
-              "\tint up;\n"
-              "\tuint8_t down: 7;\n"
-              "};\n"
-              "\n"
-              "static int &Test_Get_power(){return *(int*)(interfaces::g_schema->FindTypeScopeForModule(\"tier0\")->FindDeclaredClass(\"Game\")->"
-              "GetStaticFields()[19]->m_pInstance);};\n");
+    EXPECT_EQ(builder.str(), "struct Test\n"
+                             "{\n"
+                             "\tint up;\n"
+                             "\tuint8_t down: 7;\n"
+                             "};\n"
+                             "\n");
 }
 
 TEST(CodeGenC, EscapesClassMembers) {
@@ -86,6 +86,8 @@ TEST(CodeGenC, Struct) {
 
     EXPECT_EQ(builder.str(), "struct Test\n"
                              "{\n"
+                             "\t// This is an empty struct. There is no data in this struct. A pad has been generated for compliance with C.\n"
+                             "\tchar pad_do_not_access;\n"
                              "};\n"
                              "\n");
 }
@@ -97,7 +99,7 @@ TEST(CodeGenC, StructWithBase) {
 
     EXPECT_EQ(builder.str(), "struct Player\n"
                              "{\n"
-                             "\tEntity base;\n");
+                             "\tstruct Entity base;\n");
 }
 
 TEST(CodeGenC, StructWithContents) {
@@ -144,7 +146,7 @@ TEST(CodeGenC, Enum) {
     builder.begin_enum("Choice");
     builder.enum_item("Chocolate", 7);
     builder.enum_item("Strawberries", 9);
-    builder.end_enum_class();
+    builder.end_enum();
 
     EXPECT_EQ(builder.str(), "enum Choice\n"
                              "{\n"
@@ -174,5 +176,6 @@ TEST(CodeGenC, BitfieldBlock) {
     builder.begin_bitfield_block();
     builder.end_bitfield_block(true);
 
-    EXPECT_EQ(builder.str(), "struct \n{\n};\n");
+    EXPECT_EQ(builder.str(), "// start of bitfield block\n"
+                             "// end of bitfield block\n");
 }

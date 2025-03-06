@@ -129,7 +129,7 @@ namespace codegen {
 
         virtual self_ref begin_enum(const std::string& enum_name, const std::string& base_typename = "") = 0;
 
-        virtual self_ref end_enum_class() = 0;
+        virtual self_ref end_enum() = 0;
 
         virtual self_ref enum_item(const std::string& name, std::uint64_t value) = 0;
 

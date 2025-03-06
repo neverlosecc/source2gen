@@ -119,7 +119,7 @@ namespace codegen {
             return begin_block(std::format("enum class {}{}", escape_name(enum_name), base_typename.empty() ? base_typename : (" : " + base_typename)));
         }
 
-        self_ref end_enum_class() override {
+        self_ref end_enum() override {
             return end_block();
         }
 
@@ -154,7 +154,7 @@ namespace codegen {
                 R"(*reinterpret_cast<{}*>(interfaces::g_schema->FindTypeScopeForModule("{}")->FindDeclaredClass("{}")->GetStaticFields()[{}]->m_pInstance))",
                 type_name, mod_name, decl_class, index);
             return_value(getter, false);
-            end_function(false, false);
+            end_function(false, true);
 
             // @note: @es3n1n: restore tabs count
             //
@@ -229,15 +229,10 @@ namespace codegen {
 
         self_ref begin_bitfield_block() override {
             return comment("start of bitfield block");
-            // TOOD: remove commented code
-            // return begin_struct("", "");
         }
 
         self_ref end_bitfield_block(const bool move_cursor_to_next_line = true) override {
-            // TOOD: remove commented code
-            // dec_tabs_count(1);
-            return comment("start of bitfield block", move_cursor_to_next_line);
-            // return push_line(move_cursor_to_next_line ? "};" : "}; ", move_cursor_to_next_line);
+            return comment("end of bitfield block", move_cursor_to_next_line);
         }
 
         self_ref restore_tabs_count() override {
