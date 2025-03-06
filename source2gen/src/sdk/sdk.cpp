@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <list>
@@ -45,7 +46,7 @@ namespace {
     struct BitfieldEntry {
         std::string name{};
         std::size_t size{};
-        // TOOD: document lifetime - asked es3n1n
+        /// Lifetime of fields' pointers bound to the source2's @ref CSchemaClassInfo
         std::vector<SchemaMetadataEntryData_t> metadata{};
     };
 
@@ -1218,7 +1219,6 @@ namespace {
         const auto names = GetRequiredNamesForClass(class_);
 
         for (const auto& include : names | std::views::filter([](const auto& el) { return el.source == NameSource::include; })) {
-            // TOOD: bad include
             generator.include(std::format("{}/{}/{}", kIncludeDirName, include.module, EscapeTypeName(include.type_name)), codegen::IncludeOptions{
                                                                                                                                .local = true,
                                                                                                                                .system = false,

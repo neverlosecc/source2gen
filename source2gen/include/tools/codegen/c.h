@@ -6,7 +6,6 @@
 #include <absl/strings/str_join.h>
 #include <absl/strings/str_split.h>
 #include <cassert>
-#include <iostream> // TOOD: remove
 #include <list>
 #include <set>
 #include <sstream>
@@ -95,8 +94,7 @@ namespace codegen {
             _current_class_or_enum = name;
 
             begin_block(std::format("struct {}", encode_current_namespace(escape_name(name))));
-            // TOOD: let prop() add the "struct" prefix by adding it as a propety to Prop{}
-            return prop(Prop{.type_name = "struct " + base_type, .name = "base"});
+            return prop(Prop{.type_category = TypeCategory::class_or_struct, .type_name = base_type, .name = "base"});
         }
 
         self_ref end_struct() override {
@@ -244,7 +242,6 @@ namespace codegen {
 
         self_ref forward_declaration(const std::string& text) override {
             // @note: @es3n1n: forward decl only once
-            // TOOD: use std::hash. repeats in cpp generator.
             const auto fwd_decl_hash = fnv32::hash_runtime(text.data());
             if (_forward_decls.contains(fwd_decl_hash))
                 return *this;
@@ -261,10 +258,6 @@ namespace codegen {
 
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
             std::string type_name = is_bitfield ? detail::c_family::guess_bitfield_type(std::get<Padding::Bits>(options.size).value) : "uint8_t";
-            if (options.is_private_field) {
-                // TOOD: add a C99 mode?
-                // type_name = "[[maybe_unused]] " + type_name;
-            }
 
             auto pad_name =
                 options.pad_offset.has_value() ? std::format("__pad{:04x}", options.pad_offset.value()) : std::format("__pad{:d}", _pads_count++);

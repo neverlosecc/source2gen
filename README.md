@@ -1,5 +1,3 @@
-TOOD: remove or test+document rust
-
 # Source2Gen
 
 Source2Gen is a tool to generate Source 2 SDKs. \
@@ -44,16 +42,18 @@ Linux.
 
 ### Using the generated SDK
 
-TOOD: "sdk-filler" doesn't exist. is it sdk-static?
-
 The sdk depends on a file/module called "source2gen_user_types". This file has
 to be provided by the user and expose all types listed in
-[types.hpp](sdk-filler/types.hpp). If you don't intend to access any of these
-types, you can use [types.hpp](sdk-filler/types.hpp) as
-"source2gen_user_types.hpp".
+[source2gen_user_types.hpp](sdk-static/cpp/include/source2sdk/source2gen/source2gen_user_types.hpp).
+If you don't intend to access any of these
+types, you can use the linked file directly.
 
-TOOD: document exact file/module name per language
-TOOD: document language standard requirements
+The following languages can be emitted (`--emit-language`)
+
+| Language | Minimum required version |
+| -------- | ------------------------ |
+| `cpp`    | C++23                    |
+| `c`      | C23                      |
 
 ## Getting Started
 

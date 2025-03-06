@@ -2,32 +2,8 @@
 // See end of file for extended copyright information.
 #pragma once
 
-// TOOD: remove all of these includes
-
-#include <array>
-#include <cassert>
-#include <chrono>
-#include <filesystem>
-#include <fstream>
-#include <thread>
-#include <unordered_map>
-
-using namespace std::chrono_literals;
-using namespace std::this_thread;
-
-#pragma region Format
-#include <format>
-#include <iostream>
-#pragma endregion Format
-
-#pragma region Tools
-#include "tools/codegen/codegen.h"
-#include "tools/field_parser.h"
-#include "tools/fnv.h"
-#include "tools/util.h"
-#pragma endregion Tools
-
 #include "options.hpp"
+#include <string_view>
 
 namespace source2_gen {
     /// Logs errors. Calls @ref std::abort() on fatal errors.

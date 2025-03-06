@@ -1,6 +1,7 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
 #include "options.hpp"
+#include "tools/platform.h"
 #include <argparse/argparse.hpp>
 #include <Include.h>
 #include <optional>

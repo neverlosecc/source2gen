@@ -6,8 +6,10 @@
 #include <tools/platform.h>
 
 #include "options.hpp"
+#include "tools/util.h"
 #include <array>
 #include <fstream>
+#include <iostream>
 #include <iterator>
 #include <span>
 #include <string>
