@@ -237,10 +237,9 @@ namespace codegen {
             return push_line(std::format("struct {};", encode_current_namespace(detail::c_family::escape_name(text))));
         }
 
-        self_ref struct_padding(Padding options, bool move_cursor_to_next_line = true) override {
+        self_ref struct_padding(Padding options, bool move_cursor_to_next_line) override {
             const auto is_bitfield = std::holds_alternative<Padding::Bits>(options.size);
 
-            // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
             std::string type_name = is_bitfield ? detail::c_family::guess_bitfield_type(std::get<Padding::Bits>(options.size).value) : "uint8_t";
 
             auto pad_name =

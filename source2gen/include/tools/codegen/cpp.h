@@ -216,7 +216,7 @@ namespace codegen {
             return push_line(std::format("struct {};", detail::c_family::escape_name(text)));
         }
 
-        self_ref struct_padding(Padding options, bool move_cursor_to_next_line = true) override {
+        self_ref struct_padding(Padding options, bool move_cursor_to_next_line) override {
             const auto is_bitfield{std::holds_alternative<Padding::Bits>(options.size)};
 
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field

@@ -792,7 +792,7 @@ namespace {
                         .pad_offset = expected_offset,
                         .size = codegen::Padding::Bytes{offset - expected_offset},
                     },
-                    true)
+                    false)
                 .reset_tabs_count()
                 .comment(std::format("{:#x}", expected_offset))
                 .restore_tabs_count();
@@ -837,7 +837,7 @@ namespace {
             generator.comment(warning);
             generator.comment("It has been replaced by a dummy. You can try uncommenting the struct below.");
             generator.begin_struct(class_.GetName());
-            generator.struct_padding(codegen::Padding{.pad_offset = 0, .size = codegen::Padding::Bytes{static_cast<std::size_t>(class_size)}});
+            generator.struct_padding(codegen::Padding{.pad_offset = 0, .size = codegen::Padding::Bytes{static_cast<std::size_t>(class_size)}}, false);
             generator.end_struct();
         }
 
@@ -1048,7 +1048,7 @@ namespace {
                     .pad_offset = last_field_end,
                     .size = codegen::Padding::Bytes{end_pad},
                 },
-                true);
+                false);
         } else if (static_cast<std::size_t>(class_size) < last_field_end) [[unlikely]] {
             throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
                                                  -end_pad, last_field_end, class_.GetName(), class_size)};
