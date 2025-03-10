@@ -609,8 +609,7 @@ namespace {
         return result;
     }
 
-    // TOOD: name style
-    std::unique_ptr<codegen::IGenerator> get_generator_for_language(source2_gen::Language language) {
+    std::unique_ptr<codegen::IGenerator> GetGeneratorForLanguage(source2_gen::Language language) {
         switch (language) {
         case source2_gen::Language::cpp:
             return std::make_unique<codegen::generator_cpp_t>();
@@ -1162,7 +1161,7 @@ namespace {
     void GenerateEnumSdk(const source2_gen::Options& options, std::string_view module_name, const CSchemaEnumBinding& enum_) {
         // @note: @es3n1n: init codegen
         //
-        auto p_generator = get_generator_for_language(options.emit_language);
+        auto p_generator = GetGeneratorForLanguage(options.emit_language);
         auto& generator = *p_generator;
 
         generator.preamble();
@@ -1209,7 +1208,7 @@ namespace {
                           const CSchemaClassBinding& class_) {
         // @note: @es3n1n: init codegen
         //
-        auto p_generator = get_generator_for_language(options.emit_language);
+        auto p_generator = GetGeneratorForLanguage(options.emit_language);
         auto& generator = *p_generator;
 
         generator.preamble();
