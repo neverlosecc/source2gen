@@ -153,6 +153,7 @@ namespace codegen {
 
         virtual self_ref static_assert_size(std::string_view type_name, int expected_size, const bool move_cursor_to_next_line = true) = 0;
 
+        /// @param class_name Fully qualified
         virtual self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, int expected_offset,
                                               const bool move_cursor_to_next_line = true) = 0;
 

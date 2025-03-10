@@ -181,8 +181,9 @@ namespace codegen {
                                       const bool move_cursor_to_next_line) override {
             assert(expected_offset >= 0);
 
-            return push_line(std::format("static_assert(offsetof(struct {}, {}) == {:#x});", escape_name(class_name), prop_name, expected_offset),
-                             move_cursor_to_next_line);
+            return push_line(
+                std::format("static_assert(offsetof(struct {}, {}) == {:#x});", escape_name(class_name), escape_name(prop_name), expected_offset),
+                move_cursor_to_next_line);
         }
 
         self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) override {
@@ -335,7 +336,7 @@ namespace codegen {
 
             // collapse multiple underscores into one
             // because names containing double underscores are reserved in C
-            result = absl::StrJoin(absl::StrSplit(result, '_'), "_");
+            result = absl::StrJoin(absl::StrSplit(result, '_', absl::SkipWhitespace{}), "_");
 
             return result;
         }
