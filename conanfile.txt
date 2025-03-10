@@ -1,6 +1,6 @@
 [requires]
 abseil/20240722.0
-argparse/3.0
+argparse/3.2
 gtest/1.15.0
 
 [generators]

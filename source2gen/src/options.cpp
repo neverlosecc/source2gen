@@ -18,8 +18,7 @@ static std::optional<source2_gen::Language> parse_language(std::string_view str)
 std::optional<source2_gen::Options> source2_gen::Options::parse_args(int argc, char* argv[]) {
     argparse::ArgumentParser parser{"source2gen"};
 
-    // TOOD: .choices("cpp", "c") breaks the parser when more flags are given
-    parser.add_argument("--emit-language").default_value("cpp").help("Programming language to be used for the generated SDK");
+    parser.add_argument("--emit-language").choices("cpp", "c").default_value("cpp").help("Programming language to be used for the generated SDK [cpp, c]");
     parser.add_argument("--no-static-members").default_value(false).help("Don't generate getters for static member variables");
 
     try {
