@@ -788,10 +788,12 @@ namespace {
         // insert padding only if needed
         if (expected_offset < static_cast<std::uint64_t>(offset) && !state.assembling_bitfield) {
             generator
-                .struct_padding(codegen::Padding{.pad_offset = expected_offset,
-                                                 .size = codegen::Padding::Bytes{offset - expected_offset},
-                                                 .is_private_field = false,
-                                                 .move_cursor_to_next_line = false})
+                .struct_padding(
+                    codegen::Padding{
+                        .pad_offset = expected_offset,
+                        .size = codegen::Padding::Bytes{offset - expected_offset},
+                    },
+                    true)
                 .reset_tabs_count()
                 .comment(std::format("{:#x}", expected_offset))
                 .restore_tabs_count();
@@ -1042,10 +1044,12 @@ namespace {
         // we generated a pad for empty classes, they'd no longer have standard-layout.
         // The pad isn't necessary for such classes, because the compiler will make them have size=1.
         if ((end_pad != 0) && (class_size != 1)) {
-            generator.struct_padding(codegen::Padding{.pad_offset = last_field_end,
-                                                      .size = codegen::Padding::Bytes{end_pad},
-                                                      .is_private_field = true,
-                                                      .move_cursor_to_next_line = true});
+            generator.struct_padding(
+                codegen::Padding{
+                    .pad_offset = last_field_end,
+                    .size = codegen::Padding::Bytes{end_pad},
+                },
+                true);
         } else if (static_cast<std::size_t>(class_size) < last_field_end) [[unlikely]] {
             throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
                                                  -end_pad, last_field_end, class_.GetName(), class_size)};

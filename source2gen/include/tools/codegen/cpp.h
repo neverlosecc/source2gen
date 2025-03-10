@@ -47,7 +47,7 @@ namespace codegen {
         }
 
         std::string escape_type_name(std::string_view name) const override {
-            return escape_name(name);
+            return detail::c_family::escape_name(name);
         }
 
         self_ref preamble() override {
@@ -83,7 +83,7 @@ namespace codegen {
         }
 
         self_ref begin_class(const std::string& class_name, const std::string& access_modifier = "public") override {
-            return begin_block(std::format("class {}", escape_name(class_name)), access_modifier);
+            return begin_block(std::format("class {}", detail::c_family::escape_name(class_name)), access_modifier);
         }
 
         self_ref begin_class_with_base_type(const std::string& class_name, const std::string& base_type,
@@ -91,7 +91,7 @@ namespace codegen {
             if (base_type.empty())
                 return begin_class(std::cref(class_name), access_modifier);
 
-            return begin_block(std::format("class {} : public {}", escape_name(class_name), base_type), access_modifier);
+            return begin_block(std::format("class {} : public {}", detail::c_family::escape_name(class_name), base_type), access_modifier);
         }
 
         self_ref end_class() override {
@@ -99,7 +99,7 @@ namespace codegen {
         }
 
         self_ref begin_struct(std::string_view name, const std::string& access_modifier = "public") override {
-            return begin_block(std::format("struct {}", escape_name(name)), access_modifier);
+            return begin_block(std::format("struct {}", detail::c_family::escape_name(name)), access_modifier);
         }
 
         self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type,
@@ -107,7 +107,7 @@ namespace codegen {
             if (base_type.empty())
                 return begin_struct(name, access_modifier);
 
-            return begin_block(std::format("struct {} : public {}", escape_name(name), base_type), access_modifier);
+            return begin_block(std::format("struct {} : public {}", detail::c_family::escape_name(name), base_type), access_modifier);
         }
 
         self_ref end_struct() override {
@@ -123,7 +123,8 @@ namespace codegen {
         }
 
         self_ref begin_enum(const std::string& enum_name, const std::string& base_typename = "") override {
-            return begin_block(std::format("enum class {}{}", escape_name(enum_name), base_typename.empty() ? base_typename : (" : " + base_typename)));
+            return begin_block(
+                std::format("enum class {}{}", detail::c_family::escape_name(enum_name), base_typename.empty() ? base_typename : (" : " + base_typename)));
         }
 
         self_ref end_enum() override {
@@ -137,7 +138,8 @@ namespace codegen {
         // @todo: @es3n1n: add func params
         self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name,
                                 const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) override {
-            return begin_block(std::format("{}{} {}()", prefix, type_name, escape_name(func_name)), "", increment_tabs_count, move_cursor_to_next_line);
+            return begin_block(std::format("{}{} {}()", prefix, type_name, detail::c_family::escape_name(func_name)), "", increment_tabs_count,
+                               move_cursor_to_next_line);
         }
 
         self_ref end_function(const bool decrement_tabs_count = true, const bool move_cursor_to_next_line = true) override {
@@ -211,16 +213,14 @@ namespace codegen {
 
             // @fixme: split method to class_forward_declaration & struct_forward_declaration
             // one for `struct uwu_t` and the other one for `class c_uwu`
-            return push_line(std::format("struct {};", escape_name(text)));
+            return push_line(std::format("struct {};", detail::c_family::escape_name(text)));
         }
 
-        self_ref struct_padding(Padding options) override {
+        self_ref struct_padding(Padding options, bool move_cursor_to_next_line = true) override {
             const auto is_bitfield{std::holds_alternative<Padding::Bits>(options.size)};
 
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
             std::string type_name = is_bitfield ? detail::c_family::guess_bitfield_type(std::get<Padding::Bits>(options.size).value) : "uint8_t";
-            if (options.is_private_field)
-                type_name = "[[maybe_unused]] " + type_name;
 
             auto pad_name =
                 options.pad_offset.has_value() ? std::format("_pad{:04x}", options.pad_offset.value()) : std::format("_pad{:d}", _pads_count++);
@@ -231,7 +231,7 @@ namespace codegen {
             return prop(Prop{.type_name = type_name,
                              .name = pad_name,
                              .bitfield_size = is_bitfield ? std::make_optional(std::get<Padding::Bits>(options.size).value) : std::nullopt},
-                        options.move_cursor_to_next_line);
+                        move_cursor_to_next_line);
         }
 
         self_ref begin_bitfield_block() override {
@@ -299,22 +299,6 @@ namespace codegen {
             if (move_cursor_to_next_line)
                 _stream << std::endl;
             return *this;
-        }
-
-        static std::string escape_name(const std::string_view name) {
-            std::string result;
-            result.resize(name.size());
-
-            for (std::size_t i = 0; i < name.size(); i++)
-                result[i] = std::ranges::find(detail::c_family::kBlacklistedCharacters, name[i]) == std::end(detail::c_family::kBlacklistedCharacters) ?
-                                name[i] :
-                                '_';
-
-            // collapse multiple underscores into one
-            // because names containing double underscores are reserved in C++
-            result = absl::StrJoin(absl::StrSplit(result, '_', absl::SkipWhitespace{}), "_");
-
-            return result;
         }
 
         self_ref inc_tabs_count(const std::size_t count = 1) {

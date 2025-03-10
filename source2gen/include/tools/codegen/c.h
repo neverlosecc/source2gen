@@ -32,7 +32,7 @@ namespace codegen {
         }
 
         std::string escape_type_name(std::string_view name) const override {
-            return escape_name(name);
+            return detail::c_family::escape_name(name);
         }
 
         self_ref preamble() override {
@@ -87,7 +87,7 @@ namespace codegen {
             // user has no way of knowing (other than reassembling) what the
             // generated type is actually called in case they want to refer to
             // it later.
-            return begin_block(std::format("struct {}", encode_current_namespace(escape_name(name))));
+            return begin_block(std::format("struct {}", encode_current_namespace(detail::c_family::escape_name(name))));
         }
 
         self_ref begin_struct_with_base_type(const std::string& name, const std::string& base_type,
@@ -97,7 +97,7 @@ namespace codegen {
 
             _current_class_or_enum = name;
 
-            begin_block(std::format("struct {}", encode_current_namespace(escape_name(name))));
+            begin_block(std::format("struct {}", encode_current_namespace(detail::c_family::escape_name(name))));
             return prop(Prop{.type_category = TypeCategory::class_or_struct, .type_name = base_type, .name = "base"});
         }
 
@@ -135,7 +135,7 @@ namespace codegen {
         self_ref begin_enum(const std::string& enum_name, const std::string& base_typename = "") override {
             assert(!_current_class_or_enum.has_value() && "nested types are not supported");
             _current_class_or_enum = enum_name;
-            return begin_block(std::format("enum {}{}", encode_current_namespace(escape_name(enum_name)),
+            return begin_block(std::format("enum {}{}", encode_current_namespace(detail::c_family::escape_name(enum_name)),
                                            base_typename.empty() ? base_typename : (" : " + base_typename)));
         }
 
@@ -147,13 +147,14 @@ namespace codegen {
         self_ref enum_item(const std::string& name, std::uint64_t value) override {
             assert(_current_class_or_enum.has_value() && "called enum_item() without calling begin_enum_class()");
 
-            return push_line(std::format("{}_{} = {:#x},", escape_name(_current_class_or_enum.value()), name, value));
+            return push_line(std::format("{}_{} = {:#x},", detail::c_family::escape_name(_current_class_or_enum.value()), name, value));
         }
 
         // @todo: @es3n1n: add func params
         self_ref begin_function(const std::string& prefix, const std::string& type_name, const std::string& func_name,
                                 const bool increment_tabs_count = true, const bool move_cursor_to_next_line = true) override {
-            return begin_block(std::format("{}{} {}()", prefix, type_name, escape_name(func_name)), increment_tabs_count, move_cursor_to_next_line);
+            return begin_block(std::format("{}{} {}()", prefix, type_name, detail::c_family::escape_name(func_name)), increment_tabs_count,
+                               move_cursor_to_next_line);
         }
 
         self_ref end_function(const bool decrement_tabs_count = true, const bool move_cursor_to_next_line = true) override {
@@ -174,16 +175,17 @@ namespace codegen {
         self_ref static_assert_size(std::string_view type_name, int expected_size, const bool move_cursor_to_next_line) override {
             assert(expected_size > 0);
 
-            return push_line(std::format("static_assert(sizeof(struct {}) == {:#x});", escape_name(type_name), expected_size), move_cursor_to_next_line);
+            return push_line(std::format("static_assert(sizeof(struct {}) == {:#x});", detail::c_family::escape_name(type_name), expected_size),
+                             move_cursor_to_next_line);
         }
 
         self_ref static_assert_offset(std::string_view class_name, std::string_view prop_name, int expected_offset,
                                       const bool move_cursor_to_next_line) override {
             assert(expected_offset >= 0);
 
-            return push_line(
-                std::format("static_assert(offsetof(struct {}, {}) == {:#x});", escape_name(class_name), escape_name(prop_name), expected_offset),
-                move_cursor_to_next_line);
+            return push_line(std::format("static_assert(offsetof(struct {}, {}) == {:#x});", detail::c_family::escape_name(class_name),
+                                         detail::c_family::escape_name(prop_name), expected_offset),
+                             move_cursor_to_next_line);
         }
 
         self_ref comment(const std::string& text, const bool move_cursor_to_next_line = true) override {
@@ -217,7 +219,7 @@ namespace codegen {
             }();
 
             const auto line =
-                std::format("{}{} {}{};{}", type_category_prefix, escape_name(prop.type_name), escape_name(prop.name),
+                std::format("{}{} {}{};{}", type_category_prefix, detail::c_family::escape_name(prop.type_name), detail::c_family::escape_name(prop.name),
                             prop.bitfield_size.has_value() ? std::format(": {}", prop.bitfield_size.value()) : "", move_cursor_to_next_line ? "" : " ");
             return push_line(line, move_cursor_to_next_line);
         }
@@ -232,10 +234,10 @@ namespace codegen {
 
             // @fixme: split method to class_forward_declaration & struct_forward_declaration
             // one for `struct uwu_t` and the other one for `class c_uwu`
-            return push_line(std::format("struct {};", encode_current_namespace(escape_name(text))));
+            return push_line(std::format("struct {};", encode_current_namespace(detail::c_family::escape_name(text))));
         }
 
-        self_ref struct_padding(Padding options) override {
+        self_ref struct_padding(Padding options, bool move_cursor_to_next_line = true) override {
             const auto is_bitfield = std::holds_alternative<Padding::Bits>(options.size);
 
             // @note: @es3n1n: mark private fields as maybe_unused to silence -Wunused-private-field
@@ -249,7 +251,7 @@ namespace codegen {
             return prop(Prop{.type_name = type_name,
                              .name = pad_name,
                              .bitfield_size = is_bitfield ? std::make_optional(std::get<Padding::Bits>(options.size).value) : std::nullopt},
-                        options.move_cursor_to_next_line);
+                        move_cursor_to_next_line);
         }
 
         self_ref begin_bitfield_block() override {
@@ -320,25 +322,7 @@ namespace codegen {
 
         [[nodiscard]]
         std::string encode_current_namespace(std::string_view name) {
-            // TOOD: double underscores are reserved for the implementation. they're added in other places by escape_name().
-            // TOOD: this is pretty expensive
             return absl::StrJoin(std::list{_namespaces, {std::string{name}}} | std::views::join, "_");
-        }
-
-        static std::string escape_name(std::string_view name) {
-            std::string result;
-            result.resize(name.size());
-
-            for (std::size_t i = 0; i < name.size(); i++)
-                result[i] = std::ranges::find(detail::c_family::kBlacklistedCharacters, name[i]) == std::end(detail::c_family::kBlacklistedCharacters) ?
-                                name[i] :
-                                '_';
-
-            // collapse multiple underscores into one
-            // because names containing double underscores are reserved in C
-            result = absl::StrJoin(absl::StrSplit(result, '_', absl::SkipWhitespace{}), "_");
-
-            return result;
         }
 
         self_ref inc_tabs_count(const std::size_t count = 1) {

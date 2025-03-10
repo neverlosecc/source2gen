@@ -1,5 +1,7 @@
 #pragma once
 
+#include <absl/strings/str_join.h>
+#include <absl/strings/str_split.h>
 #include <array>
 #include <cassert>
 #include <cstddef>
@@ -44,8 +46,7 @@ namespace codegen::detail::c_family {
         {"uint8", "uint8_t"},
         {"uint16", "uint16_t"},
         {"uint32", "uint32_t"},
-        {"uint64", "uint64_t"}
-        // clang-format on
+        {"uint64", "uint64_t"} // clang-format on
     });
 
     // TOOD: remove?
@@ -77,5 +78,31 @@ namespace codegen::detail::c_family {
             assert(false && "unsupported bits_count, see kBitfieldIntegralTypes for supported types");
             std::abort();
         }
+    }
+
+    /**
+     * @param name Unqualified. If this is qualified, namespace separators will be replaced with underscores.
+     * @return A name that can be used to name entities
+     */
+    [[nodiscard]]
+    inline std::string escape_name(std::string_view name) {
+        std::string result;
+        result.resize(name.size());
+
+        for (std::size_t i = 0; i < name.size(); i++)
+            result[i] =
+                std::ranges::find(detail::c_family::kBlacklistedCharacters, name[i]) == std::end(detail::c_family::kBlacklistedCharacters) ? name[i] : '_';
+
+        const auto starts_with_underscore{!result.empty() && result[0] == '_'};
+
+        // collapse multiple underscores into one
+        // because names containing double underscores are reserved in C
+        result = absl::StrJoin(absl::StrSplit(result, '_', absl::SkipWhitespace{}), "_");
+
+        // restore underscore if we had one at the beginning, e.g. "_pad_10"
+        if (starts_with_underscore)
+            result = '_' + result;
+
+        return result;
     }
 } // namespace codegen::detail::c_family

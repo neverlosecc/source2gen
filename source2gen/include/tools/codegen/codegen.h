@@ -46,10 +46,6 @@ namespace codegen {
          */
         std::optional<std::ptrdiff_t> pad_offset{};
         std::variant<Bytes, Bits> size;
-        // TOOD: remove?
-        bool is_private_field{false};
-        // TOOD: inconsistent. some functions have this as a separate parameter
-        bool move_cursor_to_next_line{true};
     };
 
     struct IncludeOptions {
@@ -169,7 +165,7 @@ namespace codegen {
 
         virtual self_ref forward_declaration(const std::string& text) = 0;
 
-        virtual self_ref struct_padding(Padding options) = 0;
+        virtual self_ref struct_padding(Padding options, bool move_cursor_to_next_line = true) = 0;
 
         virtual self_ref begin_bitfield_block() = 0;
 
