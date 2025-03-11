@@ -688,7 +688,13 @@ public:
         return reinterpret_cast<RetTy (*)(SchemaClassInfoFunctionIndex, Ty...)>(m_pFn)(index, std::forward<Ty>(args)...);
     }
 };
-static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x60);
+
+#if defined(CS2)
+    static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68, "Offset of m_pFn should be 0x68 in CS2 configuration");
+#else
+    static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x60, "Offset of m_pFn should be 0x60 in non-CS2 configuration");
+#endif
+
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
 public:
@@ -818,7 +824,12 @@ public:
 #endif
 };
 
-static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x28, .linux = 0x30}.get());
+#if defined(DOTA2) || defined(CS2) || defined(DEADLOCK)
+    static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x28, .linux = 0x30}.get());
+#else
+    static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x30, .linux = 0x30}.get());
+#endif
+
 
 class CSchemaSystemTypeScope {
 public:
