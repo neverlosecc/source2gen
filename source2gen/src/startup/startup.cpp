@@ -1,16 +1,14 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
-#include <Include.h>
-#include <sdk/sdk.h>
-#include <tools/loader/loader.h>
-#include <tools/platform.h>
-
 #include "options.hpp"
 #include "tools/util.h"
 #include <array>
+#include <filesystem>
 #include <fstream>
+#include <Include.h>
 #include <iostream>
 #include <iterator>
+#include <sdk/sdk.h>
 #include <span>
 #include <string>
 #include <tools/loader/loader.h>
@@ -20,7 +18,7 @@
 #include <utility>
 
 namespace {
-    [[nodiscard]] auto get_required_modules() {
+    [[nodiscard]] auto GetRequiredModules() {
         // clang-format off
         return std::to_array<std::string>({
             // @note: @es3n1n: modules that we'll use in our code
@@ -60,13 +58,16 @@ namespace {
 } // namespace
 
 namespace source2_gen {
+    // TODO: this duplicate of the constant in sdk.h. We should let the user specify the sdk path via Options.
+    constexpr std::string_view kOutDirName = "sdk";
+
     struct module_dump {
         std::unordered_set<const CSchemaEnumBinding*> enums{};
         std::unordered_set<const CSchemaClassBinding*> classes{};
     };
 
     /// @return Key is the module name
-    std::unordered_map<std::string, module_dump> collect_modules(std::span<CSchemaSystemTypeScope*> type_scopes) {
+    std::unordered_map<std::string, module_dump> CollectModules(std::span<CSchemaSystemTypeScope*> type_scopes) {
         struct unique_module_dump {
             /// Key is the enum name. Used for de-duplication.
             std::unordered_map<std::string, CSchemaEnumBinding*> enums{};
@@ -110,11 +111,66 @@ namespace source2_gen {
         return result;
     }
 
-    bool Dump(const Options options) try {
+    /// A very basic C preprocessor.
+    /// Writes contents of @p path to @p out while expanding `#include` directives
+    void ExpandIncludesRecursive(std::ofstream& out, std::unordered_set<std::filesystem::path>& seen_files, const std::filesystem::path& path) {
+        std::ifstream f(path);
+        if (!f.good()) {
+            std::cerr << std::format("Could not read from {}: {}", path.string(), std::strerror(errno)) << std::endl;
+            std::exit(1);
+        }
+
+        std::string line{};
+        while (std::getline(f, line)) {
+            if (line.starts_with('#')) {
+                constexpr std::string_view prefix = "#include \"source2sdk/";
+
+                if (line.starts_with(prefix)) {
+                    const std::filesystem::path include_path{std::string{kOutDirName} + "/include/source2sdk/" +
+                                                             line.substr(prefix.length(), line.length() - (prefix.length() + 1))};
+                    if (!seen_files.contains(include_path)) {
+                        seen_files.emplace(include_path);
+                        ExpandIncludesRecursive(out, seen_files, include_path);
+                    }
+                }
+            } else {
+                out << line << '\n';
+            }
+        }
+    }
+
+    // Post-processes an already-generated C SDK so it can be parsed by IDA.
+    // - merges all files into a single file by resolving `#include`s
+    void PostProcessCIDA(const std::unordered_set<std::filesystem::path>& generated_files) {
+        const auto out_file_path = std::string{kOutDirName} + "/ida.h";
+        std::ofstream out(out_file_path, std::ios::out);
+
+        std::unordered_set<std::filesystem::path> seen_files{};
+
+        for (const auto& file : generated_files) {
+            ExpandIncludesRecursive(out, seen_files, file);
+        }
+    }
+
+    [[nodiscard]]
+    constexpr std::string_view GetStaticSdkName(source2_gen::Language language) {
+        using enum source2_gen::Language;
+        switch (language) {
+        case cpp:
+            return "cpp";
+        case c:
+        case c_ida:
+            return "c";
+        }
+
+        assert(false && "unhandled enumerator");
+    }
+
+    bool Dump(Options options) try {
         std::locale::global(std::locale(""));
         std::cout.imbue(std::locale());
 
-        const auto modules = get_required_modules();
+        const auto modules = GetRequiredModules();
 
         for (const auto& name : modules) {
             std::cout << std::format("{}: Loading {}", __FUNCTION__, name) << std::endl;
@@ -163,12 +219,24 @@ namespace source2_gen {
         const auto type_scopes = sdk::g_schema->GetTypeScopes();
         assert(type_scopes.Count() > 0 && "sdk is outdated");
 
-        const std::unordered_map all_modules = collect_modules(std::span{type_scopes.m_pElements, static_cast<std::size_t>(type_scopes.m_Size)});
+        const std::unordered_map all_modules = CollectModules(std::span{type_scopes.m_pElements, static_cast<std::size_t>(type_scopes.m_Size)});
 
         sdk::GeneratorCache cache{};
+        std::unordered_set<std::filesystem::path> generated_files{};
 
         for (const auto& [module_name, dump] : all_modules) {
-            sdk::GenerateTypeScopeSdk(options, cache, module_name, dump.enums, dump.classes);
+            const auto result = sdk::GenerateTypeScopeSdk(options, cache, module_name, dump.enums, dump.classes);
+            std::ranges::move(result.generated_files, std::inserter(generated_files, generated_files.end()));
+        }
+
+        // Throws an exception with descriptive message. No need for explicit error handling.
+        // Need to do this before PostProcessCIDA() because sdk-static contains types that are
+        // missing in the generated sdk.
+        std::filesystem::copy(std::format("sdk-static/{}", GetStaticSdkName(options.emit_language)), kOutDirName,
+                              std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
+
+        if (options.emit_language == source2_gen::Language::c_ida) {
+            PostProcessCIDA(generated_files);
         }
 
         std::cout << std::format("Schema stats: {} registrations; {} were redundant; {} were ignored ({} bytes of ignored data)",

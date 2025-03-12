@@ -53,7 +53,7 @@ namespace codegen {
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
-            include("source2sdk/source2gen/source2gen_user_types", IncludeOptions{.local = false, .system = false});
+            include("source2sdk/source2gen/source2gen_user_types", IncludeOptions{.local = true, .system = false});
             include("cstddef", IncludeOptions{.local = false, .system = true});
             include("cstdint", IncludeOptions{.local = false, .system = true});
 

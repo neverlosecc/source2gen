@@ -615,6 +615,11 @@ namespace {
             return std::make_unique<codegen::generator_cpp_t>();
         case source2_gen::Language::c:
             return std::make_unique<codegen::generator_c_t>();
+        case source2_gen::Language::c_ida:
+            // c-ida uses the c generator.
+            // generator options are adjusted by Dump()
+            // postprocessing happens in PostProcessCIDA()
+            return std::make_unique<codegen::generator_c_t>();
         }
 
         assert(false && "unhandled enumerator");
@@ -799,7 +804,8 @@ namespace {
         }
     }
 
-    void AssembleClass(sdk::GeneratorCache& cache, codegen::IGenerator::self_ref generator, const CSchemaClassBinding& class_) {
+    void AssembleClass(const source2_gen::Options& options, sdk::GeneratorCache& cache, codegen::IGenerator::self_ref generator,
+                       const CSchemaClassBinding& class_) {
         static constexpr std::size_t source2_max_align = 8;
 
         // TODO: when we have a CLI parser: pass this property in from the outside
@@ -1126,21 +1132,23 @@ namespace {
 
         const bool is_standard_layout_class = IsStandardLayoutClass(cache.class_has_standard_layout, class_);
 
-        // TODO: when we have a CLI parser: allow users to generate assertions in non-standard-layout classes. Those assertions are
-        // conditionally-supported by compilers.
-        if (is_standard_layout_class) {
-            for (const auto& field :
-                 class_.GetFields() | std::ranges::views::filter([&](const auto& e) { return !skipped_fields.contains(e.m_pszName); })) {
-                if (field.m_pSchemaType->m_unTypeCategory == ETypeCategory::Schema_Bitfield) {
-                    generator.comment(std::format("Cannot assert offset of bitfield {}::{}", class_.m_pszName, field.m_pszName));
-                } else {
-                    generator.static_assert_offset(MaybeWithModuleName(generator, *class_.m_pTypeScope, class_.m_pszName), field.m_pszName,
-                                                   field.m_nSingleInheritanceOffset);
+        if (options.static_assertions) {
+            // TODO: when we have a CLI parser: allow users to generate assertions in non-standard-layout classes. Those assertions are
+            // conditionally-supported by compilers.
+            if (is_standard_layout_class) {
+                for (const auto& field :
+                     class_.GetFields() | std::ranges::views::filter([&](const auto& e) { return !skipped_fields.contains(e.m_pszName); })) {
+                    if (field.m_pSchemaType->m_unTypeCategory == ETypeCategory::Schema_Bitfield) {
+                        generator.comment(std::format("Cannot assert offset of bitfield {}::{}", class_.m_pszName, field.m_pszName));
+                    } else {
+                        generator.static_assert_offset(MaybeWithModuleName(generator, *class_.m_pTypeScope, class_.m_pszName), field.m_pszName,
+                                                       field.m_nSingleInheritanceOffset);
+                    }
                 }
-            }
-        } else {
-            if (class_.m_nFieldSize != 0) {
-                generator.comment(std::format("Cannot assert offsets of fields in {} because it is not a standard-layout class", class_.m_pszName));
+            } else {
+                if (class_.m_nFieldSize != 0) {
+                    generator.comment(std::format("Cannot assert offsets of fields in {} because it is not a standard-layout class", class_.m_pszName));
+                }
             }
         }
 
@@ -1149,7 +1157,10 @@ namespace {
         }
 
         generator.next_line();
-        generator.static_assert_size(MaybeWithModuleName(generator, *class_.m_pTypeScope, class_.m_pszName), class_size);
+
+        if (options.static_assertions) {
+            generator.static_assert_size(MaybeWithModuleName(generator, *class_.m_pTypeScope, class_.m_pszName), class_size);
+        }
     }
 
     [[nodiscard]]
@@ -1158,7 +1169,8 @@ namespace {
                            generator.get_file_extension());
     }
 
-    void GenerateEnumSdk(const source2_gen::Options& options, std::string_view module_name, const CSchemaEnumBinding& enum_) {
+    /// @return Path to the generated file
+    std::filesystem::path GenerateEnumSdk(const source2_gen::Options& options, std::string_view module_name, const CSchemaEnumBinding& enum_) {
         // @note: @es3n1n: init codegen
         //
         auto p_generator = GetGeneratorForLanguage(options.emit_language);
@@ -1202,10 +1214,13 @@ namespace {
             // the output directory and handle errors.
             std::exit(1);
         }
+
+        return out_file_path;
     }
 
-    void GenerateClassSdk(const source2_gen::Options& options, sdk::GeneratorCache& cache, std::string_view module_name,
-                          const CSchemaClassBinding& class_) {
+    /// @return Path to the generated file
+    std::filesystem::path GenerateClassSdk(const source2_gen::Options& options, sdk::GeneratorCache& cache, std::string_view module_name,
+                                           const CSchemaClassBinding& class_) {
         // @note: @es3n1n: init codegen
         //
         auto p_generator = GetGeneratorForLanguage(options.emit_language);
@@ -1245,7 +1260,7 @@ namespace {
 
         // @note: @es3n1n: assemble props
         //
-        AssembleClass(cache, generator, class_);
+        AssembleClass(options, cache, generator, class_);
 
         generator.end_namespace();
         generator.end_namespace();
@@ -1263,12 +1278,15 @@ namespace {
             // the output directory and handle errors.
             std::exit(1);
         }
+
+        return out_file_path;
     }
 } // namespace
 
 namespace sdk {
-    void GenerateTypeScopeSdk(source2_gen::Options options, GeneratorCache& cache, std::string_view module_name,
-                              const std::unordered_set<const CSchemaEnumBinding*>& enums, const std::unordered_set<const CSchemaClassBinding*>& classes) {
+    GeneratorResult GenerateTypeScopeSdk(source2_gen::Options options, GeneratorCache& cache, std::string_view module_name,
+                                         const std::unordered_set<const CSchemaEnumBinding*>& enums,
+                                         const std::unordered_set<const CSchemaClassBinding*>& classes) {
         // @note: @es3n1n: print debug info
         //
         std::cout << std::format("{}: Assembling module {} with {} enum(s) and {} class(es)", __FUNCTION__, module_name, enums.size(), classes.size())
@@ -1279,8 +1297,12 @@ namespace sdk {
         if (!std::filesystem::exists(out_directory_path))
             std::filesystem::create_directories(out_directory_path);
 
-        std::ranges::for_each(enums, [&](const auto* el) { GenerateEnumSdk(options, module_name, *el); });
-        std::ranges::for_each(classes, [&](const auto* el) { GenerateClassSdk(options, cache, module_name, *el); });
+        GeneratorResult result{};
+
+        std::ranges::for_each(enums, [&](const auto* el) { result.generated_files.emplace(GenerateEnumSdk(options, module_name, *el)); });
+        std::ranges::for_each(classes, [&](const auto* el) { result.generated_files.emplace(GenerateClassSdk(options, cache, module_name, *el)); });
+
+        return result;
     }
 } // namespace sdk
 

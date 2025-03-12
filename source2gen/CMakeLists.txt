@@ -1,5 +1,5 @@
-find_package(absl)
-find_package(argparse)
+find_package(absl REQUIRED)
+find_package(argparse REQUIRED)
 
 file(GLOB_RECURSE source2gen_SOURCES "src/**.cpp")
 list(REMOVE_ITEM source2gen_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")

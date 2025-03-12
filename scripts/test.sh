@@ -24,7 +24,6 @@ test_language()
     # because the user might have a shell open in the sdk directory.
     rm -rf "${PROJECT_ROOT}/sdk/"*
     "${PROJECT_ROOT}/scripts/run.sh" "${CS2_DIRECTORY}" --emit-language "${language}"
-    cp -r "${PROJECT_ROOT}/sdk-static/${language}/"* "${PROJECT_ROOT}/sdk/"
 
     pushd "${PROJECT_ROOT}/sdk/"
     # conan invokes cmake, which compiles "compile-test" binary to check if the SDK compiles

@@ -22,8 +22,7 @@ source2gen-loader.exe
 ### Linux
 
 ```sh
-./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/"
-cp -r ./sdk-static/cpp/* ./sdk
+./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/" [options]
 # view generated sdk
 ls ./sdk
 ```
@@ -42,24 +41,27 @@ Linux.
 
 ### Using the generated SDK
 
-The sdk depends on a file/module called "source2gen_user_types". This file has
-to be provided by the user and expose all types listed in
-[source2gen_user_types.hpp](sdk-static/cpp/include/source2sdk/source2gen/source2gen_user_types.hpp).
-If you don't intend to access any of these
-types, you can use the linked file directly.
+The SDK contains dummy implementations for some types by default.
+See [source2gen_user_types.hpp](sdk-static/cpp/include/source2sdk/source2gen/source2gen_user_types.hpp).
+It as recommended to replace this file with real implementations once you have
+generated the sdk.
 
 The following languages can be emitted (`--emit-language`)
 
-| Language | Minimum required version |
-| -------- | ------------------------ |
-| `cpp`    | C++23                    |
-| `c`      | C23                      |
+| Language | Minimum required version                           |
+| -------- | -------------------------------------------------- |
+| `cpp`    | C++23                                              |
+| `c`      | C23                                                |
+| `c-ida`  | C, single file (`sdk/ida.h`), can be parsed by IDA |
 
-## Getting Started
+#### c-ida
 
-[source2gen_user_types.hpp](sdk-static/source2gen_user_types.hpp). If you don't
-intend to access any of these types, you can use the dummy file
-[source2gen_user_types.hpp](sdk-static/source2gen_user_types.hpp).
+1. In IDA, navigate to `File -> Load File -> Parse C Header File...`
+2. Select `sdk/ida.h`
+
+The header file is large, IDA might need a moment to parse it.
+
+All types are available in the `Local Types` view.
 
 ## Limitations
 
@@ -148,6 +150,15 @@ to allow generation of C and C++.
 - `class` is emitted as `struct` (C doesn't have `class`)
 - uses of `struct`, `union`, `enum` types are prefixed with the "struct", "union", "enum" keyword respectively (see `codegen::TypeCategory`)
 - emission of static fields is disabled for C, as the only currently known use case of C is to generate IDA headers
+
+### How the C-ida generator works
+
+- uses the C generator
+- sets `--no-static-assertions`
+- sets `--no-static-members`
+- runs a postprocessing step (`PostProcessCIDA()`)
+  - merges all generated files into a single header
+  - removes system includes
 
 ---
 

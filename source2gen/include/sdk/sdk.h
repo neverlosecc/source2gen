@@ -5,6 +5,7 @@
 #include <sdk/interfaces/schemasystem/schema.h>
 
 #include "options.hpp"
+#include <filesystem>
 #include <map>
 #include <sdk/interfaceregs.h>
 #include <sdk/interfaces/client/game/datamap_t.h>
@@ -32,8 +33,15 @@ namespace sdk {
         std::map<TypeIdentifier, bool> class_has_standard_layout{};
     };
 
-    void GenerateTypeScopeSdk(source2_gen::Options options, GeneratorCache& cache, std::string_view module_name,
-                              const std::unordered_set<const CSchemaEnumBinding*>& enums, const std::unordered_set<const CSchemaClassBinding*>& classes);
+    // Wrapping the file list in a struct in case we need to return more properties in the future
+    struct GeneratorResult {
+        /// All generated files
+        std::unordered_set<std::filesystem::path> generated_files{};
+    };
+
+    GeneratorResult GenerateTypeScopeSdk(source2_gen::Options options, GeneratorCache& cache, std::string_view module_name,
+                                         const std::unordered_set<const CSchemaEnumBinding*>& enums,
+                                         const std::unordered_set<const CSchemaClassBinding*>& classes);
 } // namespace sdk
 
 // source2gen - Source2 games SDK generator

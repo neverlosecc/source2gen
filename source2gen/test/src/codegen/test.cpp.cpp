@@ -12,7 +12,7 @@ TEST(CodeGenCpp, Simple) {
 
     EXPECT_EQ(builder.str(), "#pragma once\n"
                              "\n"
-                             "#include <source2sdk/source2gen/source2gen_user_types.hpp>\n"
+                             "#include \"source2sdk/source2gen/source2gen_user_types.hpp\"\n"
                              "#include <cstddef>\n"
                              "#include <cstdint>\n"
                              "\n"
