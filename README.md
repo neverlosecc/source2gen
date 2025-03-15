@@ -42,7 +42,7 @@ Linux.
 ### Using the generated SDK
 
 The SDK contains dummy implementations for some types by default.
-See [source2gen_user_types.hpp](sdk-static/cpp/include/source2sdk/source2gen/source2gen_user_types.hpp).
+See [source2gen.hpp](sdk-static/cpp/include/source2sdk/source2gen/source2gen.hpp).
 It as recommended to replace this file with real implementations once you have
 generated the sdk.
 
