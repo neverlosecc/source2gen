@@ -972,46 +972,20 @@ namespace {
             state.last_field_offset = field.m_nSingleInheritanceOffset;
             state.last_field_size = static_cast<std::size_t>(field_size);
 
-            /// @note: @es3n1n: game bug:
-            ///     There are some classes that have literally no info about them in schema,
-            ///     for these fields we'll just insert a pad.
-            // TOOD: check if this is handled by the new generator
             if (const auto e_class = field.m_pSchemaType->GetAsDeclaredClass(); e_class != nullptr && e_class->m_pClassInfo == nullptr) {
-                assert(false);
-                // var_info.m_type = "std::uint8_t";
-                // var_info.m_array_sizes.clear();
-                // var_info.m_array_sizes.emplace_back(field_size);
-                // builder.comment(std::format("game bug: prop with no declared class info ({})", e_class->m_pszName));
-            }
+                // missing class info
 
-            if ((field.m_nSingleInheritanceOffset % field_alignment.value_or(source2_max_align)) == 0) {
-                if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
-                    // This is a workaround to get the size of template types right.
-                    // There are types that have non-type template parameters, e.g.
-                    // `CUtlLeanVectorFixedGrowable<int, 10>`. The non-type template parameter affects the size of the template type, but the schema system
-                    // doesn't store information about non-type template parameters. The schema system just says `CUtlLeanVectorFixedGrowable<int>`, which
-                    // is insufficient to generate a `CUtlLeanVectorFixedGrowable` with correct size.`
-                    // To still keep the rest of the class in order, we replace all template fields with char arrays.
-                    // We're applying this workaround to all template type, even those that don't have non-type template parameters, because we can't tell
-                    // them apart. So we're certainly commenting out more than is necessary.
-                    generator.comment(
-                        std::format("{} has a template type with potentially unknown template parameters. You can try uncommenting the field below.",
-                                    var_info.m_name));
-                    generator.comment("", false);
-                    generator.reset_tabs_count()
-                        .prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()},
-                              true)
-                        .restore_tabs_count();
-                    generator.prop(codegen::Prop{.type_category = codegen::TypeCategory::built_in,
-                                                 .type_name = "char",
-                                                 .name = std::format("{}[{:#x}]", var_info.m_name, field_size)},
-                                   false);
-                } else {
-                    // This is the "all normal, all good" `prop()` call
-                    generator.prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()},
-                                   false);
-                }
-            } else {
+                /// @note: @es3n1n: game bug:
+                ///     There are some classes that have literally no info about them in schema,
+                ///     for these fields we'll just insert a pad.
+                generator.comment(std::format("game bug: prop with no declared class info ({})", e_class->m_pszName));
+                generator.prop(codegen::Prop{.type_category = codegen::TypeCategory::built_in,
+                                             .type_name = "char",
+                                             .name = std::format("{}[{:#x}]", var_info.m_name, field_size)},
+                               false);
+            } else if ((field.m_nSingleInheritanceOffset % field_alignment.value_or(source2_max_align)) != 0) {
+                // misaligned field
+
                 const auto warning =
                     field_alignment.has_value() ?
                         std::format("Property {}::{} is misaligned.", class_.GetName(), field.m_pszName) :
@@ -1027,6 +1001,31 @@ namespace {
                     .reset_tabs_count()
                     .prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()}, false)
                     .restore_tabs_count();
+            } else if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
+                // template type
+
+                // This is a workaround to get the size of template types right.
+                // There are types that have non-type template parameters, e.g.
+                // `CUtlLeanVectorFixedGrowable<int, 10>`. The non-type template parameter affects the size of the template type, but the schema system
+                // doesn't store information about non-type template parameters. The schema system just says `CUtlLeanVectorFixedGrowable<int>`, which
+                // is insufficient to generate a `CUtlLeanVectorFixedGrowable` with correct size.`
+                // To still keep the rest of the class in order, we replace all template fields with char arrays.
+                // We're applying this workaround to all template type, even those that don't have non-type template parameters, because we can't tell
+                // them apart. So we're certainly commenting out more than is necessary.
+                generator.comment(std::format(
+                    "{} has a template type with potentially unknown template parameters. You can try uncommenting the field below.", var_info.m_name));
+                generator.comment("", false);
+                generator.reset_tabs_count()
+                    .prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()}, true)
+                    .restore_tabs_count();
+                generator.prop(codegen::Prop{.type_category = codegen::TypeCategory::built_in,
+                                             .type_name = "char",
+                                             .name = std::format("{}[{:#x}]", var_info.m_name, field_size)},
+                               false);
+            } else {
+                // This is the "all normal, all good" `prop()` call
+                generator.prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()},
+                               false);
             }
 
             if (verbose) {
