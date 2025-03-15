@@ -56,10 +56,10 @@ TEST(CodeGenCpp, ClassContents) {
     EXPECT_EQ(builder.str(), "class Test\n"
                              "{\n"
                              "public:\n"
-                             "\tstatic int &Get_power(){return "
+                             "    static int &Get_power(){return "
                              "*reinterpret_cast<int*>(interfaces::g_schema->FindTypeScopeForModule(\"tier0\")->FindDeclaredClass(\"Game\")->"
                              "GetStaticFields()[19]->m_pInstance);};\n"
-                             "\tint up;\n"
+                             "    int up;\n"
                              "};\n");
 }
 
@@ -106,8 +106,8 @@ TEST(CodeGenCpp, StructWithContents) {
     EXPECT_EQ(builder.str(), "struct Test\n"
                              "{\n"
                              "public:\n"
-                             "\tuint8_t _pad0100[0x200];\n"
-                             "\tuint8_t _pad0300: 7;\n"
+                             "    uint8_t _pad0100[0x200];\n"
+                             "    uint8_t _pad0300: 7;\n"
                              "};\n");
 }
 
@@ -133,8 +133,8 @@ TEST(CodeGenCpp, Enum) {
 
     EXPECT_EQ(builder.str(), "enum class Choice\n"
                              "{\n"
-                             "\tChocolate = 0x7,\n"
-                             "\tStrawberries = 0x9,\n"
+                             "    Chocolate = 0x7,\n"
+                             "    Strawberries = 0x9,\n"
                              "};\n");
 }
 
@@ -147,7 +147,7 @@ TEST(CodeGenCpp, Function) {
 
     EXPECT_EQ(builder.str(), "static int jump()\n"
                              "{\n"
-                             "\treturn 1234;\n"
+                             "    return 1234;\n"
                              "};\n" // this semicolon is unnecessary in C++
     );
 }

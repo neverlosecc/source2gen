@@ -52,16 +52,14 @@ namespace {
     };
 
     struct ClassAssemblyState {
-        std::optional<std::size_t> last_field_size = std::nullopt;
-        std::optional<std::size_t> last_field_offset = std::nullopt;
+        std::optional<std::ptrdiff_t> last_field_size = std::nullopt;
+        std::optional<std::ptrdiff_t> last_field_offset = std::nullopt;
         bool assembling_bitfield = false;
         std::vector<BitfieldEntry> bitfield = {};
         std::int32_t bitfield_start = 0;
 
         std::ptrdiff_t collision_end_offset = 0ull; // @fixme: @es3n1n: todo proper collision fix and remove this var
     };
-
-    using namespace std::string_view_literals;
 
     /**
      * Project structure is
@@ -75,10 +73,6 @@ namespace {
      */
     constexpr std::string_view kOutDirName = "sdk";
     constexpr std::string_view kIncludeDirName = "source2sdk";
-
-    constexpr uint32_t kMaxReferencesForClassEmbed = 2;
-    constexpr std::size_t kMinFieldCountForClassEmbed = 2;
-    constexpr std::size_t kMaxFieldCountForClassEmbed = 12;
 
     constinit std::array string_metadata_entries = {
         FNV32("MCellForDomain"),
@@ -116,7 +110,10 @@ namespace {
         FNV32("MPropertySuppressExpr"),
         FNV32("MPulseCellOutflowHookInfo"),
         FNV32("MPulseEditorHeaderIcon"),
+    /// @note: @es3n1n: In deadlock, this is an integer, but in any other game it's a string
+#if !defined(DEADLOCK) && !defined(DOTA2)
         FNV32("MPulseProvideFeatureTag"),
+#endif
         FNV32("MResourceBlockType"),
         FNV32("MScriptDescription"),
         FNV32("MSrc1ImportAttributeName"),
@@ -144,6 +141,10 @@ namespace {
         FNV32("MPropertySortPriority"),
         FNV32("MParticleMinVersion"),
         FNV32("MParticleMaxVersion"),
+    /// @note: @es3n1n: In deadlock, this is an integer, but in any other game it's a string
+#if defined(DEADLOCK) || defined(DOTA2)
+        FNV32("MPulseProvideFeatureTag"),
+#endif
         FNV32("MNetworkEncodeFlags"),
         FNV32("MResourceVersion"),
         FNV32("MVDataNodeType"),
@@ -168,43 +169,38 @@ namespace {
 
         const auto value_hash_name = fnv32::hash_runtime(metadata_entry.m_szName);
 
-        // clang-format off
-        if (std::ranges::find(var_name_string_class_metadata_entries, value_hash_name) != var_name_string_class_metadata_entries.end())
-        {
-            const auto &var_value = metadata_entry.m_pNetworkValue->m_VarValue;
-            if (var_value.m_pszType && var_value.m_pszName)
-                value = std::format("{} {}", var_value.m_pszType, var_value.m_pszName);
-            else if (var_value.m_pszName && !var_value.m_pszType)
-                value = var_value.m_pszName;
-            else if (!var_value.m_pszName && var_value.m_pszType)
-                value = var_value.m_pszType;
-        }
-        else if (std::ranges::find(string_class_metadata_entries, value_hash_name) != string_class_metadata_entries.end())
-        {
-            auto clean_string = [](const std::string_view& input) {
-                std::string result;
-                for (const char &ch : input) {
-                    if (std::isalpha(static_cast<unsigned char>(ch))) {
-                        result += ch;
-                    } else {
-                        break;
-                    }
-                }
-                return result;
+        if (std::ranges::find(var_name_string_class_metadata_entries, value_hash_name) != var_name_string_class_metadata_entries.end()) {
+            const auto& var_value = metadata_entry.m_pNetworkValue->m_VarValue;
+            const auto check_ptr = [](const char* ptr) -> bool {
+                /// @note: hotfix for the deadlock 14/09/24 update,
+                ///     where they filled some ptrs with -1 instead of nullptr
+                return ptr != nullptr && ptr != reinterpret_cast<const char*>(-1);
             };
 
-            value = clean_string(metadata_entry.m_pNetworkValue->m_szValue.data());
-        }
-        else if (std::ranges::find(string_metadata_entries, value_hash_name) != string_metadata_entries.end())
+            if (check_ptr(var_value.m_pszType) && check_ptr(var_value.m_pszName))
+                value = std::format("{} {}", var_value.m_pszType, var_value.m_pszName);
+            else if (check_ptr(var_value.m_pszName) && !check_ptr(var_value.m_pszType))
+                value = var_value.m_pszName;
+            else if (!check_ptr(var_value.m_pszName) && check_ptr(var_value.m_pszType))
+                value = var_value.m_pszType;
+        } else if (std::ranges::find(string_class_metadata_entries, value_hash_name) != string_class_metadata_entries.end()) {
+            /// Explicitly convert to std::string with the size as the string may not end with a nullterm
+            /// But if this string does contain a null terminator, we should properly handle this too
+            const auto& szValue = metadata_entry.m_pNetworkValue->m_szValue;
+            const auto null_pos = std::find(szValue.begin(), szValue.end(), 0x00);
+            const auto size = null_pos != szValue.end() ? std::distance(szValue.begin(), null_pos) : szValue.size();
+
+            value = std::string(metadata_entry.m_pNetworkValue->m_szValue.data(), size);
+        } else if (std::ranges::find(string_metadata_entries, value_hash_name) != string_metadata_entries.end()) {
             value = metadata_entry.m_pNetworkValue->m_pszValue;
-        else if (std::ranges::find(integer_metadata_entries, value_hash_name) != integer_metadata_entries.end())
+        } else if (std::ranges::find(integer_metadata_entries, value_hash_name) != integer_metadata_entries.end()) {
             value = std::to_string(metadata_entry.m_pNetworkValue->m_nValue);
-        else if (std::ranges::find(float_metadata_entries, value_hash_name) != float_metadata_entries.end())
+        } else if (std::ranges::find(float_metadata_entries, value_hash_name) != float_metadata_entries.end()) {
             value = std::to_string(metadata_entry.m_pNetworkValue->m_fValue);
-        // clang-format on
+        }
 
         return value;
-    };
+    }
 
     /// https://en.cppreference.com/w/cpp/language/classes#Standard-layout_class
     /// Doesn't check for all requirements, but is strict enough for what we are doing.
@@ -233,16 +229,16 @@ namespace {
             } while (pClass != nullptr);
         }
 
-        const auto has_non_standard_layout_field =
-            std::ranges::any_of(class_.GetFields() | std::ranges::views::transform([&](const SchemaClassFieldData_t& e) {
-                                    if (const auto* e_class = e.m_pSchemaType->GetAsDeclaredClass(); e_class != nullptr) {
-                                        return !IsStandardLayoutClass(cache, *e_class->m_pClassInfo);
-                                    } else {
-                                        // Everything that is not a class has no effect
-                                        return false;
-                                    }
-                                }),
-                                std::identity{});
+        const auto has_non_standard_layout_field = std::ranges::any_of(
+            class_.GetFields() | std::ranges::views::transform([&](const SchemaClassFieldData_t& e) {
+                if (const auto* e_class = e.m_pSchemaType->GetAsDeclaredClass(); e_class != nullptr && e_class->m_pClassInfo != nullptr) {
+                    return !IsStandardLayoutClass(cache, *e_class->m_pClassInfo);
+                } else {
+                    // Everything that is not a class has no effect
+                    return false;
+                }
+            }),
+            std::identity{});
 
         if (has_non_standard_layout_field) {
             return cache.emplace(id, false).first->second;
@@ -302,7 +298,7 @@ namespace {
     /// @return For class types, returns @ref GetClassAlignmentRecursive(). Otherwise returns the immediately available size.
     [[nodiscard]]
     std::optional<int> GetAlignmentOfTypeRecursive(std::map<sdk::TypeIdentifier, std::optional<int>>& cache, const CSchemaType& type) {
-        if (const auto* class_ = type.GetAsDeclaredClass(); class_ != nullptr) {
+        if (const auto* class_ = type.GetAsDeclaredClass(); class_ != nullptr && class_->m_pClassInfo != nullptr) {
             return GetClassAlignmentRecursive(cache, *class_->m_pClassInfo);
         } else {
             return type.GetSizeAndAlignment().and_then([](const auto& e) { return std::get<1>(e); });
@@ -486,7 +482,7 @@ namespace {
         }
 
         return {base_type, sizes};
-    };
+    }
 
     /// @return Lifetime is bound to string viewed by @p type_name
     [[nodiscard]]
@@ -525,7 +521,7 @@ namespace {
         } else {
             return std::nullopt;
         }
-    };
+    }
 
     /// @param type_name Unqualified
     [[nodiscard]] std::string EscapeTypeName(const codegen::IGenerator& generator, const std::string_view type_name) {
@@ -544,7 +540,7 @@ namespace {
         return GetModuleOfTypeInScope(scope, type_name)
             .transform([&](const auto module_name) { return std::format("source2sdk::{}::{}", module_name, escaped_type_name); })
             .value_or(escaped_type_name);
-    };
+    }
 
     /// Decomposes a templated type into its components, keeping template
     /// syntax for later reassembly by @ref ReassembleRetypedTemplate().
@@ -554,13 +550,13 @@ namespace {
     std::vector<std::variant<std::string, char>> DecomposeTemplate(std::string_view type_name) {
         // TODO: use a library for this once we have a package manager
         const auto trim = [](std::string_view str) {
-            if (const auto found = str.find_first_not_of(" "); found != std::string_view::npos) {
+            if (const auto found = str.find_first_not_of(' '); found != std::string_view::npos) {
                 str.remove_prefix(found);
             } else {
                 return std::string_view{};
             }
 
-            if (const auto found = str.find_last_not_of(" "); found != std::string_view::npos) {
+            if (const auto found = str.find_last_not_of(' '); found != std::string_view::npos) {
                 str.remove_suffix(str.size() - (found + 1));
             }
 
@@ -602,7 +598,7 @@ namespace {
         // remove the topmost type and all syntax entries
         for (const auto& el : DecomposeTemplate(type_name)) {
             if (std::holds_alternative<std::string>(el)) {
-                result.emplace_back(std::move(std::get<std::string>(el)));
+                result.emplace_back(std::get<std::string>(el));
             }
         }
 
@@ -667,7 +663,7 @@ namespace {
             return {type_name_with_modules, array_sizes};
 
         return {type_name_with_modules, {}};
-    };
+    }
 
     // We assume that everything that is not a pointer is odr-used.
     // This assumption not correct, e.g. template classes that internally store pointers are
@@ -722,10 +718,12 @@ namespace {
             result.insert(names.begin(), names.end());
         }
 
+#if defined(CS2)
         for (const auto& field : std::span{class_.m_pStaticFields, static_cast<std::size_t>(class_.m_nStaticFieldsSize)}) {
             const auto names = GetRequiredNamesForType(*field.m_pSchemaType);
             result.insert(names.begin(), names.end());
         }
+#endif
 
         if (const auto* base_classes = class_.m_pBaseClasses; base_classes != nullptr) {
             assert(base_classes->m_pClass->m_pSchemaType != nullptr && "didn't think this could happen, feel free to touch");
@@ -790,12 +788,12 @@ namespace {
         const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
 
         // insert padding only if needed
-        if (expected_offset < static_cast<std::uint64_t>(offset) && !state.assembling_bitfield) {
+        if (expected_offset < static_cast<std::int64_t>(offset) && !state.assembling_bitfield) {
             generator
                 .struct_padding(
                     codegen::Padding{
                         .pad_offset = expected_offset,
-                        .size = codegen::Padding::Bytes{offset - expected_offset},
+                        .size = codegen::Padding::Bytes{static_cast<std::size_t>(offset - expected_offset)},
                     },
                     false)
                 .reset_tabs_count()
@@ -809,7 +807,7 @@ namespace {
         static constexpr std::size_t source2_max_align = 8;
 
         // TODO: when we have a CLI parser: pass this property in from the outside
-        const bool verbose = false;
+        constexpr bool verbose = false;
 
         struct cached_datamap_t {
             std::string type_;
@@ -824,7 +822,7 @@ namespace {
         const auto class_alignment = GetClassAlignmentRecursive(cache.class_alignment, class_);
         // Source2 has alignof(max_align_t)=8, i.e. every class whose size is a multiple of 8 is aligned.
         const auto class_is_aligned = (class_size % class_alignment.value_or(source2_max_align)) == 0;
-        const auto is_struct = std::string_view{class_.m_pszName}.ends_with("_t");
+        const auto is_struct = util::IsStruct(class_.m_pszName);
 
         if (!class_is_aligned) {
             const auto warning = [&]() {
@@ -882,6 +880,7 @@ namespace {
 
         // @note: @es3n1n: start class
         //
+        generator.pack_push(1); // we are aligning stuff ourselves
         if (is_struct) {
             if (class_parent != nullptr) {
                 generator.begin_struct_with_base_type(class_.m_pszName, parent_class_name);
@@ -973,8 +972,18 @@ namespace {
             state.last_field_offset = field.m_nSingleInheritanceOffset;
             state.last_field_size = static_cast<std::size_t>(field_size);
 
-            // @note: @es3n1n: push prop
-            //
+            /// @note: @es3n1n: game bug:
+            ///     There are some classes that have literally no info about them in schema,
+            ///     for these fields we'll just insert a pad.
+            // TOOD: check if this is handled by the new generator
+            if (const auto e_class = field.m_pSchemaType->GetAsDeclaredClass(); e_class != nullptr && e_class->m_pClassInfo == nullptr) {
+                assert(false);
+                // var_info.m_type = "std::uint8_t";
+                // var_info.m_array_sizes.clear();
+                // var_info.m_array_sizes.emplace_back(field_size);
+                // builder.comment(std::format("game bug: prop with no declared class info ({})", e_class->m_pszName));
+            }
+
             if ((field.m_nSingleInheritanceOffset % field_alignment.value_or(source2_max_align)) == 0) {
                 if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
                     // This is a workaround to get the size of template types right.
@@ -1052,14 +1061,15 @@ namespace {
             generator.struct_padding(
                 codegen::Padding{
                     .pad_offset = last_field_end,
-                    .size = codegen::Padding::Bytes{end_pad},
+                    .size = codegen::Padding::Bytes{static_cast<std::size_t>(end_pad)},
                 },
-                false);
-        } else if (static_cast<std::size_t>(class_size) < last_field_end) [[unlikely]] {
+                true);
+        } else if (static_cast<std::size_t>(class_size) < static_cast<std::size_t>(last_field_end)) [[unlikely]] {
             throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
                                                  -end_pad, last_field_end, class_.GetName(), class_size)};
         }
 
+#if defined(CS2)
         // @note: @es3n1n: dump static fields
         //
         if (class_.m_nStaticFieldsSize) {
@@ -1067,11 +1077,13 @@ namespace {
                 generator.next_line();
             generator.comment("Static fields:");
         }
+#endif
 
         // The current class may be defined in multiple scopes. It doesn't matter which one we use, as all definitions are the same..
         // TODO: verify the above statement. Are static fields really shared between scopes?
         const std::string scope_name{class_.m_pTypeScope->BGetScopeName()};
 
+#if defined(CS2)
         for (auto s = 0; s < class_.m_nStaticFieldsSize; s++) {
             auto static_field = &class_.m_pStaticFields[s];
 
@@ -1079,6 +1091,7 @@ namespace {
             const auto var_info = field_parser::parse(generator, type_name, static_field->m_pszName, mod);
             generator.static_field_getter(var_info.m_type, var_info.m_name, scope_name, class_.m_pszName, s);
         }
+#endif
 
         if (class_.m_pFieldMetadataOverrides && class_.m_pFieldMetadataOverrides->m_iTypeDescriptionCount > 1) {
             const auto& dm = class_.m_pFieldMetadataOverrides;
@@ -1091,7 +1104,7 @@ namespace {
                 if (t->GetFieldName().empty())
                     continue;
 
-                const auto var_info = field_parser::parse(t->m_iFieldType, t->GetFieldName().data(), t->m_nFieldSize);
+                const auto var_info = field_parser::parse(t->m_iFieldType, t->GetFieldName(), t->m_nFieldSize);
 
                 std::string field_type = var_info.m_type;
                 if (t->m_iFieldType == fieldtype_t::FIELD_EMBEDDED) {
@@ -1129,6 +1142,9 @@ namespace {
         } else {
             generator.end_class();
         }
+
+        generator.pack_pop();
+        generator.next_line();
 
         const bool is_standard_layout_class = IsStandardLayoutClass(cache.class_has_standard_layout, class_);
 

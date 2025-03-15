@@ -11,7 +11,7 @@ class source2sdkRecipe(ConanFile):
     author = "source2gen"
     url = "https://github.com/neverlosecc/source2gen"
     description = "Source2 SDK"
-    topics = ("source2")
+    topics = ("source2",)
 
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}

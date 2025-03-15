@@ -8,8 +8,9 @@
 #include <variant>
 
 namespace codegen {
-    constexpr char kTabSym = '\t';
-    constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many \t characters shall we place per each block
+    constexpr char kSpaceSym = ' ';
+    constexpr char kIndentWidth = 4;
+    constexpr std::size_t kTabsPerBlock = 1; // @note: @es3n1n: how many (kSpaceSym * kIndentWidth) characters shall we place per each block
 
     /// used to add type specifier prefixes
     /// e.g. "struct" in "struct CBaseEntity entity;" for the C generator
@@ -108,6 +109,10 @@ namespace codegen {
         virtual self_ref preamble() = 0;
 
         virtual self_ref include(std::string_view module_or_file_name, IncludeOptions options) = 0;
+
+        virtual self_ref pack_push(const std::size_t alignment = 1) = 0;
+
+        virtual self_ref pack_pop() = 0;
 
         virtual self_ref next_line() = 0;
 

@@ -53,7 +53,7 @@ namespace codegen {
         self_ref preamble() override {
             push_line("#pragma once");
             push_line("");
-            include("source2sdk/source2gen/source2gen_user_types", IncludeOptions{.local = true, .system = false});
+            include("source2sdk/source2gen/source2gen", IncludeOptions{.local = true, .system = false});
             include("cstddef", IncludeOptions{.local = false, .system = true});
             include("cstdint", IncludeOptions{.local = false, .system = true});
 
@@ -66,6 +66,14 @@ namespace codegen {
             const auto maybe_file_extension = options.system ? "" : ("." + get_file_extension());
 
             return push_line(std::format("#include {}{}{}{}", open_bracket, module_or_file_name, maybe_file_extension, close_bracket));
+        }
+
+        self_ref pack_push(const std::size_t alignment) override {
+            return push_line(std::format("#pragma pack(push, {})", alignment));
+        }
+
+        self_ref pack_pop() override {
+            return push_line("#pragma pack(pop)");
         }
 
         self_ref next_line() override {
@@ -293,11 +301,12 @@ namespace codegen {
         }
 
         self_ref push_line(const std::string& line, bool move_cursor_to_next_line = true) {
-            for (std::size_t i = 0; i < _tabs_count; i++)
-                _stream << kTabSym;
-            _stream << line;
-            if (move_cursor_to_next_line)
+            _stream << std::string(_tabs_count * kIndentWidth, kSpaceSym) // insert spaces
+                    << line;
+
+            if (move_cursor_to_next_line) {
                 _stream << std::endl;
+            }
             return *this;
         }
 

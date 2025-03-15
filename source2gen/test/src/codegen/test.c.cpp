@@ -31,8 +31,8 @@ TEST(CodeGenC, Class) {
 
     EXPECT_EQ(builder.str(), "struct Test\n"
                              "{\n"
-                             "\t// This is an empty struct. There is no data in this struct. A pad has been generated for compliance with C.\n"
-                             "\tchar pad_do_not_access;\n"
+                             "    // This is an empty struct. There is no data in this struct. A pad has been generated for compliance with C.\n"
+                             "    char pad_do_not_access;\n"
                              "};\n"
                              "\n");
 }
@@ -44,7 +44,7 @@ TEST(CodeGenC, ClassWithBase) {
 
     EXPECT_EQ(builder.str(), "struct Player\n"
                              "{\n"
-                             "\tstruct Entity base;\n");
+                             "    struct Entity base;\n");
 }
 
 TEST(CodeGenC, ClassContents) {
@@ -58,8 +58,8 @@ TEST(CodeGenC, ClassContents) {
 
     EXPECT_EQ(builder.str(), "struct Test\n"
                              "{\n"
-                             "\tint up;\n"
-                             "\tuint8_t down: 7;\n"
+                             "    int up;\n"
+                             "    uint8_t down: 7;\n"
                              "};\n"
                              "\n");
 }
@@ -73,7 +73,7 @@ TEST(CodeGenC, EscapesClassMembers) {
 
     EXPECT_EQ(builder.str(), "struct Test\n"
                              "{\n"
-                             "\tCPlayer_Head very_big;\n"
+                             "    CPlayer_Head very_big;\n"
                              "};\n"
                              "\n");
 }
@@ -86,8 +86,8 @@ TEST(CodeGenC, Struct) {
 
     EXPECT_EQ(builder.str(), "struct Test\n"
                              "{\n"
-                             "\t// This is an empty struct. There is no data in this struct. A pad has been generated for compliance with C.\n"
-                             "\tchar pad_do_not_access;\n"
+                             "    // This is an empty struct. There is no data in this struct. A pad has been generated for compliance with C.\n"
+                             "    char pad_do_not_access;\n"
                              "};\n"
                              "\n");
 }
@@ -99,7 +99,7 @@ TEST(CodeGenC, StructWithBase) {
 
     EXPECT_EQ(builder.str(), "struct Player\n"
                              "{\n"
-                             "\tstruct Entity base;\n");
+                             "    struct Entity base;\n");
 }
 
 TEST(CodeGenC, StructWithContents) {
@@ -122,8 +122,8 @@ TEST(CodeGenC, StructWithContents) {
 
     EXPECT_EQ(builder.str(), "struct Test\n"
                              "{\n"
-                             "\tuint8_t _pad0100[0x200];\n"
-                             "\tuint8_t _pad0300: 7;\n"
+                             "    uint8_t _pad0100[0x200];\n"
+                             "    uint8_t _pad0300: 7;\n"
                              "};\n"
                              "\n");
 }
@@ -150,8 +150,8 @@ TEST(CodeGenC, Enum) {
 
     EXPECT_EQ(builder.str(), "enum Choice\n"
                              "{\n"
-                             "\tChoice_Chocolate = 0x7,\n"
-                             "\tChoice_Strawberries = 0x9,\n"
+                             "    Choice_Chocolate = 0x7,\n"
+                             "    Choice_Strawberries = 0x9,\n"
                              "};\n"
                              "\n");
 }
@@ -165,7 +165,7 @@ TEST(CodeGenC, Function) {
 
     EXPECT_EQ(builder.str(), "static int jump()\n"
                              "{\n"
-                             "\treturn 1234;\n"
+                             "    return 1234;\n"
                              "};\n" // this semicolon is unnecessary in C
                              "\n");
 }
