@@ -30,7 +30,9 @@ fi
 for subdirectory in \
   "build/bin/source2gen" \
   "build/debug/bin/source2gen" \
-  "build/release/bin/source2gen"
+  "build/release/bin/source2gen" \
+  "build/Debug/bin/source2gen" \
+  "build/Release/bin/source2gen"
   do
   target="${PROJECT_ROOT}/${subdirectory}"
   if [ -f "${target}" ]; then

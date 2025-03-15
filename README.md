@@ -112,26 +112,20 @@ Before building the project in Visual Studio, you will need to update the game d
 The default definition is `CS2`. \
 Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`, `DEADLOCK`.
 
-When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
-
 ### Building the project
 
-#### With CMake
-
 - Open a command prompt or terminal in the project's root directory.
-- Run the following sequence of commands to build the project:
+- Run the following command to build the project:
 
 ```bash
-conan install --output-folder build --settings:host build_type=Release .
-cmake -S . -B build --preset conan-debug -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
-cmake --build build
+conan build -o "game=CS2" --build=missing .
 ```
 
 ### Running tests
 
 ```bash
 LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
-  ./build/bin/source2gen-test
+  ./build/Release/bin/source2gen-test
 ```
 
 On Linux, there are tests to check if the generated SDK can be compiled
