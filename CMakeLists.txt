@@ -12,6 +12,8 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(FATAL_ERROR "source2gen: 32-bit targets are not supported")
 endif()
 
+set(CMAKE_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/conan_toolchain.cmake)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 23 CACHE STRING "Default C++ standard")
@@ -37,6 +39,8 @@ endif()
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT CMAKE_BUILD_TYPE STREQUAL "Release")
     message(FATAL_ERROR "source2gen: Invalid value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 endif()
+
+find_package(argparse REQUIRED)
 
 set(SOURCE2GEN_SUPPORTED_GAMES
     CS2

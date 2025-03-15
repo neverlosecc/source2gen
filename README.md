@@ -13,6 +13,8 @@ and it will also set up the needed environment
 
 ### Windows
 
+TOOD: update windows instructions
+
 ```commandline
 source2gen-loader.exe
 ```
@@ -20,8 +22,7 @@ source2gen-loader.exe
 ### Linux
 
 ```sh
-./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/"
-cp -r ./sdk-static/* ./sdk
+./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/" [options]
 # view generated sdk
 ls ./sdk
 ```
@@ -30,7 +31,7 @@ You can also invoke source2gen directly , e.g. for debugging, by running
 
 ```sh
 LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
-  source2gen
+  ./build/source2gen
 ```
 
 Source2Gen for Linux support is currently in an alpha state. There will be
@@ -40,11 +41,27 @@ Linux.
 
 ### Using the generated SDK
 
-The sdk depends on a file/module called `source2gen.hpp`. This file has
-to be provided by the user and expose all types listed in
-[source2gen.hpp](sdk-static/include/source2sdk/source2gen.hpp). If you don't
-intend to access any of these types, you can use the dummy file
-[source2gen.hpp](sdk-static/include/source2sdk/source2gen.hpp).
+The SDK contains dummy implementations for some types by default.
+See [source2gen.hpp](sdk-static/cpp/include/source2sdk/source2gen/source2gen.hpp).
+It as recommended to replace this file with real implementations once you have
+generated the sdk.
+
+The following languages can be emitted (`--emit-language`)
+
+| Language | Minimum required version                           |
+| -------- | -------------------------------------------------- |
+| `cpp`    | C++23                                              |
+| `c`      | C23                                                |
+| `c-ida`  | C, single file (`sdk/ida.h`), can be parsed by IDA |
+
+#### c-ida
+
+1. In IDA, navigate to `File -> Load File -> Parse C Header File...`
+2. Select `sdk/ida.h`
+
+The header file is large, IDA might need a moment to parse it.
+
+All types are available in the `Local Types` view.
 
 ## Limitations
 
@@ -73,11 +90,13 @@ These instructions will help you set up the project on your local machine for de
 
 - Visual Studio 2019 or newer
 - CMake
+- conan
 
 #### Linux
 
 - g++-13 or newer
 - CMake
+- conan
 
 ### Clone the repository
 
@@ -93,19 +112,47 @@ Before building the project in Visual Studio, you will need to update the game d
 The default definition is `CS2`. \
 Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`, `DEADLOCK`.
 
-When using CMake, you can set `cmake -DSOURCE2GEN_GAME=CS2`
-
 ### Building the project
 
-#### With CMake
-
 - Open a command prompt or terminal in the project's root directory.
-- Run the following sequence of commands to build the project:
+- Run the following command to build the project:
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DSOURCE2GEN_GAME=CS2
-cmake --build build
+conan build -o "game=CS2" --build=missing .
 ```
+
+### Running tests
+
+```bash
+LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
+  ./build/Release/bin/source2gen-test
+```
+
+On Linux, there are tests to check if the generated SDK can be compiled
+
+```bash
+./scripts/test-cpp.sh ~/games/cs2/
+```
+
+### How the C generator works
+
+the `codegen::IGenerator` interface is mostly (but not completely) language-agnostic
+to allow generation of C and C++.
+
+- namespace/module names are encoded in names to avoid name conflicts
+- `enum` names are encoded in enumerator names to avoid name conflicts
+- `class` is emitted as `struct` (C doesn't have `class`)
+- uses of `struct`, `union`, `enum` types are prefixed with the "struct", "union", "enum" keyword respectively (see `codegen::TypeCategory`)
+- emission of static fields is disabled for C, as the only currently known use case of C is to generate IDA headers
+
+### How the C-ida generator works
+
+- uses the C generator
+- sets `--no-static-assertions`
+- sets `--no-static-members`
+- runs a postprocessing step (`PostProcessCIDA()`)
+  - merges all generated files into a single header
+  - removes system includes
 
 ---
 

@@ -443,6 +443,7 @@ public:
     CSchemaType* m_pObjectType;
 };
 
+/// @return For pointers/references, the type that is being pointed to
 [[nodiscard]] inline CSchemaType* CSchemaType::GetRefClass() const {
     if (GetTypeCategory() != ETypeCategory::Schema_Ptr)
         return nullptr;
