@@ -65,7 +65,22 @@ namespace {
 
 int main(const int argc, char* argv[]) try {
     argparse::ArgumentParser program("source2gen-loader");
+
+    constexpr std::array kLoaderParameters = std::to_array<std::string_view>({"--game_path"});
     program.add_argument("--game_path").help("set the game path manually (ignore the game path resolver)");
+
+    /// Copied parameters from source2gen so that argparse does not complain about extra parameters
+    /// \todo: Figure out how to make argparse ignore "extra" arguments
+    program.add_argument("--emit-language")
+        .choices("cpp", "c", "c-ida")
+        .default_value("cpp")
+        .help("Programming language to be used for the generated SDK [cpp, c, c-ida]");
+    program.add_argument("--no-static-members").default_value(false).help("Don't generate getters for static member variables");
+    program.add_argument("--no-static-assertions")
+        .default_value(false)
+        .help("Don't generate static assertions for class size and field offsets (Generated SDK might not work. You can get banned for writing to wrong "
+              "offsets!)");
+
     program.parse_args(argc, argv);
 
     std::cout << std::format("*** loading for game with app_id={:d}", kGameId) << std::endl;
@@ -119,13 +134,21 @@ int main(const int argc, char* argv[]) try {
     _putenv_s(kEnvVarName, new_path_val.c_str());
     SetDllDirectoryA(main_binaries_path.c_str());
 
-    std::cout << "*** loading source2gen" << std::endl;
-
     std::string invoke_cmd = kExecutableName;
     for (std::size_t i = 1; i < argc; ++i) {
+        const auto arg = argv[i];
+
+        if (std::ranges::find(kLoaderParameters, arg) != kLoaderParameters.end()) {
+            // Skip the value as well
+            i += 1;
+            continue;
+        }
+
         invoke_cmd += " ";
         invoke_cmd += argv[i];
     }
+
+    std::cout << "*** loading source2gen: " << invoke_cmd << std::endl;
     std::system(invoke_cmd.c_str());
 
     return 0;
