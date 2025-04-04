@@ -24,7 +24,7 @@ source2gen-loader.exe --game_path "c:\\Game\\Path"
 ```
 
 Any console arguments that are "unused" by the loader will be forwarded to source2gen. \
-This means you can configure Source2Gen directly from the loader, like so:
+This means you can configure source2gen directly from the loader, like so:
 
 ```commandline
 source2gen-loader.exe --game_path "c:\\Game\\Path" --emit-language c
