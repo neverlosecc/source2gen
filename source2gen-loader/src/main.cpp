@@ -76,7 +76,7 @@ namespace {
                          "\tsource2gen --help\n\n"
                          "Optional arguments:\n"
                          "--help              shows help message and exits\n"
-                         "--game_path         set the game path manually (ignore the game path resolver)");
+                         "--game-path         set the game path manually (ignore the game path resolver)");
             std::exit(0);
         };
 
@@ -101,7 +101,7 @@ namespace {
                 continue;
             }
 
-            if (auto game_path = read_val(it, "--game_path"); game_path.has_value()) {
+            if (auto game_path = read_val(it, "--game-path"); game_path.has_value()) {
                 result.game_path = *game_path;
                 continue;
             }

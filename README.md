@@ -20,14 +20,14 @@ source2gen-loader.exe
 If necessary, you can manually specify the game path by using the following command:
 
 ```commandline
-source2gen-loader.exe --game_path "c:\\Game\\Path"
+source2gen-loader.exe --game-path "c:\\Game\\Path"
 ```
 
 Any console arguments that are "unused" by the loader will be forwarded to source2gen. \
 This means you can configure source2gen directly from the loader, like so:
 
 ```commandline
-source2gen-loader.exe --game_path "c:\\Game\\Path" --emit-language c
+source2gen-loader.exe --game-path "c:\\Game\\Path" --emit-language c
 ```
 
 ### Linux
