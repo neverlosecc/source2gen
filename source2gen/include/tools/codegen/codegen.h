@@ -31,7 +31,7 @@ namespace codegen {
         /// fully qualified
         std::string type_name{};
         std::string name{};
-        std::optional<int> bitfield_size{};
+        std::optional<size_t> bitfield_size{};
     };
 
     struct Padding {

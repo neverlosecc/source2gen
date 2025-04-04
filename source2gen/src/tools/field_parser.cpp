@@ -3,6 +3,7 @@
 #include "tools/field_parser.h"
 #include "tools/codegen/codegen.h"
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <Include.h>
 #include <sdk/interfaces/client/game/datamap_t.h>

@@ -1217,7 +1217,7 @@ namespace {
         if (!std::filesystem::exists(kOutDirName))
             std::filesystem::create_directories(kOutDirName);
 
-        const std::string out_file_path = GetFilePathForType(generator, module_name, enum_.m_pszName);
+        const auto out_file_path = GetFilePathForType(generator, module_name, enum_.m_pszName).string();
 
         std::ofstream f(out_file_path, std::ios::out);
         f << generator.str();
@@ -1282,7 +1282,7 @@ namespace {
 
         // @note: @es3n1n: write generated data to output file
         //
-        const std::string out_file_path = GetFilePathForType(generator, module_name, class_.m_pszName);
+        const auto out_file_path = GetFilePathForType(generator, module_name, class_.m_pszName).string();
         std::ofstream f(out_file_path, std::ios::out);
         f << generator.str();
         if (!f.good()) {
