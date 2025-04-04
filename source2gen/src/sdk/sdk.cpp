@@ -1297,7 +1297,7 @@ namespace {
 } // namespace
 
 namespace sdk {
-    GeneratorResult GenerateTypeScopeSdk(source2_gen::Options options, GeneratorCache& cache, std::string_view module_name,
+    GeneratorResult GenerateTypeScopeSdk(const source2_gen::Options& options, GeneratorCache& cache, std::string_view module_name,
                                          const std::unordered_set<const CSchemaEnumBinding*>& enums,
                                          const std::unordered_set<const CSchemaClassBinding*>& classes) {
         // @note: @es3n1n: print debug info

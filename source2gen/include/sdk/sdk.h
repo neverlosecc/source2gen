@@ -39,7 +39,7 @@ namespace sdk {
         std::unordered_set<std::filesystem::path> generated_files{};
     };
 
-    GeneratorResult GenerateTypeScopeSdk(source2_gen::Options options, GeneratorCache& cache, std::string_view module_name,
+    GeneratorResult GenerateTypeScopeSdk(const source2_gen::Options& options, GeneratorCache& cache, std::string_view module_name,
                                          const std::unordered_set<const CSchemaEnumBinding*>& enums,
                                          const std::unordered_set<const CSchemaClassBinding*>& classes);
 } // namespace sdk
