@@ -163,6 +163,30 @@ namespace source2_gen {
         assert(false && "unhandled enumerator");
     }
 
+    [[nodiscard]]
+    std::filesystem::path FindSdkStatic(const Options& options) {
+        const auto directories = std::format("sdk-static/{}", GetStaticSdkName(options.emit_language));
+
+        /// Try from the current cwd first
+        if (auto path = std::filesystem::path(directories); is_directory(path)) {
+            return path;
+        }
+
+        /// On windows, cwd will be `source2gen\build\bin\Release`.
+        /// Let's walk back until we find our directory.
+        constexpr std::size_t kDepth = 4;
+        auto cwd = std::filesystem::current_path();
+        for (std::size_t i = 0; i < kDepth; ++i) {
+            cwd = cwd.parent_path();
+
+            if (auto path = cwd / directories; is_directory(path)) {
+                return path;
+            }
+        }
+
+        throw std::runtime_error(std::format("Unable to find sdk-static: {}", directories));
+    }
+
     bool Dump(Options options) try {
         std::locale::global(std::locale(""));
         std::cout.imbue(std::locale());
@@ -229,7 +253,7 @@ namespace source2_gen {
         // Throws an exception with descriptive message. No need for explicit error handling.
         // Need to do this before PostProcessCIDA() because sdk-static contains types that are
         // missing in the generated sdk.
-        std::filesystem::copy(std::format("sdk-static/{}", GetStaticSdkName(options.emit_language)), kOutDirName,
+        std::filesystem::copy(FindSdkStatic(options), kOutDirName,
                               std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
 
         if (options.emit_language == source2_gen::Language::c_ida) {
