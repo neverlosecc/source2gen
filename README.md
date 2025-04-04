@@ -8,15 +8,26 @@ An example of such SDKs could be found at [source2sdk](https://github.com/neverl
 
 ## Usage
 
-Open the source2gen-loader binary, it will automatically(if supported) find the game path,
-and it will also set up the needed environment
-
 ### Windows
 
-TOOD: update windows instructions
+Open the `source2gen-loader` binary. 
+It will automatically (if supported) locate the game path and set up the required environment.
 
 ```commandline
 source2gen-loader.exe
+```
+
+If necessary, you can manually specify the game path by using the following command:
+
+```commandline
+source2gen-loader.exe --game_path "c:\\Game\\Path"
+```
+
+Any console arguments that are "unused" by the loader will be forwarded to source2gen. \
+This means you can configure Source2Gen directly from the loader, like so:
+
+```commandline
+source2gen-loader.exe --game_path "c:\\Game\\Path" --emit-language c
 ```
 
 ### Linux
