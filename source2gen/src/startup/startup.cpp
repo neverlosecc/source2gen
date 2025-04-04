@@ -21,20 +21,17 @@ namespace {
     [[nodiscard]] auto GetRequiredModules() {
         // clang-format off
         return std::to_array<std::string>({
-            // @note: @es3n1n: modules that we'll use in our code
             loader::get_module_file_name("client"),
             loader::get_module_file_name("engine2"),
             loader::get_module_file_name("schemasystem"),
             loader::get_module_file_name("tier0"),
 
 #if defined(DOTA2)
-            // @note: @soufiw: latest modules that gets loaded in the main menu
             loader::get_module_file_name("navsystem"),
 #elif defined(CS2)
             loader::get_module_file_name("matchmaking"),
 #endif
 
-            // modules that we'll dump (minus the ones listed above)
             loader::get_module_file_name("animationsystem"),
             loader::get_module_file_name("host"),
             loader::get_module_file_name("materialsystem2"),

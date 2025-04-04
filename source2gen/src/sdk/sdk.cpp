@@ -110,7 +110,6 @@ namespace {
         FNV32("MPropertySuppressExpr"),
         FNV32("MPulseCellOutflowHookInfo"),
         FNV32("MPulseEditorHeaderIcon"),
-    /// @note: @es3n1n: In deadlock, this is an integer, but in any other game it's a string
 #if !defined(DEADLOCK) && !defined(DOTA2)
         FNV32("MPulseProvideFeatureTag"),
 #endif
@@ -141,7 +140,6 @@ namespace {
         FNV32("MPropertySortPriority"),
         FNV32("MParticleMinVersion"),
         FNV32("MParticleMaxVersion"),
-    /// @note: @es3n1n: In deadlock, this is an integer, but in any other game it's a string
 #if defined(DEADLOCK) || defined(DOTA2)
         FNV32("MPulseProvideFeatureTag"),
 #endif
