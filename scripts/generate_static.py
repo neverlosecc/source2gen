@@ -109,7 +109,7 @@ def assemble_c(classes: ClassDefs) -> str:
     ]
 
     for name, class_def in classes_iter(classes):
-        if class_def.get('template_arguments') or class_def.get('template_arguments_count'):
+        if class_def.get('template-arguments') or class_def.get('template-arguments-count'):
             result.append(f'// skipped template {name}')
             continue
 

@@ -6,12 +6,15 @@ template <typename>
 using CAnimGraphParamOptionalRef = char[0x20];
 template <typename>
 using CAnimGraphParamRef = char[0x20];
+using CAnimGraphTagOptionalRef = char[0x18];
+using CAnimGraphTagRef = char[0x18];
 template <typename>
 // size is a guess
 using CAnimScriptParam = char[0x08];
 template <typename>
 using CAnimValue = char[0x08];
 using CAnimVariant = char[0x11];
+using CAttachmentNameSymbolWithStorage = char[0x20];
 template <int N>
 using CBitVec = char[(N + 7) / 8];
 using CBufferString = char[0x10];
@@ -24,15 +27,19 @@ using CEntityIndex = char[0x04];
 template <typename>
 using CEntityOutputTemplate = char[0x28];
 using CGlobalSymbol = char[0x08];
+using CGlobalSymbolCaseSensitive = char[0x08];
 template <typename>
 using CHandle = char[0x04];
+using CKV3MemberNameSet = char[0x10];
 using CKV3MemberNameWithStorage = char[0x38];
 template <typename>
 using CNetworkUtlVectorBase = char[0x18];
 using CNetworkedQuantizedFloat = char[0x08];
+using CPanoramaImageName = char[0x10];
 using CParticleNamedValueRef = char[0x40];
 using CPiecewiseCurve = char[0x40];
 using CPlayerSlot = char[0x04];
+// size is 8 bytes bigger in Deadlock
 using CPulseValueFullType = char[0x10];
 template <typename>
 using CResourceArray = char[0x08];
@@ -49,6 +56,7 @@ using CSmartPropAttributeColor = char[0x40];
 using CSmartPropAttributeFloat = char[0x40];
 using CSmartPropAttributeInt = char[0x40];
 using CSmartPropAttributeMaterialGroup = char[0x40];
+using CSmartPropAttributeMaterialName = char[0x40];
 using CSmartPropAttributeModelName = char[0x40];
 using CSmartPropAttributeStateName = char[0x40];
 using CSmartPropAttributeVariableValue = char[0x40];
@@ -57,8 +65,7 @@ using CSmartPropAttributeVector2D = char[0x40];
 using CSmartPropVariableComparison = char[0x20];
 template <typename>
 using CSmartPtr = char[0x08];
-// size unknown. only used in dynamic containers.
-using CSoundEventName = char[0x01];
+using CSoundEventName = char[0x10];
 using CSplitScreenSlot = char[0x04];
 template <typename>
 using CStrongHandle = char[0x08];
@@ -107,16 +114,16 @@ using HSCRIPT = char[0x08];
 // size doesn't matter. only used as a pointer
 using KeyValues = char[0x01];
 using KeyValues3 = char[0x10];
+using PulseSymbol_t = char[0x10];
 using QAngle = char[0x0c];
 using Quaternion = char[0x10];
 using QuaternionStorage = char[0x10];
 using RadianEuler = char[0x0c];
-using RenderInputLayoutField_t = char[0x04];
-// we don't have a field size for this type. uses the fallback of 1.
-using RenderPrimitiveType_t = char[0x01];
+using Range_t = char[0x08];
 using RotationVector = char[0x0c];
 template <typename>
 using SphereBase_t = char[0x10];
+using V_uuid_t = char[0x10];
 using Vector = char[0x0c];
 using Vector2D = char[0x08];
 using Vector4D = char[0x10];

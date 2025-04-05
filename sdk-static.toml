@@ -47,6 +47,7 @@ size = 0x04
 
 [CPulseValueFullType]
 size = 0x10
+note = "size is 8 bytes bigger in Deadlock"
 
 [CResourceName]
 size = 0xe0
@@ -108,8 +109,7 @@ template-arguments-count = 1
 size = 0x18
 
 [CSoundEventName]
-size = 0x01
-note = "size unknown. only used in dynamic containers."
+size = 0x10
 
 [CUtlLeanVector]
 template-arguments-count = 1
@@ -255,13 +255,6 @@ size = 0x10
 [RadianEuler]
 size = 0x0c
 
-[RenderInputLayoutField_t]
-size = 0x04
-
-[RenderPrimitiveType_t]
-size = 0x01
-note = "we don't have a field size for this type. uses the fallback of 1."
-
 [RotationVector]
 size = 0x0c
 
@@ -295,3 +288,33 @@ size = 0x30
 
 [matrix3x4a_t]
 size = 0x30
+
+[Range_t]
+size = 0x08
+
+[V_uuid_t]
+size = 0x10
+
+[CAnimGraphTagOptionalRef]
+size = 0x18
+
+[CPanoramaImageName]
+size = 0x10
+
+[CAnimGraphTagRef]
+size = 0x18
+
+[CAttachmentNameSymbolWithStorage]
+size = 0x20
+
+[CGlobalSymbolCaseSensitive]
+size = 0x08
+
+[CKV3MemberNameSet]
+size = 0x10
+
+[CSmartPropAttributeMaterialName]
+size = 0x40
+
+[PulseSymbol_t]
+size = 0x10
