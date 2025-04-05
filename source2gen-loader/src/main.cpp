@@ -71,7 +71,7 @@ namespace {
         Config result;
 
         auto show_help = [&]() -> void {
-            std::println("Usage: source2gen-loader [--help] [--game_path VAR]\n\n"
+            std::println("Usage: source2gen-loader [--help] [--game-path VAR]\n\n"
                          "More cli options that will be forwarded to source2gen can be seen via:\n"
                          "\tsource2gen --help\n\n"
                          "Optional arguments:\n"
@@ -130,7 +130,7 @@ int main(const int argc, char* argv[]) try {
         std::println(stderr,
                      "game directory not found!\n"
                      "please specify it via the command line option like this:\n"
-                     "\t* {} --game_path c:\\Some\\Path\\",
+                     "\t* {} --game-path c:\\Some\\Path\\",
                      argv[0]);
         return 1;
     }
