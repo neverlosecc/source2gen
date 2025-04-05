@@ -59,7 +59,3 @@ class pkgRecipe(ConanFile):
     def package(self):
         cmake = CMake(self)
         cmake.install()
-
-    
-
-    

@@ -1,0 +1,297 @@
+[CAnimValue]
+template-arguments-count = 1
+size = 0x08
+
+[CAnimVariant]
+size = 0x11
+
+[CAnimScriptParam]
+template-arguments-count = 1
+size = 0x08
+note = "size is a guess"
+
+[CBufferString]
+size = 0x10
+
+[CColorGradient]
+size = 0x18
+
+[CCompressor]
+template-arguments-count = 1
+size = 0x01
+note = "size doesn't matter. only used as a pointer"
+
+[CEntityHandle]
+size = 0x04
+
+[CEntityIndex]
+size = 0x04
+
+[CGlobalSymbol]
+size = 0x08
+
+[CKV3MemberNameWithStorage]
+size = 0x38
+
+[CNetworkedQuantizedFloat]
+size = 0x08
+
+[CParticleNamedValueRef]
+size = 0x40
+
+[CPiecewiseCurve]
+size = 0x40
+
+[CPlayerSlot]
+size = 0x04
+
+[CPulseValueFullType]
+size = 0x10
+
+[CResourceName]
+size = 0xe0
+
+[CSplitScreenSlot]
+size = 0x04
+
+[CTransform]
+size = 0x20
+
+[CUtlBinaryBlock]
+size = 0x18
+
+[CUtlHashtable]
+template-arguments-count = 2
+size = 0x20
+
+[CUtlStringTokenWithStorage]
+size = 0x18
+
+[CUtlStringToken]
+size = 0x04
+
+[CUtlString]
+size = 0x08
+
+[CUtlSymbolLarge]
+size = 0x08
+
+[CUtlSymbol]
+size = 0x02
+
+[CAnimGraphParamOptionalRef]
+template-arguments-count = 1
+size = 0x20
+
+[CAnimGraphParamRef]
+template-arguments-count = 1
+size = 0x20
+
+[CBitVec]
+template-arguments = ["int N"]
+size = "(N + 7) / 8"
+
+[CEntityOutputTemplate]
+template-arguments-count = 1
+size = 0x28
+
+[CHandle]
+template-arguments-count = 1
+size = 0x04
+
+[C_NetworkUtlVectorBase]
+template-arguments-count = 1
+size = 0x18
+
+[CNetworkUtlVectorBase]
+template-arguments-count = 1
+size = 0x18
+
+[CSoundEventName]
+size = 0x01
+note = "size unknown. only used in dynamic containers."
+
+[CUtlLeanVector]
+template-arguments-count = 1
+size = 0x10
+
+[CUtlOrderedMap]
+template-arguments-count = 2
+size = 0x28
+
+[CUtlPair]
+template-arguments-count = 2
+size = 0x01
+note = "size doesn't matter. only used as a pointer"
+
+[CUtlVector]
+template-arguments-count = 1
+size = 0x18
+
+[CUtlVectorFixedGrowable]
+template-arguments = ["typename Ty"]
+size = "0x18 + ((sizeof(Ty) < 4) ? 4 : sizeof(Ty))"
+note = "size is a guess that fits both occurrences of this type in CS2"
+
+[CUtlLeanVectorFixedGrowable]
+template-arguments = ["typename Ty"]
+size = "0x10 + ((sizeof(Ty) < 4) ? 4 : sizeof(Ty))"
+
+[C_UtlVectorEmbeddedNetworkVar]
+template-arguments-count = 1
+size = 0x50
+
+[CUtlVectorEmbeddedNetworkVar]
+template-arguments-count = 1
+size = 0x50
+
+[CUtlVectorSIMDPaddedVector]
+size = 0x18
+
+[CSmartPtr]
+template-arguments-count = 1
+size = 0x08
+
+[CResourceArray]
+template-arguments-count = 1
+size = 0x08
+
+[CResourceString]
+size = 0x08
+note = "size unknown"
+
+[CResourcePointer]
+template-arguments-count = 1
+size = 0x08
+
+[CResourceNameTyped]
+template-arguments-count = 1
+size = 0xe0
+
+[CStrongHandle]
+template-arguments-count = 1
+size = 0x08
+
+[CStrongHandleCopyable]
+template-arguments-count = 1
+size = 0x08
+
+[CStrongHandleVoid]
+size = 0x08
+note = "size doesn't matter. only used as a pointer"
+
+[CVariantBase]
+template-arguments-count = 1
+size = 0x10
+
+[CWeakHandle]
+template-arguments-count = 1
+size = 0x18
+
+[CSmartPropAttributeVector]
+size = 0x40
+
+[CSmartPropAttributeFloat]
+size = 0x40
+
+[CSmartPropAttributeBool]
+size = 0x40
+
+[CSmartPropAttributeColor]
+size = 0x40
+
+[CSmartPropAttributeInt]
+size = 0x40
+
+[CSmartPropAttributeModelName]
+size = 0x40
+
+[CSmartPropAttributeMaterialGroup]
+size = 0x40
+
+[CSmartPropAttributeVector2D]
+size = 0x40
+
+[CSmartPropVariableComparison]
+size = 0x20
+
+[CSmartPropAttributeAngles]
+size = 0x40
+
+[CSmartPropAttributeStateName]
+size = 0x40
+
+[CSmartPropAttributeVariableValue]
+size = 0x40
+
+[Color]
+size = 0x04
+
+[DegreeEuler]
+size = 0x0c
+
+[FourVectors]
+size = 0x30
+
+[HSCRIPT]
+size = 0x08
+
+[KeyValues3]
+size = 0x10
+
+[KeyValues]
+size = 0x01
+note = "size doesn't matter. only used as a pointer"
+
+[QAngle]
+size = 0x0c
+
+[QuaternionStorage]
+size = 0x10
+
+[Quaternion]
+size = 0x10
+
+[RadianEuler]
+size = 0x0c
+
+[RenderInputLayoutField_t]
+size = 0x04
+
+[RenderPrimitiveType_t]
+size = 0x01
+note = "we don't have a field size for this type. uses the fallback of 1."
+
+[RotationVector]
+size = 0x0c
+
+[SphereBase_t]
+template-arguments-count = 1
+size = 0x10
+
+[Vector2D]
+size = 0x08
+
+[Vector4D]
+size = 0x10
+
+[VectorAligned]
+size = 0x10
+
+[Vector]
+size = 0x0c
+
+[WorldGroupId_t]
+size = 0x04
+
+[float32]
+size = 0x04
+
+[fltx4]
+size = 0x10
+
+[matrix3x4_t]
+size = 0x30
+
+[matrix3x4a_t]
+size = 0x30

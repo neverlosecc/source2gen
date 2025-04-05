@@ -66,6 +66,23 @@ if(NOT SOURCE2GEN_GAME IN_LIST SOURCE2GEN_SUPPORTED_GAMES)
     message(FATAL_ERROR "source2gen: Invalid value for SOURCE2GEN_GAME: ${SOURCE2GEN_GAME}")
 endif()
 
+# Generating sdk-static
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+execute_process(
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/generate_static.py
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    RESULT_VARIABLE SDK_STATIC_SCRIPT_RESULT
+    OUTPUT_VARIABLE SDK_STATIC_SCRIPT_OUTPUT
+    ERROR_VARIABLE SDK_STATIC_SCRIPT_ERROR
+)
+
+if(NOT SDK_STATIC_SCRIPT_RESULT EQUAL 0)
+    message(WARNING "Failed to generate sdk-static: ${SDK_STATIC_SCRIPT_ERROR}")
+else()
+    string(REGEX REPLACE "\n$" "" SDK_STATIC_SCRIPT_OUTPUT_TRIMMED "${SDK_STATIC_SCRIPT_OUTPUT}")
+    message(STATUS "Generated sdk-static:\n${SDK_STATIC_SCRIPT_OUTPUT_TRIMMED}")
+endif()
+
 # This one should be included before we include any other projects
 add_subdirectory(vendor)
 
