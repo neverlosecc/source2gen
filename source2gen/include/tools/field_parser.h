@@ -67,6 +67,9 @@ namespace field_parser {
     };
 
     [[nodiscard]]
+    std::pair<std::string, std::string> split_type_name_pointers(const std::string& type_name);
+
+    [[nodiscard]]
     std::string guess_bitfield_type(std::size_t bits_count);
 
     /// @return @ref std::nullopt if type_name is not a built-in type

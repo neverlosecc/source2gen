@@ -105,8 +105,10 @@ namespace field_parser {
         // or array
         //
         void parse_type(const codegen::IGenerator& generator, field_info_t& result, const std::string& type_name) {
-            if (const auto found = generator.find_built_in(type_name); found.has_value()) {
-                result.m_type = found.value();
+            auto [unwrapped_name, unwrapped_pointers] = split_type_name_pointers(type_name);
+
+            if (const auto found = generator.find_built_in(unwrapped_name); found.has_value()) {
+                result.m_type = found.value() + unwrapped_pointers;
             } else {
                 // result.m_type may already be set if parse_bitfield() identified a bitfield
                 if (result.m_type.empty()) {
@@ -130,6 +132,14 @@ namespace field_parser {
             }
         }
     } // namespace detail
+
+    std::pair<std::string, std::string> split_type_name_pointers(const std::string& type_name) {
+        const auto pos = type_name.find('*');
+        const auto base = (pos == std::string::npos) ? type_name : type_name.substr(0, pos);
+        const auto pointers = (pos == std::string::npos) ? "" : type_name.substr(pos);
+
+        return std::make_pair(base, pointers);
+    }
 
     std::string guess_bitfield_type(const std::size_t bits_count) {
         for (auto p : detail::kBitfieldIntegralTypes) {
