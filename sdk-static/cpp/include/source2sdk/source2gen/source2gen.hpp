@@ -133,6 +133,7 @@ using float32 = char[0x04];
 using fltx4 = char[0x10];
 using matrix3x4_t = char[0x30];
 using matrix3x4a_t = char[0x30];
+using panorama_CPanelPtr = char[0x08];
 
 // intentionally left undefined. if you want to access static fields, add your own sdk.
 namespace interfaces {

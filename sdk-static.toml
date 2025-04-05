@@ -318,3 +318,6 @@ size = 0x40
 
 [PulseSymbol_t]
 size = 0x10
+
+[panorama_CPanelPtr]
+size = 0x08

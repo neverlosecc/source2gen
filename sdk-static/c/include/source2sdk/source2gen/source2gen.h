@@ -100,3 +100,4 @@ typedef char float32[0x04];
 typedef char fltx4[0x10];
 typedef char matrix3x4_t[0x30];
 typedef char matrix3x4a_t[0x30];
+typedef char panorama_CPanelPtr[0x08];
