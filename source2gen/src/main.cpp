@@ -9,16 +9,11 @@
 int main(const int argc, char* argv[]) {
     int exit_code = 1;
 
-    const auto maybe_options = source2_gen::Options::parse_args(argc, argv);
-
-    if (maybe_options.has_value()) {
-        const auto options{maybe_options.value()};
-
-        if (source2_gen::Dump(options)) {
-            std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
-            std::cout << kPoweredByMessage << std::endl;
-            exit_code = 0;
-        }
+    const auto options = source2_gen::Options::parse_args(argc, argv);
+    if (options.has_value() && Dump(*options)) {
+        std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
+        std::cout << kPoweredByMessage << std::endl;
+        exit_code = 0;
     }
 
     /// Errors would be logged in the `source2_gen::Dump` itself
