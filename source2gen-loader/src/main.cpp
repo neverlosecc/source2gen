@@ -85,12 +85,12 @@ namespace {
                 return std::nullopt;
             }
 
-            auto next_it = std::next(it);
+            const auto next_it = std::next(it);
             if (next_it == arguments.end()) {
                 throw std::runtime_error(std::format("{} requires a value", command));
             }
 
-            const auto value = *next_it;
+            auto value = *next_it;
             it = arguments.erase(it, std::next(next_it));
             return value;
         };
@@ -178,8 +178,9 @@ int main(const int argc, char* argv[]) try {
     invoke_cmd += " " + (arguments | std::views::join_with(' ') | std::ranges::to<std::string>());
 
     std::println("*** loading source2gen: {}", invoke_cmd);
-    std::system(invoke_cmd.c_str());
+    std::fflush(stdout);
 
+    std::system(invoke_cmd.c_str());
     return 0;
 } catch (const std::runtime_error& error) {
     std::println(stderr, "Fatal error: {}", error.what());
