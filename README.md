@@ -1,8 +1,17 @@
 # Source2Gen
 
-Source2Gen is a tool to generate Source 2 SDKs. \
-This project aims to provide an easy way to generate SDKs for various Source 2 games. \
-An example of such SDKs could be found at [source2sdk](https://github.com/neverlosecc/source2sdk/tree/cs2).
+Source2Gen is a tool designed to generate SDKs for Source 2 games.
+
+Example SDKs generated with this tool can be found at [neverlosecc/source2sdk](https://github.com/neverlosecc/source2sdk/tree/cs2).
+
+---
+
+## Features
+
+- Extracts SDK definitions from Source 2 binaries with minimal effort
+- Supports multiple Source 2 games (full list below)
+- Emits **C++23**, **C23**, or **IDA-compatible C** headers
+- Cross-platform: Windows and Linux
 
 ---
 
@@ -10,177 +19,196 @@ An example of such SDKs could be found at [source2sdk](https://github.com/neverl
 
 ### Windows
 
-Open the `source2gen-loader` binary. 
-It will automatically (if supported) locate the game path and set up the required environment.
+Launch `source2gen-loader.exe`:
 
 ```commandline
 source2gen-loader.exe
 ```
 
-If necessary, you can manually specify the game path by using the following command:
+The loader will attempt to automatically detect the game path.  
+To specify the game directory manually:
 
 ```commandline
-source2gen-loader.exe --game-path "c:\\Game\\Path"
+source2gen-loader.exe --game-path "C:\\Games\\CS2"
 ```
 
-Any console arguments that are "unused" by the loader will be forwarded to source2gen. \
-This means you can configure source2gen directly from the loader, like so:
+Additional arguments can be passed directly to source2gen via the loader, for example:
 
 ```commandline
-source2gen-loader.exe --game-path "c:\\Game\\Path" --emit-language c
+source2gen-loader.exe --game-path "C:\\Games\\CS2" --emit-language c
 ```
 
-### Linux
+---
 
-```sh
+### Linux (alpha-quality support)
+
+Run the provided wrapper script:
+
+```bash
 ./scripts/run.sh "$HOME/.steam/steam/steamapps/cs2/" [options]
-# view generated sdk
-ls ./sdk
 ```
 
-You can also invoke source2gen directly , e.g. for debugging, by running
+Generated SDKs will appear under the `./sdk` directory.
 
-```sh
+For manual or debugging use, invoke directly:
+
+```bash
 LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
   ./build/source2gen
 ```
 
-Source2Gen for Linux support is currently in an alpha state. There will be
-errors, bugs, and wrong output. Please only file issues if you want to work on
-them. This note will be removed once we have thoroughly tested Source2Gen on
-Linux.
+**Note:** Linux support is experimental. Expect issues, incomplete output, or errors. Contributions to improve Linux support are encouraged.
 
-### Using the generated SDK
+---
 
-The SDK contains dummy implementations for some types by default.
-See [source2gen.hpp](sdk-static/cpp/include/source2sdk/source2gen/source2gen.hpp).
-It as recommended to replace this file with real implementations once you have
-generated the sdk.
+## Using the Generated SDK
 
-The following languages can be emitted (`--emit-language`)
+By default, the SDK contains dummy implementations for certain types, located in [sdk-static](sdk-static/cpp/include/source2sdk/source2gen/source2gen.hpp)
 
-| Language | Minimum required version                           |
-| -------- | -------------------------------------------------- |
-| `cpp`    | C++23                                              |
-| `c`      | C23                                                |
-| `c-ida`  | C, single file (`sdk/ida.h`), can be parsed by IDA |
+It is recommended to replace these dummy implementations with actual implementations specific to your needs.
 
-#### c-ida
+---
 
-1. In IDA, navigate to `File -> Load File -> Parse C Header File...`
+## Output languages (`--emit-language`)
+
+| Language   | Minimum Language Standard        |
+|------------|----------------------------------|
+| `cpp`      | C++23                            |
+| `c`        | C23                              |
+| `c-ida`    | C (single file: `sdk/ida.h`)     |
+
+---
+
+### Using IDA-compatible output (`c-ida`)
+
+1. In IDA, navigate to **File -> Load File -> Parse C Header File...**
 2. Select `sdk/ida.h`
+3. Wait for compilation to complete (this may take some time)
 
-The header file is large, IDA might need a moment to parse it.
+All defined types will then be available under **Local Types** in IDA.
 
-All types are available in the `Local Types` view.
+> [!NOTE]  
+> The IDA support was tested on IDA Pro 9.1, all the "older" versions of IDA might not proceed the output well, feel free to open the issues in case you run into any issues though.
+
+---
 
 ## Limitations
 
-### Disabled entities
+Some entities are omitted or replaced with dummy implementations in the generated SDK due to technical limitations:
 
-Under the following conditions, entities are either entirely omitted, or emitted
-as a comment and replaced with a dummy:
+- **Overlapping fields:** when multiple fields occupy the same memory location
+- **Misaligned fields:** fields whose type alignment requirements prevent correct in-structure offset placement
+- **Misaligned types:** class/struct types where padding would be needed beyond the original size to meet alignment rules
+- **Entities using C++ templates**
 
-- Overlapping fields: Fields that share memory with another field
-- Misaligned fields: Fields that cannot be placed at the correct in-class offset
-  because of their type's alignment requirements
-- Misaligned types: Class types that would exceed their correct size because
-  padding bytes would have to be inserted to meet alignment requirements
-- Fields with template types
+Some of these limitations might be addressed in future versions using compiler-specific extensions.
 
-Some of these disabled entities can be made to work by using compiler-specific
-attributes.
+---
 
-## Getting Started with Development
-
-These instructions will help you set up the project on your local machine for development and testing purposes.
+## Development Setup
 
 ### Prerequisites
 
-#### Windows
+**Windows**
 
-- Visual Studio 2019 or newer
+- Visual Studio 2019 or newer (build inside the "Developer Command Prompt")
 - CMake
-- conan
+- Conan
 
-#### Linux
+**Linux**
 
 - g++-13 or newer
 - CMake
-- conan
+- Conan
 
-### Clone the repository
+---
 
-To clone the repository with submodules, run the following command:
+### Clone repository
 
 ```bash
 git clone --recurse-submodules https://github.com/neverlosecc/source2gen.git
 ```
 
-### Update the Game Definition
+---
 
-Before building the project in Visual Studio, you will need to update the game definition.
-The default definition is `CS2`. \
-Possible options are: `CS2`, `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`, `DEADLOCK`.
+### Selecting your game and building
 
-### Building the project
+Supported games:
 
-- Open a command prompt or terminal in the project's root directory.
-- Run the following command to build the project:
+`CS2` (default), `SBOX`, `ARTIFACT2`, `ARTIFACT1`, `DOTA2`, `UNDERLORDS`, `DESKJOB`, `DEADLOCK`, `HL_ALYX`, `THE_LAB_ROBOT_REPAIR`
+
+Example build targeting DEADLOCK:
 
 ```bash
-conan build -o "game=CS2" --build=missing .
+conan build -o "game=DEADLOCK" --build=missing .
 ```
 
+Replace `DEADLOCK` with the chosen target.
+
+---
+
 ### Running tests
+
+Run unit tests (Linux):
 
 ```bash
 LD_LIBRARY_PATH=$HOME/.steam/steam/steamapps/cs2/game/bin/linuxsteamrt64/:$HOME/.steam/steam/steamapps/cs2/game/csgo/bin/linuxsteamrt64/ \
   ./build/Release/bin/source2gen-test
 ```
 
-On Linux, there are tests to check if the generated SDK can be compiled
+Test whether the generated SDK compiles:
 
 ```bash
 ./scripts/test-cpp.sh ~/games/cs2/
 ```
 
-### How the C generator works
+---
 
-the `codegen::IGenerator` interface is mostly (but not completely) language-agnostic
-to allow generation of C and C++.
+## Internal Design
 
-- namespace/module names are encoded in names to avoid name conflicts
-- `enum` names are encoded in enumerator names to avoid name conflicts
-- `class` is emitted as `struct` (C doesn't have `class`)
-- uses of `struct`, `union`, `enum` types are prefixed with the "struct", "union", "enum" keyword respectively (see `codegen::TypeCategory`)
-- emission of static fields is disabled for C, as the only currently known use case of C is to generate IDA headers
+### C Generator
 
-### How the C-ida generator works
+Implements the `codegen::IGenerator` interface, designed to be language-agnostic. Notable considerations:
 
-- uses the C generator
-- sets `--no-static-assertions`
-- sets `--no-static-members`
-- runs a postprocessing step (`PostProcessCIDA()`)
-  - merges all generated files into a single header
-  - removes system includes
+- Namespaces and module information are encoded into identifiers to avoid conflicts
+- Enumerator names include the enum name prefix to minimize name collisions
+- Classes are emitted as `struct` in C/C++
+- Uses of `struct`, `union`, `enum` types are prefixed with the "struct", "union", "enum" keyword respectively (see `codegen::TypeCategory`)
+- Static fields are omitted for C output (the only currently known use case of C is to generate IDA headers)
+
+---
+
+### C-IDA Generator
+
+Implemented as a wrapper on top of the C generator:
+
+- Sets options `--no-static-assertions` and `--no-static-members`
+- Performs postprocessing:
+  - Merges all generated files into a single header (`sdk/ida.h`)
+  - Removes system includes
 
 ---
 
 ## Credits
 
-This project is made possible by the contributions of various individuals and projects. Special thanks to the following:
+Special thanks to project contributors:
 
-- **[es3n1n](https://github.com/es3n1n)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=es3n1n)
-- **[cpz](https://github.com/cpz)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=cpz)
-- **[Cre3per](https://github.com/Cre3per/)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=cre3per), Linux support
-- **[Soufiw](https://github.com/Soufiw)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=Soufiw)
-- **[anarh1st47](https://github.com/anarh1st47)** - source2gen [contributor](https://github.com/neverlosecc/source2gen/commits?author=anarh1st47)
-- **[praydog](https://github.com/praydog)** - the author of the original [Source2Gen](https://github.com/praydog/Source2Gen) project
+- [es3n1n](https://github.com/es3n1n)
+- [cpz](https://github.com/cpz)
+- [Cre3per](https://github.com/Cre3per) (Linux support)
+- [Soufiw](https://github.com/Soufiw)
+- [anarh1st47](https://github.com/anarh1st47)
+- [praydog](https://github.com/praydog) (author of the original [Source2Gen](https://github.com/praydog/Source2Gen) tool)
 
-This project also utilizes the following open-source libraries/tools:
+If you have contributed and are not listed here, please submit a [pull request](https://github.com/neverlosecc/source2gen/pulls).
 
-- **[CMake](https://github.com/Kitware/CMake)** - Build tool
-- **[ValveFileVDF](https://github.com/TinyTinni/ValveFileVDF)** - VDF file parser
+---
 
-If you've contributed to the project and would like to be listed here, please submit a [pull request](https://github.com/neverlosecc/source2gen/pulls) with your information added to the credits.
+## Dependencies
+
+- [Conan](https://github.com/conan-io/conan) - C and C++ package manager
+- [CMake](https://github.com/Kitware/CMake) - Build system
+- [ValveFileVDF](https://github.com/TinyTinni/ValveFileVDF) - VDF file parser
+- [argparse](https://github.com/p-ranav/argparse) - C++ argument parser
+- [Abseil](https://github.com/abseil/abseil-cpp) - Common C++ libraries from Google
+- [GoogleTest](https://github.com/google/googletest) - Testing framework
