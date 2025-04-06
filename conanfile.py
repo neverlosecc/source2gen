@@ -49,7 +49,7 @@ class pkgRecipe(ConanFile):
           "SOURCE2GEN_GAME": self.options.game,
         }
 
-        if self.settings.os == "Windows":
+        if self.settings.os != "Windows":
           variables["CMAKE_CXX_COMPILER"] = "g++"
 
         cmake = CMake(self)
