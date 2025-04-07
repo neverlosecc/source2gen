@@ -254,7 +254,8 @@ public:
         HashFixedData_t* m_pFirstUncommitted; // 0x0020
         IF_LINUX(char pad_0x20[0x08];)
     }; // Size: 0x0028
-    static_assert(sizeof(HashBucket_t) == platform_specific{.windows = 0x28, .linux = 0x30});
+    // clang-19 requires an explicit template type for platform_specific
+    static_assert(sizeof(HashBucket_t) == platform_specific<int>{.windows = 0x28, .linux = 0x30});
 
     CUtlMemoryPoolBase m_EntryMemory;
 

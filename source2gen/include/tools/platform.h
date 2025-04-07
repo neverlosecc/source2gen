@@ -37,6 +37,8 @@ constexpr platform current_platform =
     #error
 #endif
 
+// default argument is unused. we only need it because clang-19 fails to deduce
+// template arguments.
 template <class Value>
 struct [[nodiscard]] platform_specific {
     Value windows;
