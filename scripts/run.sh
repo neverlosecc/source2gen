@@ -3,6 +3,7 @@
 set -Eueo pipefail
 
 GAME_DIRECTORY="${1:-}"
+shift
 SCRIPT_DIRECTORY="$(dirname "$(readlink -f "$0")")"
 PROJECT_ROOT="${SCRIPT_DIRECTORY}/../"
 BINARY=""
@@ -29,7 +30,9 @@ fi
 for subdirectory in \
   "build/bin/source2gen" \
   "build/debug/bin/source2gen" \
-  "build/release/bin/source2gen"
+  "build/release/bin/source2gen" \
+  "build/Debug/bin/source2gen" \
+  "build/Release/bin/source2gen"
   do
   target="${PROJECT_ROOT}/${subdirectory}"
   if [ -f "${target}" ]; then
@@ -45,10 +48,11 @@ else
   FIRST_BIN_DIRECTORY="${GAME_DIRECTORY}/game/bin/linuxsteamrt64/"
   SECOND_BIN_DIRECTORY=$(find_second_bin_directory "$GAME_DIRECTORY")
   export LD_LIBRARY_PATH="${FIRST_BIN_DIRECTORY}:${SECOND_BIN_DIRECTORY}:${LD_LIBRARY_PATH:-}"
+  echo "setting LD_LIBRARY_PATH to ${LD_LIBRARY_PATH}"
   set -x
   if [ -z "${DEBUGGER:-}" ]; then
-    "${BINARY}"
+    "${BINARY}" "${@}"
   else
-    "${DEBUGGER}" -- "${BINARY}"
+    "${DEBUGGER}" -- "${BINARY}" "${@}"
   fi
 fi

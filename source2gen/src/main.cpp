@@ -1,11 +1,16 @@
 // Copyright (C) 2024 neverlosecc
 // See end of file for extended copyright information.
+#include "options.hpp"
+#include "tools/platform.h"
 #include <Include.h>
+#include <iostream>
+#include <optional>
 
-int main(const int argc, const char* argv[]) {
+int main(const int argc, char* argv[]) {
     int exit_code = 1;
 
-    if (source2_gen::Dump()) {
+    const auto options = source2_gen::Options::parse_args(argc, argv);
+    if (options.has_value() && Dump(*options)) {
         std::cout << std::format("Successfully dumped Source 2 SDK, now you can safely close this console.") << std::endl;
         std::cout << kPoweredByMessage << std::endl;
         exit_code = 0;

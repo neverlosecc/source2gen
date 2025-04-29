@@ -2,33 +2,13 @@
 // See end of file for extended copyright information.
 #pragma once
 
-#include <array>
-#include <cassert>
-#include <chrono>
-#include <filesystem>
-#include <fstream>
-#include <thread>
-#include <unordered_map>
-
-using namespace std::chrono_literals;
-using namespace std::this_thread;
-
-#pragma region Format
-#include <format>
-#include <iostream>
-#pragma endregion Format
-
-#pragma region Tools
-#include "tools/codegen.h"
-#include "tools/field_parser.h"
-#include "tools/fnv.h"
-#include "tools/util.h"
-#pragma endregion Tools
+#include "options.hpp"
+#include <string_view>
 
 namespace source2_gen {
     /// Logs errors. Calls @ref std::abort() on fatal errors.
     /// @return true on success
-    bool Dump();
+    bool Dump(Options options);
 } // namespace source2_gen
 
 constexpr std::string_view kPoweredByMessage = {"Powered by github.com/neverlosecc/source2gen"};

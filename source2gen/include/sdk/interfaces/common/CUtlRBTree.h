@@ -241,7 +241,7 @@ public:
         return InvalidIndex();
     }
 
-    I PrevPreorder(I i) const {
+    I PrevPreorder([[maybe_unused]] I i) const {
         // not implemented yet
         return InvalidIndex();
     }

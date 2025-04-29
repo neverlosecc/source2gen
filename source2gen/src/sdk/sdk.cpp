@@ -3,10 +3,20 @@
 
 // ReSharper disable CppClangTidyClangDiagnosticLanguageExtensionToken
 #include "sdk/sdk.h"
+#include "Include.h"
+#include "tools/codegen/c.h"
+#include "tools/codegen/codegen.h"
+#include "tools/codegen/cpp.h"
+#include "tools/field_parser.h"
+#include "tools/util.h"
+#include <absl/strings/str_replace.h>
+#include <cstdlib>
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <functional>
+#include <iostream>
 #include <list>
 #include <ranges>
 #include <set>
@@ -100,7 +110,6 @@ namespace {
         FNV32("MPropertySuppressExpr"),
         FNV32("MPulseCellOutflowHookInfo"),
         FNV32("MPulseEditorHeaderIcon"),
-    /// @note: @es3n1n: In deadlock, this is an integer, but in any other game it's a string
 #if !defined(DEADLOCK) && !defined(DOTA2)
         FNV32("MPulseProvideFeatureTag"),
 #endif
@@ -131,7 +140,6 @@ namespace {
         FNV32("MPropertySortPriority"),
         FNV32("MParticleMinVersion"),
         FNV32("MParticleMaxVersion"),
-    /// @note: @es3n1n: In deadlock, this is an integer, but in any other game it's a string
 #if defined(DEADLOCK) || defined(DOTA2)
         FNV32("MPulseProvideFeatureTag"),
 #endif
@@ -295,119 +303,135 @@ namespace {
         }
     }
 
-    void PrintClassInfo(sdk::GeneratorCache& cache, codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
-        builder.comment(std::format("Registered alignment: {}", class_.GetRegisteredAlignment().transform(&util::to_hex_string).value_or("unknown")));
-        builder.comment(
-            std::format("Alignment: {}", GetClassAlignmentRecursive(cache.class_alignment, class_).transform(&util::to_hex_string).value_or("unknown")));
-        builder.comment(std::format("Standard-layout class: {}", IsStandardLayoutClass(cache.class_has_standard_layout, class_)));
-        builder.comment(std::format("Size: {:#x}", class_.m_nSizeOf));
+    [[nodiscard]]
+    codegen::TypeCategory GetTypeCategory(const SchemaClassFieldData_t& field) {
+        using enum codegen::TypeCategory;
 
-        if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
-            builder.comment("Has VTable");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_IS_ABSTRACT) != 0)
-            builder.comment("Is Abstract");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_TRIVIAL_CONSTRUCTOR) != 0)
-            builder.comment("Has Trivial Constructor");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR) != 0)
-            builder.comment("Has Trivial Destructor");
-
-#if defined(CS2) || defined(DOTA2)
-        if ((class_.m_nClassFlags & SCHEMA_CF1_CONSTRUCT_ALLOWED) != 0)
-            builder.comment("Construct allowed");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_CONSTRUCT_DISALLOWED) != 0)
-            builder.comment("Construct disallowed");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MConstructibleClassBase) != 0)
-            builder.comment("MConstructibleClassBase");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MClassHasCustomAlignedNewDelete) != 0)
-            builder.comment("MClassHasCustomAlignedNewDelete");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MClassHasEntityLimitedDataDesc) != 0)
-            builder.comment("MClassHasEntityLimitedDataDesc");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MDisableDataDescValidation) != 0)
-            builder.comment("MDisableDataDescValidation");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MIgnoreTypeScopeMetaChecks) != 0)
-            builder.comment("MIgnoreTypeScopeMetaChecks");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MNetworkNoBase) != 0)
-            builder.comment("MNetworkNoBase");
-        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MNetworkAssumeNotNetworkable) != 0)
-            builder.comment("MNetworkAssumeNotNetworkable");
-#endif
-
-        if (class_.m_nStaticMetadataSize > 0)
-            builder.comment("");
-
-        for (const auto& metadata : class_.GetStaticMetadata()) {
-            if (const auto value = GetMetadataValue(metadata); !value.empty())
-                builder.comment(std::format("static metadata: {} \"{}\"", metadata.m_szName, value));
-            else
-                builder.comment(std::format("static metadata: {}", metadata.m_szName));
+        // these cases and sub-cases aren't exactly correct, but they do the job.
+        // we can improve the classification when we need more details.
+        switch (field.m_pSchemaType->GetTypeCategory()) {
+        case ETypeCategory::Schema_DeclaredEnum:
+            return enum_;
+        case ETypeCategory::Schema_DeclaredClass:
+            return class_or_struct;
+        case ETypeCategory::Schema_FixedArray: {
+            auto* schema = reinterpret_cast<const CSchemaType_FixedArray*>(field.m_pSchemaType);
+            switch (schema->m_pElementType->m_unTypeCategory) {
+            case ETypeCategory::Schema_DeclaredEnum:
+                return enum_;
+            case ETypeCategory::Schema_DeclaredClass:
+            case ETypeCategory::Schema_Ptr:
+                return class_or_struct;
+            default:
+                return built_in;
+            }
+        }
+        case ETypeCategory::Schema_Ptr: {
+            if (const auto ref_class = field.m_pSchemaType->GetRefClass(); ref_class != nullptr) {
+                // there are only pointers to structs/classes in source2, not to enums
+                if (ref_class->GetTypeCategory() == ETypeCategory::Schema_DeclaredClass) {
+                    return class_or_struct;
+                }
+            }
+            return built_in;
+        }
+        default:
+            return built_in;
         }
     }
 
-    void PrintEnumInfo(codegen::generator_t::self_ref builder, const CSchemaEnumBinding& enum_binding) {
-        builder.comment(std::format("Enumerator count: {}", enum_binding.m_nEnumeratorCount))
+    void PrintClassInfo(sdk::GeneratorCache& cache, codegen::IGenerator::self_ref generator, const CSchemaClassBinding& class_) {
+        generator.comment(std::format("Registered alignment: {}", class_.GetRegisteredAlignment().transform(&util::to_hex_string).value_or("unknown")));
+        generator.comment(
+            std::format("Alignment: {}", GetClassAlignmentRecursive(cache.class_alignment, class_).transform(&util::to_hex_string).value_or("unknown")));
+        generator.comment(std::format("Standard-layout class: {}", IsStandardLayoutClass(cache.class_has_standard_layout, class_)));
+        generator.comment(std::format("Size: {:#x}", class_.m_nSizeOf));
+
+        if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_VIRTUAL_MEMBERS) != 0) // @note: @og: its means that class probably does have vtable
+            generator.comment("Has VTable");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_IS_ABSTRACT) != 0)
+            generator.comment("Is Abstract");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_TRIVIAL_CONSTRUCTOR) != 0)
+            generator.comment("Has Trivial Constructor");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_HAS_TRIVIAL_DESTRUCTOR) != 0)
+            generator.comment("Has Trivial Destructor");
+
+#if defined(CS2) || defined(DOTA2)
+        if ((class_.m_nClassFlags & SCHEMA_CF1_CONSTRUCT_ALLOWED) != 0)
+            generator.comment("Construct allowed");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_CONSTRUCT_DISALLOWED) != 0)
+            generator.comment("Construct disallowed");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MConstructibleClassBase) != 0)
+            generator.comment("MConstructibleClassBase");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MClassHasCustomAlignedNewDelete) != 0)
+            generator.comment("MClassHasCustomAlignedNewDelete");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MClassHasEntityLimitedDataDesc) != 0)
+            generator.comment("MClassHasEntityLimitedDataDesc");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MDisableDataDescValidation) != 0)
+            generator.comment("MDisableDataDescValidation");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MIgnoreTypeScopeMetaChecks) != 0)
+            generator.comment("MIgnoreTypeScopeMetaChecks");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MNetworkNoBase) != 0)
+            generator.comment("MNetworkNoBase");
+        if ((class_.m_nClassFlags & SCHEMA_CF1_INFO_TAG_MNetworkAssumeNotNetworkable) != 0)
+            generator.comment("MNetworkAssumeNotNetworkable");
+#endif
+
+        if (class_.m_nStaticMetadataSize > 0)
+            generator.comment("");
+
+        for (const auto& metadata : class_.GetStaticMetadata()) {
+            if (const auto value = GetMetadataValue(metadata); !value.empty())
+                generator.comment(std::format("static metadata: {} \"{}\"", metadata.m_szName, value));
+            else
+                generator.comment(std::format("static metadata: {}", metadata.m_szName));
+        }
+    }
+
+    void PrintEnumInfo(codegen::IGenerator::self_ref generator, const CSchemaEnumBinding& enum_binding) {
+        generator.comment(std::format("Enumerator count: {}", enum_binding.m_nEnumeratorCount))
             .comment(std::format("Alignment: {}", enum_binding.m_unAlignOf))
             .comment(std::format("Size: {:#x}", enum_binding.m_unSizeOf));
 
         if (enum_binding.m_nStaticMetadataSize > 0)
-            builder.comment("");
+            generator.comment("");
 
         for (const auto& metadata : enum_binding.GetStaticMetadata()) {
-            builder.comment(std::format("metadata: {}", metadata.m_szName));
+            generator.comment(std::format("metadata: {}", metadata.m_szName));
         }
     }
 
-    void AssembleEnum(codegen::generator_t::self_ref builder, const CSchemaEnumBinding& schema_enum_binding) {
+    void AssembleEnum(codegen::IGenerator::self_ref generator, const CSchemaEnumBinding& schema_enum_binding) {
         // @note: @es3n1n: get type name by align size
         //
-        const auto get_type_name = [&schema_enum_binding]() -> std::string {
-            std::string type_storage;
-
-            switch (schema_enum_binding.m_unAlignOf) {
-            case 1:
-                type_storage = "std::uint8_t";
-                break;
-            case 2:
-                type_storage = "std::uint16_t";
-                break;
-            case 4:
-                type_storage = "std::uint32_t";
-                break;
-            case 8:
-                type_storage = "std::uint64_t";
-                break;
-            default:
-                type_storage = "INVALID_TYPE";
-            }
-
-            return type_storage;
-        };
+        const auto underlying_type_name = generator.get_uint(schema_enum_binding.m_unAlignOf * 8);
 
         // @note: @es3n1n: print meta info
         //
-        PrintEnumInfo(builder, schema_enum_binding);
+        PrintEnumInfo(generator, schema_enum_binding);
 
         // @note: @es3n1n: begin enum class
         //
-        builder.begin_enum_class(schema_enum_binding.m_pszName, get_type_name());
+        generator.begin_enum(schema_enum_binding.m_pszName, underlying_type_name);
 
         // @note: @og: build max based on numeric_limits of unAlignOf
         //
-        const auto print_enum_item = [schema_enum_binding, &builder](const SchemaEnumeratorInfoData_t& field) {
+        const auto print_enum_item = [schema_enum_binding, &generator](const SchemaEnumeratorInfoData_t& field) {
             switch (schema_enum_binding.m_unAlignOf) {
             case 1:
-                builder.enum_item(field.m_szName, field.m_uint8);
+                generator.enum_item(field.m_szName, field.m_uint8);
                 break;
             case 2:
-                builder.enum_item(field.m_szName, field.m_uint16);
+                generator.enum_item(field.m_szName, field.m_uint16);
                 break;
             case 4:
-                builder.enum_item(field.m_szName, field.m_uint32);
+                generator.enum_item(field.m_szName, field.m_uint32);
                 break;
             case 8:
-                builder.enum_item(field.m_szName, field.m_uint64);
+                generator.enum_item(field.m_szName, field.m_uint64);
                 break;
             default:
-                builder.enum_item(field.m_szName, field.m_uint64);
+                generator.enum_item(field.m_szName, field.m_uint64);
             }
         };
 
@@ -420,9 +444,9 @@ namespace {
                 auto field_metadata = field.m_pMetadata[j];
 
                 if (auto data = GetMetadataValue(field_metadata); data.empty())
-                    builder.comment(field_metadata.m_szName);
+                    generator.comment(field_metadata.m_szName);
                 else
-                    builder.comment(std::format("{} \"{}\"", field_metadata.m_szName, data));
+                    generator.comment(std::format("{} \"{}\"", field_metadata.m_szName, data));
             }
 
             print_enum_item(field);
@@ -430,7 +454,7 @@ namespace {
 
         // @note: @es3n1n: we are done with this enum
         //
-        builder.end_enum_class();
+        generator.end_enum();
     }
 
     /// @return {type_name, array_sizes}
@@ -497,30 +521,22 @@ namespace {
         }
     }
 
-    [[nodiscard]] std::string EscapeTypeName(const std::string_view type_name) {
-        // TODO: when we have a package manager: use a library
-        const auto StringReplace = [](std::string str, std::string_view search, std::string_view replace) {
-            const std::size_t pos = str.find(search);
-            if (pos != std::string::npos) {
-                str.replace(pos, search.length(), replace);
-            }
-            return str;
-        };
-
+    /// @param type_name Unqualified
+    [[nodiscard]] std::string EscapeTypeName(const codegen::IGenerator& generator, const std::string_view type_name) {
         // This is a hack to support nested types.
         // When we define nested types, they're not actually nested, but contain their outer class' name in their name,
         // e.g. "struct Player { struct Hand {}; };" is emitted as
         // "struct Player {}; struct Player__Hand{};".
         // But when used as a property, types expect `Hand` in `Player`, i.e. `Player::Hand m_hand;`
         // Instead of doing this hackery, we should probably declare nested classes as nested classes.
-        return StringReplace(std::string{type_name}, "::", "__");
+        return absl::StrReplaceAll(generator.escape_type_name(type_name), {{"::", "_"}});
     }
 
     /// Adds the module specifier to @p type_name, if @p type_name is declared in @p scope. Otherwise returns @p type_name unmodified.
-    std::string MaybeWithModuleName(const CSchemaSystemTypeScope& scope, const std::string_view type_name) {
-        const auto escaped_type_name = EscapeTypeName(type_name);
+    std::string MaybeWithModuleName(const codegen::IGenerator& generator, const CSchemaSystemTypeScope& scope, const std::string_view type_name) {
+        const auto escaped_type_name = EscapeTypeName(generator, type_name);
         return GetModuleOfTypeInScope(scope, type_name)
-            .transform([&](const auto module_name) { return std::format("{}::{}", module_name, escaped_type_name); })
+            .transform([&](const auto module_name) { return std::format("source2sdk::{}::{}", module_name, escaped_type_name); })
             .value_or(escaped_type_name);
     }
 
@@ -587,8 +603,26 @@ namespace {
         return result;
     }
 
-    /// Adds module qualifiers and resolves built-in types
-    std::string ReassembleRetypedTemplate(const CSchemaSystemTypeScope& scope, const std::vector<std::variant<std::string, char>>& decomposed) {
+    std::unique_ptr<codegen::IGenerator> GetGeneratorForLanguage(source2_gen::Language language) {
+        switch (language) {
+        case source2_gen::Language::cpp:
+            return std::make_unique<codegen::generator_cpp_t>();
+        case source2_gen::Language::c:
+            return std::make_unique<codegen::generator_c_t>();
+        case source2_gen::Language::c_ida:
+            // c-ida uses the c generator.
+            // generator options are adjusted by Dump()
+            // postprocessing happens in PostProcessCIDA()
+            return std::make_unique<codegen::generator_c_t>();
+        }
+
+        assert(false && "unhandled enumerator");
+        std::abort();
+    }
+
+    /// Adds module qualifiers and resolves built-in types.
+    std::string ReassembleRetypedTemplate(const codegen::IGenerator& generator, const CSchemaSystemTypeScope& scope,
+                                          const std::vector<std::variant<std::string, char>>& decomposed) {
         std::string result{};
 
         for (const auto& el : decomposed) {
@@ -597,12 +631,12 @@ namespace {
                     if constexpr (std::is_same_v<std::decay_t<decltype(e)>, char>) {
                         result += e;
                     } else {
-                        if (const auto built_in = field_parser::type_name_to_cpp(e)) {
+                        if (const auto built_in = generator.find_built_in(e)) {
                             result += built_in.value();
                         } else {
                             // e is a dirty name, e.g. "CPlayer*[10]". We need to add the module, but keep it dirty.
                             const auto type_name = DecayTypeName(e);
-                            const auto type_name_with_module = MaybeWithModuleName(scope, type_name);
+                            const auto type_name_with_module = MaybeWithModuleName(generator, scope, type_name);
                             const auto dirty_type_name_with_module = std::string{e}.replace(e.find(type_name), type_name.length(), type_name_with_module);
                             result += dirty_type_name_with_module;
                         }
@@ -615,13 +649,13 @@ namespace {
     }
 
     /// @return {type_name, array_sizes} where type_name is a fully qualified name
-    std::pair<std::string, std::vector<std::size_t>> GetType(const CSchemaType& type) {
+    std::pair<std::string, std::vector<std::size_t>> GetType(const codegen::IGenerator& generator, const CSchemaType& type) {
         const auto [type_name, array_sizes] = ParseArray(type);
 
         assert(type_name.empty() == array_sizes.empty());
 
         const auto type_name_with_modules =
-            ReassembleRetypedTemplate(*type.m_pTypeScope, DecomposeTemplate(type_name.empty() ? type.m_pszName : type_name));
+            ReassembleRetypedTemplate(generator, *type.m_pTypeScope, DecomposeTemplate(type_name.empty() ? type.m_pszName : type_name));
 
         if (!type_name.empty() && !array_sizes.empty())
             return {type_name_with_modules, array_sizes};
@@ -709,7 +743,7 @@ namespace {
     }
 
     [[nodiscard]]
-    ClassAssemblyState AssembleBitfield(codegen::generator_t& builder, ClassAssemblyState&& state, std::ptrdiff_t expected_offset) {
+    ClassAssemblyState AssembleBitfield(codegen::IGenerator& generator, ClassAssemblyState&& state) {
         state.assembling_bitfield = false;
 
         std::size_t exact_bitfield_size_bits = 0;
@@ -718,20 +752,20 @@ namespace {
         }
         const auto type_name = field_parser::guess_bitfield_type(exact_bitfield_size_bits);
 
-        builder.begin_bitfield_block(expected_offset);
+        generator.begin_bitfield_block();
 
         for (const auto& entry : state.bitfield) {
             for (const auto& field_metadata : entry.metadata) {
                 if (auto data = GetMetadataValue(field_metadata); data.empty())
-                    builder.comment(std::format("metadata: {}", field_metadata.m_szName));
+                    generator.comment(std::format("metadata: {}", field_metadata.m_szName));
                 else
-                    builder.comment(std::format("metadata: {} \"{}\"", field_metadata.m_szName, data));
+                    generator.comment(std::format("metadata: {} \"{}\"", field_metadata.m_szName, data));
             }
 
-            builder.prop(type_name, entry.name, true);
+            generator.prop(codegen::Prop{.type_name = type_name, .name = entry.name, .bitfield_size = entry.size}, true);
         }
 
-        builder.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", exact_bitfield_size_bits)).restore_tabs_count();
+        generator.end_bitfield_block(false).reset_tabs_count().comment(std::format("{:d} bits", exact_bitfield_size_bits)).restore_tabs_count();
 
         state.bitfield.clear();
         state.last_field_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
@@ -742,25 +776,32 @@ namespace {
     }
 
     /// Does not insert a pad if it would have size 0
-    void InsertPadUntil(codegen::generator_t::self_ref builder, const ClassAssemblyState& state, std::int32_t offset, bool verbose) {
+    void InsertPadUntil(codegen::IGenerator::self_ref generator, const ClassAssemblyState& state, std::int32_t offset, bool verbose) {
         if (verbose) {
-            builder.comment(std::format("last_field_offset={} last_field_size={}",
-                                        state.last_field_offset.transform(&util::to_hex_string).value_or("none"),
-                                        state.last_field_size.transform(&util::to_hex_string).value_or("none")));
+            generator.comment(std::format("last_field_offset={} last_field_size={}",
+                                          state.last_field_offset.transform(&util::to_hex_string).value_or("none"),
+                                          state.last_field_size.transform(&util::to_hex_string).value_or("none")));
         }
 
         const auto expected_offset = state.last_field_offset.value_or(0) + state.last_field_size.value_or(0);
 
         // insert padding only if needed
-        if (expected_offset < static_cast<std::uint64_t>(offset) && !state.assembling_bitfield) {
-            builder.struct_padding(expected_offset, offset - expected_offset, false, true)
+        if (expected_offset < static_cast<std::int64_t>(offset) && !state.assembling_bitfield) {
+            generator
+                .struct_padding(
+                    codegen::Padding{
+                        .pad_offset = expected_offset,
+                        .size = codegen::Padding::Bytes{static_cast<std::size_t>(offset - expected_offset)},
+                    },
+                    false)
                 .reset_tabs_count()
                 .comment(std::format("{:#x}", expected_offset))
                 .restore_tabs_count();
         }
     }
 
-    void AssembleClass(sdk::GeneratorCache& cache, codegen::generator_t::self_ref builder, const CSchemaClassBinding& class_) {
+    void AssembleClass(const source2_gen::Options& options, sdk::GeneratorCache& cache, codegen::IGenerator::self_ref generator,
+                       const CSchemaClassBinding& class_) {
         static constexpr std::size_t source2_max_align = 8;
 
         // TODO: when we have a CLI parser: pass this property in from the outside
@@ -795,22 +836,23 @@ namespace {
                 }
             }();
             warn(warning);
-            builder.comment(warning);
-            builder.comment("It has been replaced by a dummy. You can try uncommenting the struct below.");
-            builder.begin_struct(class_.GetName());
-            builder.struct_padding(0, class_size);
-            builder.end_struct();
+            generator.comment(warning);
+            generator.comment("It has been replaced by a dummy. You can try uncommenting the struct below.");
+            generator.begin_struct(class_.GetName());
+            generator.struct_padding(codegen::Padding{.pad_offset = 0, .size = codegen::Padding::Bytes{static_cast<std::size_t>(class_size)}}, false);
+            generator.end_struct();
         }
 
-        PrintClassInfo(cache, builder, class_);
+        PrintClassInfo(cache, generator, class_);
 
         // @note: @es3n1n: get parent name
         //
-        const std::string parent_class_name = (class_parent != nullptr) ? MaybeWithModuleName(*class_parent->m_pTypeScope, class_parent->m_pszName) : "";
+        const std::string parent_class_name =
+            (class_parent != nullptr) ? MaybeWithModuleName(generator, *class_parent->m_pTypeScope, class_parent->m_pszName) : "";
         const std::optional<std::ptrdiff_t> parent_class_size = class_parent ? std::make_optional(class_parent->m_nSizeOf) : std::nullopt;
 
         if (!class_is_aligned) {
-            builder.begin_multi_line_comment();
+            generator.begin_multi_line_comment();
         }
 
         // @note: @es3n1n: field assembling state
@@ -830,16 +872,26 @@ namespace {
             const auto warning = std::format("Collision detected: {} and its base {} have {:#x} overlapping byte(s)", class_.GetName(), parent_class_name,
                                              parent_class_size.value() - first_field_offset.value());
             warn(warning);
-            builder.comment(warning);
+            generator.comment(warning);
             state.collision_end_offset = parent_class_size.value();
         }
 
-        /// Start the class
-        builder.pack_push(1); // we are aligning stuff ourselves
-        if (is_struct)
-            builder.begin_struct_with_base_type(class_.m_pszName, parent_class_name);
-        else
-            builder.begin_class_with_base_type(class_.m_pszName, parent_class_name);
+        // @note: @es3n1n: start class
+        //
+        generator.pack_push(1); // we are aligning stuff ourselves
+        if (is_struct) {
+            if (class_parent != nullptr) {
+                generator.begin_struct_with_base_type(class_.m_pszName, parent_class_name);
+            } else {
+                generator.begin_struct(class_.m_pszName);
+            }
+        } else {
+            if (class_parent != nullptr) {
+                generator.begin_class_with_base_type(class_.m_pszName, parent_class_name);
+            } else {
+                generator.begin_class(class_.m_pszName);
+            }
+        }
 
         /// If fields cannot be emitted, e.g. because of collisions, they're added to
         /// this set so we can ignore them when asserting offsets.
@@ -855,16 +907,20 @@ namespace {
 
             // @note: @es3n1n: parsing type
             //
-            const auto [type_name, array_sizes] = GetType(*field.m_pSchemaType);
-            auto var_info = field_parser::parse(type_name, field.m_pszName, array_sizes);
+            // type_name is fully qualified
+            const auto [type_name, array_sizes] = GetType(generator, *field.m_pSchemaType);
+            const auto var_info = field_parser::parse(generator, type_name, field.m_pszName, array_sizes);
 
             // @fixme: @es3n1n: todo proper collision fix and remove this block
             if (state.collision_end_offset && field.m_nSingleInheritanceOffset < state.collision_end_offset) {
                 skipped_fields.emplace(field.m_pszName);
                 // A warning has already been logged at the start of the class
-                builder.comment(
+                generator.comment(
                     std::format("Skipped field \"{}\" @ {:#x} because of the struct collision", field.m_pszName, field.m_nSingleInheritanceOffset));
-                builder.comment("", false).reset_tabs_count().prop(var_info.m_type, var_info.formatted_name()).restore_tabs_count();
+                generator.comment("", false)
+                    .reset_tabs_count()
+                    .prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()})
+                    .restore_tabs_count();
                 continue;
             }
 
@@ -878,7 +934,7 @@ namespace {
                 }
 
                 state.bitfield.emplace_back(BitfieldEntry{
-                    .name = var_info.formatted_name(),
+                    .name = var_info.m_name,
                     .size = var_info.m_bitfield_size,
                     .metadata = std::vector(field.m_pMetadata, field.m_pMetadata + field.m_nMetadataSize),
                 });
@@ -888,14 +944,14 @@ namespace {
             // At this point, we're never still inside a bitfield. If `assembling_bitfield` is set, that means we're at the first field following a
             // bitfield, but the bitfield has not been emitted yet.
             // note: in CS2, there are no types with padding before a bitfield
-            InsertPadUntil(builder, state, state.assembling_bitfield ? state.bitfield_start : field.m_nSingleInheritanceOffset, verbose);
+            InsertPadUntil(generator, state, state.assembling_bitfield ? state.bitfield_start : field.m_nSingleInheritanceOffset, verbose);
 
             // This is the first field after a bitfield, i.e. the active bitfield has ended. Emit the bitfield we have collected.
             if (state.assembling_bitfield) {
-                state = AssembleBitfield(builder, std::move(state), state.last_field_offset.value_or(0) + state.last_field_size.value_or(0));
+                state = AssembleBitfield(generator, std::move(state));
 
                 // We need another pad here because the current loop iteration is already on a non-bitfield field which will get emitted right away.
-                InsertPadUntil(builder, state, field.m_nSingleInheritanceOffset, verbose);
+                InsertPadUntil(generator, state, field.m_nSingleInheritanceOffset, verbose);
             }
 
             // @note: @es3n1n: dump metadata
@@ -904,9 +960,9 @@ namespace {
                 const auto field_metadata = field.m_pMetadata[j];
 
                 if (auto data = GetMetadataValue(field_metadata); data.empty())
-                    builder.comment(std::format("metadata: {}", field_metadata.m_szName));
+                    generator.comment(std::format("metadata: {}", field_metadata.m_szName));
                 else
-                    builder.comment(std::format("metadata: {} \"{}\"", field_metadata.m_szName, data));
+                    generator.comment(std::format("metadata: {} \"{}\"", field_metadata.m_szName, data));
             }
 
             // @note: @es3n1n: update state
@@ -914,66 +970,81 @@ namespace {
             state.last_field_offset = field.m_nSingleInheritanceOffset;
             state.last_field_size = static_cast<std::size_t>(field_size);
 
-            /// @note: @es3n1n: game bug:
-            ///     There are some classes that have literally no info about them in schema,
-            ///     for these fields we'll just insert a pad.
             if (const auto e_class = field.m_pSchemaType->GetAsDeclaredClass(); e_class != nullptr && e_class->m_pClassInfo == nullptr) {
-                var_info.m_type = "std::uint8_t";
-                var_info.m_array_sizes.clear();
-                var_info.m_array_sizes.emplace_back(field_size);
-                builder.comment(std::format("game bug: prop with no declared class info ({})", e_class->m_pszName));
-            }
+                // missing class info
 
-            if ((field.m_nSingleInheritanceOffset % field_alignment.value_or(source2_max_align)) == 0) {
-                if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
-                    // This is a workaround to get the size of template types right.
-                    // There are types that have non-type template parameters, e.g.
-                    // `CUtlLeanVectorFixedGrowable<int, 10>`. The non-type template parameter affects the size of the template type, but the schema system
-                    // doesn't store information about non-type template parameters. The schema system just says `CUtlLeanVectorFixedGrowable<int>`, which
-                    // is insufficient to generate a `CUtlLeanVectorFixedGrowable` with correct size.`
-                    // To still keep the rest of the class in order, we replace all template fields with char arrays.
-                    // We're applying this workaround to all template type, even those that don't have non-type template parameters, because we can't tell
-                    // them apart. So we're certainly commenting out more than is necessary.
-                    builder.comment(
-                        std::format("{} has a template type with potentially unknown template parameters. You can try uncommenting the field below.",
-                                    var_info.m_name));
-                    builder.comment("", false);
-                    builder.reset_tabs_count().prop(var_info.m_type, var_info.formatted_name(), true).restore_tabs_count();
-                    builder.prop("char", std::format("{}[{:#x}]", var_info.m_name, field_size), false);
-                } else {
-                    builder.prop(var_info.m_type, var_info.formatted_name(), false);
-                }
-            } else {
+                /// @note: @es3n1n: game bug:
+                ///     There are some classes that have literally no info about them in schema,
+                ///     for these fields we'll just insert a pad.
+                generator.comment(std::format("game bug: prop with no declared class info ({})", e_class->m_pszName));
+                generator.prop(codegen::Prop{.type_category = codegen::TypeCategory::built_in,
+                                             .type_name = "char",
+                                             .name = std::format("{}[{:#x}]", var_info.m_name, field_size)},
+                               false);
+            } else if ((field.m_nSingleInheritanceOffset % field_alignment.value_or(source2_max_align)) != 0) {
+                // misaligned field
+
                 const auto warning =
                     field_alignment.has_value() ?
                         std::format("Property {}::{} is misaligned.", class_.GetName(), field.m_pszName) :
                         std::format("Property {}::{} appears to be misaligned. Its alignment is unknown and it is not aligned to max_align_t ({}).",
                                     class_.GetName(), field.m_pszName, source2_max_align);
                 warn(warning);
-                builder.comment(warning);
-                builder.prop("char", std::format("{}[{:#x}]", var_info.m_name, field_size), true);
-                builder.comment("", false).reset_tabs_count().prop(var_info.m_type, var_info.formatted_name(), false).restore_tabs_count();
+                generator.comment(warning);
+                generator.prop(codegen::Prop{.type_category = codegen::TypeCategory::built_in,
+                                             .type_name = "char",
+                                             .name = std::format("{}[{:#x}]", var_info.m_name, field_size)},
+                               true);
+                generator.comment("", false)
+                    .reset_tabs_count()
+                    .prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()}, false)
+                    .restore_tabs_count();
+            } else if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
+                // template type
+
+                // This is a workaround to get the size of template types right.
+                // There are types that have non-type template parameters, e.g.
+                // `CUtlLeanVectorFixedGrowable<int, 10>`. The non-type template parameter affects the size of the template type, but the schema system
+                // doesn't store information about non-type template parameters. The schema system just says `CUtlLeanVectorFixedGrowable<int>`, which
+                // is insufficient to generate a `CUtlLeanVectorFixedGrowable` with correct size.`
+                // To still keep the rest of the class in order, we replace all template fields with char arrays.
+                // We're applying this workaround to all template type, even those that don't have non-type template parameters, because we can't tell
+                // them apart. So we're certainly commenting out more than is necessary.
+                generator.comment(std::format(
+                    "{} has a template type with potentially unknown template parameters. You can try uncommenting the field below.", var_info.m_name));
+                generator.comment("", false);
+                generator.reset_tabs_count()
+                    .prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()}, true)
+                    .restore_tabs_count();
+                generator.prop(codegen::Prop{.type_category = codegen::TypeCategory::built_in,
+                                             .type_name = "char",
+                                             .name = std::format("{}[{:#x}]", var_info.m_name, field_size)},
+                               false);
+            } else {
+                // This is the "all normal, all good" `prop()` call
+                generator.prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()},
+                               false);
             }
 
-            if constexpr (verbose) {
-                builder.reset_tabs_count()
+            if (verbose) {
+                generator.reset_tabs_count()
                     .comment(std::format("type.name=\"{}\" offset={:#x} size={:#x} alignment={}", std::string_view{field.m_pSchemaType->m_pszName},
                                          field.m_nSingleInheritanceOffset, field_size,
                                          field_alignment.transform(&util::to_hex_string).value_or("unknown")),
                              false)
                     .restore_tabs_count();
             } else {
-                builder.reset_tabs_count().comment(std::format("{:#x}", field.m_nSingleInheritanceOffset), false).restore_tabs_count();
+                generator.reset_tabs_count().comment(std::format("{:#x}", field.m_nSingleInheritanceOffset), false).restore_tabs_count();
             }
             cached_fields.emplace_back(var_info.formatted_name(), field.m_nSingleInheritanceOffset);
 
-            builder.next_line();
+            generator.next_line();
         }
 
         // @note: @es3n1n: if struct ends with bitfield we should end bitfield before ending the class
         //
         if (state.assembling_bitfield) {
-            state = AssembleBitfield(builder, std::move(state), state.last_field_offset.value_or(0) + state.last_field_size.value_or(0));
+            state = AssembleBitfield(generator, std::move(state));
         }
 
         // pad the class end.
@@ -984,8 +1055,13 @@ namespace {
         // we generated a pad for empty classes, they'd no longer have standard-layout.
         // The pad isn't necessary for such classes, because the compiler will make them have size=1.
         if ((end_pad != 0) && (class_size != 1)) {
-            builder.struct_padding(last_field_end, end_pad, true, true);
-        } else if (end_pad < 0) [[unlikely]] {
+            generator.struct_padding(
+                codegen::Padding{
+                    .pad_offset = last_field_end,
+                    .size = codegen::Padding::Bytes{static_cast<std::size_t>(end_pad)},
+                },
+                true);
+        } else if (static_cast<std::size_t>(class_size) < static_cast<std::size_t>(last_field_end)) [[unlikely]] {
             throw std::runtime_error{std::format("{} overflows by {:#x} byte(s). Its last field ends at {:#x}, but {} ends at {:#x}", class_.GetName(),
                                                  -end_pad, last_field_end, class_.GetName(), class_size)};
         }
@@ -995,8 +1071,8 @@ namespace {
         //
         if (class_.m_nStaticFieldsSize) {
             if (class_.m_nFieldSize)
-                builder.next_line();
-            builder.comment("Static fields:");
+                generator.next_line();
+            generator.comment("Static fields:");
         }
 #endif
 
@@ -1008,9 +1084,9 @@ namespace {
         for (auto s = 0; s < class_.m_nStaticFieldsSize; s++) {
             auto static_field = &class_.m_pStaticFields[s];
 
-            auto [type, mod] = GetType(*static_field->m_pSchemaType);
-            const auto var_info = field_parser::parse(type, static_field->m_pszName, mod);
-            builder.static_field_getter(var_info.m_type, var_info.m_name, scope_name, class_.m_pszName, s);
+            auto [type_name, mod] = GetType(generator, *static_field->m_pSchemaType);
+            const auto var_info = field_parser::parse(generator, type_name, static_field->m_pszName, mod);
+            generator.static_field_getter(var_info.m_type, var_info.m_name, scope_name, class_.m_pszName, s);
         }
 #endif
 
@@ -1046,89 +1122,103 @@ namespace {
 
             if (!cached_datamap_fields.empty()) {
                 if (class_.m_nFieldSize)
-                    builder.next_line();
+                    generator.next_line();
 
-                builder.comment("Datamap fields:");
+                generator.comment("Datamap fields:");
                 for (auto& [field_type, field_name, field_offset] : cached_datamap_fields) {
-                    builder.comment(std::format("{} {}; // {:#x}", field_type, field_name, field_offset));
+                    generator.comment(std::format("{} {}; // {:#x}", field_type, field_name, field_offset));
                 }
             }
         }
 
         if (!class_.m_nFieldSize && !class_.m_nStaticMetadataSize)
-            builder.comment("No schema binary for binding");
+            generator.comment("No schema binary for binding");
 
-        builder.end_block();
-        builder.pack_pop();
-        builder.next_line();
+        if (is_struct) {
+            generator.end_struct();
+        } else {
+            generator.end_class();
+        }
+
+        generator.pack_pop();
+        generator.next_line();
 
         const bool is_standard_layout_class = IsStandardLayoutClass(cache.class_has_standard_layout, class_);
 
-        // TODO: when we have a CLI parser: allow users to generate assertions in non-standard-layout classes. Those assertions are
-        // conditionally-supported by compilers.
-        bool asserted_values = false;
-        if (is_standard_layout_class) {
-            for (const auto& field :
-                 class_.GetFields() | std::ranges::views::filter([&](const auto& e) { return !skipped_fields.contains(e.m_pszName); })) {
-                if (field.m_pSchemaType->m_unTypeCategory == ETypeCategory::Schema_Bitfield) {
-                    builder.comment(std::format("Cannot assert offset of bitfield {}::{}", class_.m_pszName, field.m_pszName));
-                } else {
-                    builder.static_assert_offset(class_.m_pszName, field.m_pszName, field.m_nSingleInheritanceOffset);
-                    asserted_values = true;
+        if (options.static_assertions) {
+            // TODO: when we have a CLI parser: allow users to generate assertions in non-standard-layout classes. Those assertions are
+            // conditionally-supported by compilers.
+            if (is_standard_layout_class) {
+                for (const auto& field :
+                     class_.GetFields() | std::ranges::views::filter([&](const auto& e) { return !skipped_fields.contains(e.m_pszName); })) {
+                    if (field.m_pSchemaType->m_unTypeCategory == ETypeCategory::Schema_Bitfield) {
+                        generator.comment(std::format("Cannot assert offset of bitfield {}::{}", class_.m_pszName, field.m_pszName));
+                    } else {
+                        generator.static_assert_offset(MaybeWithModuleName(generator, *class_.m_pTypeScope, class_.m_pszName), field.m_pszName,
+                                                       field.m_nSingleInheritanceOffset);
+                    }
                 }
-            }
-        } else {
-            if (class_.m_nFieldSize != 0) {
-                builder.comment(std::format("Cannot assert offsets of fields in {} because it is not a standard-layout class", class_.m_pszName));
+            } else {
+                if (class_.m_nFieldSize != 0) {
+                    generator.comment(std::format("Cannot assert offsets of fields in {} because it is not a standard-layout class", class_.m_pszName));
+                }
             }
         }
 
         if (!class_is_aligned) {
-            builder.end_multi_line_comment();
+            generator.end_multi_line_comment();
         }
 
-        if (asserted_values) {
-            builder.next_line();
+        generator.next_line();
+
+        if (options.static_assertions) {
+            generator.static_assert_size(MaybeWithModuleName(generator, *class_.m_pTypeScope, class_.m_pszName), class_size);
         }
-        builder.static_assert_size(class_.m_pszName, class_size);
     }
 
     [[nodiscard]]
-    std::filesystem::path GetFilePathForType(std::string_view module_name, std::string_view type_name) {
-        return util::EscapePath(std::format("{}/include/{}/{}/{}.hpp", kOutDirName, kIncludeDirName, module_name, DecayTypeName(type_name)));
+    std::filesystem::path GetFilePathForType(const codegen::IGenerator& generator, std::string_view module_name, std::string_view type_name) {
+        return std::format("{}/include/{}/{}/{}.{}", kOutDirName, kIncludeDirName, module_name, EscapeTypeName(generator, DecayTypeName(type_name)),
+                           generator.get_file_extension());
     }
 
-    void GenerateEnumSdk(std::string_view module_name, const CSchemaEnumBinding& enum_) {
-        const auto out_file_path = GetFilePathForType(module_name, enum_.m_pszName).string();
-
+    /// @return Path to the generated file
+    std::filesystem::path GenerateEnumSdk(const source2_gen::Options& options, std::string_view module_name, const CSchemaEnumBinding& enum_) {
         // @note: @es3n1n: init codegen
         //
-        auto builder = codegen::get();
-        builder.pragma("once");
+        auto p_generator = GetGeneratorForLanguage(options.emit_language);
+        auto& generator = *p_generator;
 
-        builder.include("<cstdint>");
+        generator.preamble();
 
         // @note: @es3n1n: print banner
         //
-        builder.next_line()
+        generator.next_line()
             .comment("/////////////////////////////////////////////////////////////")
             .comment(std::format("Module: {}", module_name))
             .comment(std::string{kCreatedBySource2genMessage})
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();
 
-        builder.begin_namespace(std::format("source2sdk::{}", module_name));
+        generator.begin_namespace("source2sdk");
+        generator.begin_namespace(module_name);
 
         // @note: @es3n1n: assemble props
         //
-        AssembleEnum(builder, enum_);
+        AssembleEnum(generator, enum_);
 
-        builder.end_namespace();
+        generator.end_namespace();
+        generator.end_namespace();
 
         // @note: @es3n1n: write generated data to output file
         //
+        if (!std::filesystem::exists(kOutDirName))
+            std::filesystem::create_directories(kOutDirName);
+
+        const auto out_file_path = GetFilePathForType(generator, module_name, enum_.m_pszName).string();
+
         std::ofstream f(out_file_path, std::ios::out);
-        f << builder.str();
+        f << generator.str();
         if (!f.good()) {
             std::cerr << std::format("Could not write to {}: {}", out_file_path, std::strerror(errno)) << std::endl;
             // This std::exit() is bad. Instead, we could return the dumped
@@ -1137,54 +1227,62 @@ namespace {
             // the output directory and handle errors.
             std::exit(1);
         }
+
+        return out_file_path;
     }
 
-    void GenerateClassSdk(sdk::GeneratorCache& cache, std::string_view module_name, const CSchemaClassBinding& class_) {
-        const auto out_file_path = GetFilePathForType(module_name, class_.m_pszName).string();
-
+    /// @return Path to the generated file
+    std::filesystem::path GenerateClassSdk(const source2_gen::Options& options, sdk::GeneratorCache& cache, std::string_view module_name,
+                                           const CSchemaClassBinding& class_) {
         // @note: @es3n1n: init codegen
         //
-        auto builder = codegen::get();
-        builder.pragma("once");
+        auto p_generator = GetGeneratorForLanguage(options.emit_language);
+        auto& generator = *p_generator;
+
+        generator.preamble();
 
         const auto names = GetRequiredNamesForClass(class_);
 
         for (const auto& include : names | std::views::filter([](const auto& el) { return el.source == NameSource::include; })) {
-            builder.include(util::EscapePath(std::format("\"{}/{}/{}.hpp\"", kIncludeDirName, include.module, include.type_name)));
+            generator.include(std::format("{}/{}/{}", kIncludeDirName, include.module, EscapeTypeName(generator, include.type_name)),
+                              codegen::IncludeOptions{
+                                  .local = true,
+                                  .system = false,
+                              });
         }
 
-        builder.include(std::format("\"{}/source2gen.hpp\"", kIncludeDirName));
-        builder.include("<cstddef>"); // for offsetof()
-        builder.include("<cstdint>");
+        for (const auto& forward_declaration : names | std::views::filter([](const auto& el) { return el.source == NameSource::forward_declaration; })) {
+            generator.begin_namespace("source2sdk");
+            generator.begin_namespace(forward_declaration.module);
+            generator.forward_declaration(forward_declaration.type_name);
+            generator.end_namespace();
+            generator.end_namespace();
+        }
 
-        /// print banner
-        builder.next_line()
+        // @note: @es3n1n: print banner
+        //
+        generator.next_line()
             .comment("/////////////////////////////////////////////////////////////")
             .comment(std::format("Module: {}", module_name))
             .comment(std::string{kCreatedBySource2genMessage})
             .comment("/////////////////////////////////////////////////////////////")
             .next_line();
 
-        /// Insert forward declarations
-        for (const auto& forward_declaration : names | std::views::filter([](const auto& el) { return el.source == NameSource::forward_declaration; })) {
-            builder.begin_namespace(std::format("source2sdk::{}", forward_declaration.module));
-            builder.forward_declaration(forward_declaration.type_name);
-            builder.end_namespace();
-            builder.next_line();
-        }
-
-        builder.begin_namespace(std::format("source2sdk::{}", module_name));
+        generator.begin_namespace("source2sdk");
+        generator.begin_namespace(module_name);
 
         // @note: @es3n1n: assemble props
         //
-        AssembleClass(cache, builder, class_);
+        AssembleClass(options, cache, generator, class_);
 
-        builder.end_namespace();
+        generator.end_namespace();
+        generator.end_namespace();
 
         // @note: @es3n1n: write generated data to output file
         //
+        const auto out_file_path = GetFilePathForType(generator, module_name, class_.m_pszName).string();
         std::ofstream f(out_file_path, std::ios::out);
-        f << builder.str();
+        f << generator.str();
         if (!f.good()) {
             std::cerr << std::format("Could not write to {}: {}", out_file_path, std::strerror(errno)) << std::endl;
             // This std::exit() is bad. Instead, we could return the dumped
@@ -1193,12 +1291,15 @@ namespace {
             // the output directory and handle errors.
             std::exit(1);
         }
+
+        return out_file_path;
     }
 } // namespace
 
 namespace sdk {
-    void GenerateTypeScopeSdk(GeneratorCache& cache, std::string_view module_name, const std::unordered_set<const CSchemaEnumBinding*>& enums,
-                              const std::unordered_set<const CSchemaClassBinding*>& classes) {
+    GeneratorResult GenerateTypeScopeSdk(const source2_gen::Options& options, GeneratorCache& cache, std::string_view module_name,
+                                         const std::unordered_set<const CSchemaEnumBinding*>& enums,
+                                         const std::unordered_set<const CSchemaClassBinding*>& classes) {
         // @note: @es3n1n: print debug info
         //
         std::cout << std::format("{}: Assembling module {} with {} enum(s) and {} class(es)", __FUNCTION__, module_name, enums.size(), classes.size())
@@ -1209,8 +1310,12 @@ namespace sdk {
         if (!std::filesystem::exists(out_directory_path))
             std::filesystem::create_directories(out_directory_path);
 
-        std::ranges::for_each(enums, [=](const auto* el) { GenerateEnumSdk(module_name, *el); });
-        std::ranges::for_each(classes, [&](const auto* el) { GenerateClassSdk(cache, module_name, *el); });
+        GeneratorResult result{};
+
+        std::ranges::for_each(enums, [&](const auto* el) { result.generated_files.emplace(GenerateEnumSdk(options, module_name, *el)); });
+        std::ranges::for_each(classes, [&](const auto* el) { result.generated_files.emplace(GenerateClassSdk(options, cache, module_name, *el)); });
+
+        return result;
     }
 } // namespace sdk
 

@@ -2,6 +2,7 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#include "codegen/codegen.h"
 #include <cstddef>
 #include <format>
 #include <optional>
@@ -13,11 +14,11 @@
 namespace field_parser {
     class field_info_t {
     public:
-        std::string m_type; // var type
+        std::string m_type; // fully qualified name
         fieldtype_t m_field_type = fieldtype_t::FIELD_UNUSED; // var type
         std::string m_name; // var name
 
-        // array sizes, for example {13, 37} for multi demensional array "[13][37]"
+        // array sizes, for example {13, 37} for multi dimensional array "[13][37]"
         std::vector<std::size_t> m_array_sizes = {};
 
         std::size_t m_bitfield_size = 0ull; // bitfield size, set to 0 if var isn't a bitfield
@@ -58,9 +59,6 @@ namespace field_parser {
         }
 
         [[nodiscard]] std::string formatted_name() const {
-            if (is_bitfield())
-                return std::format("{}: {}", m_name, m_bitfield_size);
-
             if (is_array())
                 return std::format("{}{}", m_name, formatted_array_sizes());
 
@@ -69,14 +67,21 @@ namespace field_parser {
     };
 
     [[nodiscard]]
+    std::pair<std::string, std::string> split_type_name_pointers(const std::string& type_name);
+
+    [[nodiscard]]
     std::string guess_bitfield_type(std::size_t bits_count);
 
     /// @return @ref std::nullopt if type_name is not a built-in type
     [[nodiscard]]
     std::optional<std::string_view> type_name_to_cpp(std::string_view type_name);
 
-    field_info_t parse(const std::string& type_name, const std::string& name, const std::vector<std::size_t>& array_sizes);
-    field_info_t parse(const fieldtype_t& type_name, const std::string& name, const std::size_t& array_sizes = 1);
+    [[nodiscard]]
+    field_info_t parse(const codegen::IGenerator& generator, const std::string& type_name, const std::string& name,
+                       const std::vector<std::size_t>& array_sizes);
+
+    [[nodiscard]]
+    field_info_t parse(fieldtype_t field_type, const std::string& name, std::size_t array_size);
 } // namespace field_parser
 
 // source2gen - Source2 games SDK generator

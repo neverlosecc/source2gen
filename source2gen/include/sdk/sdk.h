@@ -2,28 +2,15 @@
 // See end of file for extended copyright information.
 #pragma once
 
-#include <Include.h>
+#include <sdk/interfaces/schemasystem/schema.h>
 
-#include <sdk/interfaces/tier0/IMemAlloc.h>
-
-#include <sdk/interfaces/common/CBufferString.h>
-#include <sdk/interfaces/common/CInterlockedInt.h>
-#include <sdk/interfaces/common/CThreadMutex.h>
-#include <sdk/interfaces/common/CThreadSpinMutex.h>
-#include <sdk/interfaces/common/CThreadSpinRWLock.h>
-#include <sdk/interfaces/common/CTSList.h>
-#include <sdk/interfaces/common/CUtlMap.h>
-#include <sdk/interfaces/common/CUtlMemory.h>
-#include <sdk/interfaces/common/CUtlMemoryPoolBase.h>
-#include <sdk/interfaces/common/CUtlRBTree.h>
-#include <sdk/interfaces/common/CUtlString.h>
-#include <sdk/interfaces/common/CUtlTSHash.h>
-#include <sdk/interfaces/common/CUtlVector.h>
-
+#include "options.hpp"
+#include <filesystem>
 #include <map>
 #include <sdk/interfaceregs.h>
 #include <sdk/interfaces/client/game/datamap_t.h>
 #include <sdk/interfaces/schemasystem/schema.h>
+#include <string>
 #include <unordered_set>
 
 namespace sdk {
@@ -46,8 +33,15 @@ namespace sdk {
         std::map<TypeIdentifier, bool> class_has_standard_layout{};
     };
 
-    void GenerateTypeScopeSdk(GeneratorCache& cache, std::string_view module_name, const std::unordered_set<const CSchemaEnumBinding*>& enums,
-                              const std::unordered_set<const CSchemaClassBinding*>& classes);
+    // Wrapping the file list in a struct in case we need to return more properties in the future
+    struct GeneratorResult {
+        /// All generated files
+        std::unordered_set<std::filesystem::path> generated_files{};
+    };
+
+    GeneratorResult GenerateTypeScopeSdk(const source2_gen::Options& options, GeneratorCache& cache, std::string_view module_name,
+                                         const std::unordered_set<const CSchemaEnumBinding*>& enums,
+                                         const std::unordered_set<const CSchemaClassBinding*>& classes);
 } // namespace sdk
 
 // source2gen - Source2 games SDK generator

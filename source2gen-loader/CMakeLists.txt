@@ -13,7 +13,6 @@ if (WIN32)
 
     target_link_libraries(source2gen-loader PRIVATE
         ValveFileVDF
-        argparse
     )
 
     if(MSVC)

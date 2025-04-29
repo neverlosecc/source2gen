@@ -1,9 +1,9 @@
 #include <cassert>
-#include <iostream>
+#include <print>
 #include <ranges>
+#include <span>
 
 #include "steam_resolver.h"
-#include <argparse/argparse.hpp>
 
 namespace {
     constexpr std::size_t kGameId =
@@ -61,26 +61,77 @@ namespace {
 
         throw std::runtime_error("unable to find second bin directory");
     }
+
+    struct Config {
+        std::optional<std::filesystem::path> game_path = std::nullopt;
+    };
+
+    [[nodiscard]] Config parse_arguments(std::vector<std::string>& arguments) {
+        using Iter = std::decay_t<decltype(arguments)>::iterator;
+        Config result;
+
+        auto show_help = [&]() -> void {
+            std::println("Usage: source2gen-loader [--help] [--game-path VAR]\n\n"
+                         "More cli options that will be forwarded to source2gen can be seen via:\n"
+                         "\tsource2gen --help\n\n"
+                         "Optional arguments:\n"
+                         "--help              shows help message and exits\n"
+                         "--game-path         set the game path manually (ignore the game path resolver)");
+            std::exit(0);
+        };
+
+        auto read_val = [&](Iter& it, std::string_view command) -> std::optional<std::string> {
+            if (*it != command) {
+                return std::nullopt;
+            }
+
+            const auto next_it = std::next(it);
+            if (next_it == arguments.end()) {
+                throw std::runtime_error(std::format("{} requires a value", command));
+            }
+
+            auto value = *next_it;
+            it = arguments.erase(it, std::next(next_it));
+            return value;
+        };
+
+        for (auto it = arguments.begin(); it != arguments.end();) {
+            if (*it == "--help") {
+                show_help();
+                continue;
+            }
+
+            if (auto game_path = read_val(it, "--game-path"); game_path.has_value()) {
+                result.game_path = *game_path;
+                continue;
+            }
+
+            it = std::next(it);
+        }
+
+        return result;
+    }
+
 } // namespace
 
 int main(const int argc, char* argv[]) try {
-    argparse::ArgumentParser program("source2gen-loader");
-    program.add_argument("--game_path").help("set the game path manually (ignore the game path resolver)");
-    program.parse_args(argc, argv);
+    std::span args_raw(argv, argc);
+    std::vector<std::string> arguments(args_raw.begin(), args_raw.end());
 
-    std::cout << std::format("*** loading for game with app_id={:d}", kGameId) << std::endl;
-    std::optional<std::filesystem::path> path = std::nullopt;
-    if (program.is_used("game_path")) {
-        path = program.get<std::string>("game_path");
-    }
+    const auto config = parse_arguments(arguments);
+
+    std::println("*** loading for game with app_id={:d}", kGameId);
+    auto path = config.game_path;
     if (!path.has_value()) {
         path = steam_resolver::find_game(kGameId);
     }
 
     if (!path.has_value()) {
-        std::cerr << "game directory not found!" << std::endl;
-        std::cerr << "please specify it via the command line option like this:" << std::endl;
-        std::cerr << std::format("\t* {} --game_path c:\\Some\\Path\\", argv[0]) << std::endl;
+        std::println(stderr,
+                     "game directory not found!\n"
+                     "please specify it via the command line option like this:\n"
+                     "\t* {} --game-path c:\\Some\\Path\\",
+                     argv[0]);
         return 1;
     }
 
@@ -89,12 +140,12 @@ int main(const int argc, char* argv[]) try {
 
     /// But this could happen
     if (!exists(*path)) {
-        std::cerr << std::format("specified game path {} does not exist", path->string()) << std::endl;
+        std::println(stderr, "specified game path {} does not exist", path->string());
         return 1;
     }
 
-    std::cout << std::format("*** game path resolved to {}", path->string()) << std::endl;
-    std::cout << "*** setting up the env" << std::endl;
+    std::println("*** game path resolved to {}", path->string());
+    std::println("*** setting up the env");
 
     /// Uses the same priority as declared
     const auto main_binaries_path = (*path / "game" / "bin" / kPlatformDirName).string();
@@ -119,17 +170,19 @@ int main(const int argc, char* argv[]) try {
     _putenv_s(kEnvVarName, new_path_val.c_str());
     SetDllDirectoryA(main_binaries_path.c_str());
 
-    std::cout << "*** loading source2gen" << std::endl;
+    /// Erase source2gen-loader.exe
+    assert(!arguments.empty());
+    arguments.erase(arguments.begin());
 
     std::string invoke_cmd = kExecutableName;
-    for (std::size_t i = 1; i < argc; ++i) {
-        invoke_cmd += " ";
-        invoke_cmd += argv[i];
-    }
-    std::system(invoke_cmd.c_str());
+    invoke_cmd += " " + (arguments | std::views::join_with(' ') | std::ranges::to<std::string>());
 
+    std::println("*** loading source2gen: {}", invoke_cmd);
+    std::fflush(stdout);
+
+    std::system(invoke_cmd.c_str());
     return 0;
 } catch (const std::runtime_error& error) {
-    std::cerr << error.what() << std::endl;
+    std::println(stderr, "Fatal error: {}", error.what());
     return 1;
 }
