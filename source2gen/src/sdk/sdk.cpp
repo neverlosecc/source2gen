@@ -899,21 +899,19 @@ namespace {
         std::unordered_set<std::string> skipped_fields{};
         std::list<std::pair<std::string, std::ptrdiff_t>> cached_fields{};
         std::list<cached_datamap_t> cached_datamap_fields{};
-        
+
         const auto is_known_type = [&options](std::string type_name) {
             // Checks if type name fully known including nested templates
 
             if (options.known_types.empty())
                 return false;
-            
+
             std::vector<std::string> types;
             auto parts = type_name | std::views::split('<');
             for (auto part : parts) {
                 std::string s(part.begin(), part.end());
 
-                s.erase(std::remove_if(s.begin(), s.end(), [](char c) {
-                    return c == '>' || std::isspace(static_cast<unsigned char>(c));
-                }), s.end());
+                s.erase(std::remove_if(s.begin(), s.end(), [](char c) { return c == '>' || std::isspace(static_cast<unsigned char>(c)); }), s.end());
                 if (!s.empty())
                     types.push_back(s);
             }
