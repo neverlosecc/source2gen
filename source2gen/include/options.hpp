@@ -1,6 +1,8 @@
 #pragma once
 
 #include <optional>
+#include <vector>
+#include <string>
 
 namespace source2_gen {
     enum class Language {
@@ -18,6 +20,7 @@ namespace source2_gen {
         Language emit_language{};
         bool static_members{};
         bool static_assertions{};
+        std::vector<std::string> known_types{};
 
         /// @return @ref std::nullopt if "--help" was passed or parsing failed
         [[nodiscard]]

@@ -29,6 +29,10 @@ std::optional<source2_gen::Options> source2_gen::Options::parse_args(int argc, c
         .default_value(false)
         .help("Don't generate static assertions for class size and field offsets (Generated SDK might not work. You can get banned for writing to wrong "
               "offsets!)");
+    parser.add_argument("--known-types")
+        .nargs(argparse::nargs_pattern::any)
+        .default_value(std::vector<std::string>{})
+        .help("List of known template types (should be in your source2gen.hpp)");
 
     try {
         parser.parse_args(argc, argv);
@@ -46,5 +50,6 @@ std::optional<source2_gen::Options> source2_gen::Options::parse_args(int argc, c
 
     return source2_gen::Options{.emit_language = language.value(),
                                 .static_members = (language.value() != Language::c_ida) && !parser.is_used("no-static-members"),
-                                .static_assertions = (language.value() != Language::c_ida) && !parser.is_used("no-static-assertions")};
+                                .static_assertions = (language.value() != Language::c_ida) && !parser.is_used("no-static-assertions"),
+                                .known_types = parser.get<std::vector<std::string>>("--known-types")};
 }

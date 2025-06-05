@@ -10,6 +10,7 @@
 #include "tools/field_parser.h"
 #include "tools/util.h"
 #include <absl/strings/str_replace.h>
+#include <cstddef>
 #include <cstdlib>
 
 #include <algorithm>
@@ -899,6 +900,28 @@ namespace {
         std::list<std::pair<std::string, std::ptrdiff_t>> cached_fields{};
         std::list<cached_datamap_t> cached_datamap_fields{};
 
+        const auto is_known_type = [&options](std::string type_name) {
+            // Checks if type name fully known including nested templates
+
+            if (options.known_types.empty())
+                return false;
+
+            std::vector<std::string> types;
+            auto parts = type_name | std::views::split('<');
+            for (auto part : parts) {
+                std::string s(part.begin(), part.end());
+
+                s.erase(std::remove_if(s.begin(), s.end(), [](char c) { return c == '>' || std::isspace(static_cast<unsigned char>(c)); }), s.end());
+                if (!s.empty())
+                    types.push_back(s);
+            }
+            if (!types.empty())
+                types.pop_back();
+            return std::all_of(types.begin(), types.end(), [&options](const std::string& t) {
+                return std::find(options.known_types.begin(), options.known_types.end(), t) != options.known_types.end();
+            });
+        };
+
         for (const auto& field : class_.GetFields()) {
             // Fall back to size=1 because there are no 0-sized types.
             // `RenderPrimitiveType_t` is the only type (in CS2 9035763) without size information.
@@ -999,7 +1022,7 @@ namespace {
                     .reset_tabs_count()
                     .prop(codegen::Prop{.type_category = GetTypeCategory(field), .type_name = var_info.m_type, .name = var_info.formatted_name()}, false)
                     .restore_tabs_count();
-            } else if (std::string{field.m_pSchemaType->m_pszName}.contains('<')) {
+            } else if (std::string{field.m_pSchemaType->m_pszName}.contains('<') && !is_known_type(field.m_pSchemaType->m_pszName)) {
                 // template type
 
                 // This is a workaround to get the size of template types right.
