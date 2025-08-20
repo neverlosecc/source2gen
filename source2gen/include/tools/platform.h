@@ -2,6 +2,8 @@
 // See end of file for extended copyright information.
 #pragma once
 
+#undef linux
+
 #define WINDOWS 0
 #define LINUX 1
 
