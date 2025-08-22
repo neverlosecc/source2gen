@@ -2,7 +2,12 @@
 // See end of file for extended copyright information.
 #pragma once
 
-#undef linux
+/// Some environments automatically define the bare macro `linux` (in
+/// addition to the portable feature-test macro `__linux__`). This pollutes 
+/// the global namespace and collides with our `platform::linux`.
+#if defined(linux)
+    #undef linux
+#endif
 
 #define WINDOWS 0
 #define LINUX 1
