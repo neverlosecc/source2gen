@@ -27,7 +27,7 @@ namespace loader::linux {
     }
 
     [[nodiscard]] inline auto load_module(std::string_view name) -> std::expected<module_handle_t, ModuleLookupError> {
-        if (auto* const handle = dlopen(name.data(), RTLD_LAZY)) {
+        if (auto* const handle = dlopen(name.data(), RTLD_NOW)) {
             return handle;
         }
         return std::unexpected(ModuleLookupError::from_string(dlerror()));

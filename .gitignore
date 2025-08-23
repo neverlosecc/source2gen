@@ -1036,3 +1036,5 @@ bin/
 
 # CLion
 .idea/**
+generate.sh
+build.sh

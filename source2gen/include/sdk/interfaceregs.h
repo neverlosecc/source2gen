@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdint>
 #include <string_view>
+#include <iostream>
 
 #include <tools/loader/loader.h>
 
@@ -25,22 +26,42 @@ namespace sdk {
 
         const auto maybe_createinterface_symbol = loader::find_module_symbol<uintptr_t>(library_handle, "CreateInterface");
 
+        if(&maybe_createinterface_symbol == nullptr) {
+            std::cerr << "Could not find CreateInterface" << std::endl;
+            return nullptr;
+        }
+
         return maybe_createinterface_symbol
-            .transform([](auto createinterface_symbol) {
-                const auto interface_list = [=] {
-                    if constexpr (current_platform == platform::windows) {
-                        return createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 3) + 7;
-                    } else if constexpr (current_platform == platform::linux) {
-                        const auto createinterface_impl = createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 1) + 5;
-                        const auto createinterface_mov = createinterface_impl + 0x10;
+    .transform([](auto createinterface_symbol) -> const InterfaceReg* {
+        if constexpr (current_platform == platform::windows) {
+            // Windows logic
+            auto interface_list = createinterface_symbol + *reinterpret_cast<int32_t*>(createinterface_symbol + 3) + 7;
+            return *reinterpret_cast<InterfaceReg**>(interface_list);
+        } else if constexpr (current_platform == platform::linux) {
+            // Linux logic
+            // Fixed by Bubbles -- thank you Ghidra and chatgpt bc this is super dumb
+            // Offsets from Ghidra, relative to CreateInterface function start
+            constexpr uintptr_t kInstrOffset = 0x10;   // offset of 'mov rbx, [rip+disp32]' in CreateInterface
+            constexpr int32_t   kDisp        = 0x000328d9; // displacement in that instruction
 
-                        return createinterface_mov + *reinterpret_cast<int32_t*>(createinterface_mov + 3) + 7;
-                    }
-                }();
+            // Compute RIP-relative address
+            uintptr_t rip_after = reinterpret_cast<uintptr_t>(createinterface_symbol) + kInstrOffset + 7; // instruction length = 7
+            auto interface_list_ptr = reinterpret_cast<const InterfaceReg* const*>(rip_after + kDisp);
+                if (!interface_list_ptr) {
+                std::cerr << "interface_list_ptr is null\n";
+                return nullptr;
+            }
 
-                return *reinterpret_cast<InterfaceReg**>(interface_list);
-            })
-            .value_or(nullptr);
+                const InterfaceReg* head = *interface_list_ptr;
+                if (!head) {
+                std::cerr << "InterfaceReg head is null, check offsets!\n";
+                return nullptr;
+            }
+
+            return head;
+        }
+    })
+    .value_or(nullptr);
     }
 
     template <typename T = void*>
