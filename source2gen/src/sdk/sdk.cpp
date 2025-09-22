@@ -716,13 +716,6 @@ namespace {
             result.insert(names.begin(), names.end());
         }
 
-#if defined(CS2)
-        for (const auto& field : std::span{class_.m_pStaticFields, static_cast<std::size_t>(class_.m_nStaticFieldsSize)}) {
-            const auto names = GetRequiredNamesForType(*field.m_pSchemaType);
-            result.insert(names.begin(), names.end());
-        }
-#endif
-
         if (const auto* base_classes = class_.m_pBaseClasses; base_classes != nullptr) {
             assert(base_classes->m_pClass->m_pSchemaType != nullptr && "didn't think this could happen, feel free to touch");
             // source2gen doesn't support multiple inheritance, only check class[0]
@@ -1066,29 +1059,9 @@ namespace {
                                                  -end_pad, last_field_end, class_.GetName(), class_size)};
         }
 
-#if defined(CS2)
-        // @note: @es3n1n: dump static fields
-        //
-        if (class_.m_nStaticFieldsSize) {
-            if (class_.m_nFieldSize)
-                generator.next_line();
-            generator.comment("Static fields:");
-        }
-#endif
-
         // The current class may be defined in multiple scopes. It doesn't matter which one we use, as all definitions are the same..
         // TODO: verify the above statement. Are static fields really shared between scopes?
         const std::string scope_name{class_.m_pTypeScope->BGetScopeName()};
-
-#if defined(CS2)
-        for (auto s = 0; s < class_.m_nStaticFieldsSize; s++) {
-            auto static_field = &class_.m_pStaticFields[s];
-
-            auto [type_name, mod] = GetType(generator, *static_field->m_pSchemaType);
-            const auto var_info = field_parser::parse(generator, type_name, static_field->m_pszName, mod);
-            generator.static_field_getter(var_info.m_type, var_info.m_name, scope_name, class_.m_pszName, s);
-        }
-#endif
 
         if (class_.m_pFieldMetadataOverrides && class_.m_pFieldMetadataOverrides->m_iTypeDescriptionCount > 1) {
             const auto& dm = class_.m_pFieldMetadataOverrides;

@@ -653,9 +653,6 @@ public:
     int m_nSizeOf; // 0x0018
 
     std::int16_t m_nFieldSize; // 0x001C
-#if defined(CS2)
-    std::int16_t m_nStaticFieldsSize; // 0x001E
-#endif
 
     std::int16_t m_nStaticMetadataSize; // 0x0020
     std::uint8_t m_unAlignOf; // 0x0022
@@ -667,10 +664,6 @@ public:
     std::int16_t m_nSingleInheritanceDepth; // 0x0026
 
     SchemaClassFieldData_t* m_pFields; // 0x0028
-
-#if defined(CS2)
-    SchemaStaticFieldData_t* m_pStaticFields; // 0x0030
-#endif
 
     SchemaBaseClassInfoData_t* m_pBaseClasses; // 0x0038
     SchemaFieldMetadataOverrideSetData_t* m_pFieldMetadataOverrides; // 0x0040
@@ -690,12 +683,7 @@ public:
     }
 };
 
-#if defined(CS2)
-    static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68, "Offset of m_pFn should be 0x68 in CS2 configuration");
-#else
-    static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x60, "Offset of m_pFn should be 0x60 in non-CS2 configuration");
-#endif
-
+static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x60, "Offset of m_pFn should be 0x60");
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
 public:
@@ -721,12 +709,6 @@ public:
     [[nodiscard]] std::vector<SchemaClassFieldData_t> GetFields() const {
         return {m_pFields, m_pFields + m_nFieldSize};
     }
-
-#if defined(CS2)
-    [[nodiscard]] std::vector<SchemaStaticFieldData_t> GetStaticFields() const {
-        return {m_pStaticFields, m_pStaticFields + m_nStaticFieldsSize};
-    }
-#endif
 
     [[nodiscard]] std::vector<SchemaMetadataEntryData_t> GetStaticMetadata() const {
         return {m_pStaticMetadata, m_pStaticMetadata + m_nStaticMetadataSize};
@@ -826,11 +808,10 @@ public:
 };
 
 #if defined(DOTA2) || defined(CS2) || defined(DEADLOCK)
-    static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x28, .linux = 0x30}.get());
+static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x28, .linux = 0x30}.get());
 #else
-    static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x30, .linux = 0x30}.get());
+static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x30, .linux = 0x30}.get());
 #endif
-
 
 class CSchemaSystemTypeScope {
 public:
