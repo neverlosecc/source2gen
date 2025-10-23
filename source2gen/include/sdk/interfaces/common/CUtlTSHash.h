@@ -253,7 +253,7 @@ public:
         HashFixedData_t* m_pFirst; // 0x008
         HashFixedData_t* m_pFirstUncommitted; // 0x0010
         IF_LINUX(char pad_0x18[0x08];)
-    }; // Size: 0x0028
+    }; // Size: 0x0018
     // clang-19 requires an explicit template type for platform_specific
     static_assert(sizeof(HashBucket_t) == platform_specific<int>{.windows = 0x18, .linux = 0x20});
 
