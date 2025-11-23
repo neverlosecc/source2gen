@@ -323,4 +323,4 @@ size = 0x10
 size = 0x08
 
 [VectorWS]
-size = 0xc0
+size = 0xc
