@@ -57,6 +57,7 @@ namespace {
 namespace source2_gen {
     // TODO: this duplicate of the constant in sdk.h. We should let the user specify the sdk path via Options.
     constexpr std::string_view kOutDirName = "sdk";
+    using sdk::GenerateTypeScopeSdk;
 
     struct module_dump {
         std::unordered_set<const CSchemaEnumBinding*> enums{};
@@ -75,31 +76,28 @@ namespace source2_gen {
         // Key is the module name, e.g. SchemaEnumInfoData_t::m_pszModule.
         std::unordered_map<std::string, unique_module_dump> dumped_modules{};
 
-        for (const auto* current_scope : type_scopes) {
-            auto current_enums = current_scope->GetEnumBindings();
+        const auto append_scope = [&dumped_modules](const CSchemaSystemTypeScope* scope) {
+            if (scope == nullptr) {
+                return;
+            }
+
+            auto current_enums = scope->GetEnumBindings();
             for (auto el : current_enums.GetElements()) {
                 auto& dump{dumped_modules.emplace(el->m_pszModule, unique_module_dump{}).first->second};
                 dump.enums.emplace(el->m_pszName, el);
             }
 
-            auto current_classes = current_scope->GetClassBindings();
+            auto current_classes = scope->GetClassBindings();
             for (auto el : current_classes.GetElements()) {
                 auto& dump{dumped_modules.emplace(el->m_pszModule, unique_module_dump{}).first->second};
                 dump.classes.emplace(el->m_pszName, el);
             }
-        }
+        };
 
-        const auto global_scope = sdk::g_schema->GlobalTypeScope();
-        auto current_enums = global_scope->GetEnumBindings();
-        for (auto el : current_enums.GetElements()) {
-            auto& dump{dumped_modules.emplace(el->m_pszModule, unique_module_dump{}).first->second};
-            dump.enums.emplace(el->m_pszName, el);
-        }
+        append_scope(sdk::g_schema->GlobalTypeScope());
 
-        auto current_classes = global_scope->GetClassBindings();
-        for (auto el : current_classes.GetElements()) {
-            auto& dump{dumped_modules.emplace(el->m_pszModule, unique_module_dump{}).first->second};
-            dump.classes.emplace(el->m_pszName, el);
+        for (const auto* current_scope : type_scopes) {
+            append_scope(current_scope);
         }
 
         std::unordered_map<std::string, module_dump> result{};
@@ -250,9 +248,8 @@ namespace source2_gen {
         }
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk
-        auto type_scopes = sdk::g_schema->GetTypeScopes();
+        const auto type_scopes = sdk::g_schema->GetTypeScopes();
         assert(type_scopes.Count() > 0 && "sdk is outdated");
-
 
         const std::unordered_map all_modules = CollectModules(std::span{type_scopes.m_pElements, static_cast<std::size_t>(type_scopes.m_Size)});
 

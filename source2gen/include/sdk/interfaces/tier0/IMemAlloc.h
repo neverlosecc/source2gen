@@ -40,7 +40,11 @@ public:
     }
 };
 
-extern "C" __declspec(dllimport) IMemAlloc* GetMemAlloc();
+#if defined(_WIN64) || defined(_WIN32)
+    extern "C" __declspec(dllimport) IMemAlloc* GetMemAlloc();
+#else
+    extern "C" IMemAlloc* GetMemAlloc();
+#endif
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
