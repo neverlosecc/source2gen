@@ -132,7 +132,12 @@ enum {
 #elif defined(DOTA2) || defined(CS2) || defined(DEADLOCK)
 
 constexpr auto kSchemaSystemVersion = platform_specific{.windows = 2, .linux = 1}.get();
+
+#if DOTA2 && TARGET_OS == WINDOWS
 constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x190, .linux = 0x188 + 0x68}.get();
+#else
+constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x188, .linux = 0x188 + 0x68}.get();
+#endif
 constexpr auto kSchemaSystem_PAD1 = 0x120;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
