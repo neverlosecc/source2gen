@@ -249,8 +249,8 @@ public:
 
     class HashBucket_t {
     public:
-#if DOTA2 && TARGET_OS == WINDOWS 
-        char _pad[0x8];  // Linux UNTESTED
+#if DOTA2 && TARGET_OS == WINDOWS
+        RTL_SRWLOCK m_AddLock; // 0x0000
 #else
         CThreadSpinRWLock m_AddLock; // 0x0000
 #endif

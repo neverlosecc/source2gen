@@ -95,6 +95,7 @@ typedef char Vector[0x0c];
 typedef char Vector2D[0x08];
 typedef char Vector4D[0x10];
 typedef char VectorAligned[0x10];
+typedef char VectorWS[0x0c];
 typedef char WorldGroupId_t[0x04];
 typedef char float32[0x04];
 typedef char fltx4[0x10];

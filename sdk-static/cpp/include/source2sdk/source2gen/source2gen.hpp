@@ -128,6 +128,7 @@ using Vector = char[0x0c];
 using Vector2D = char[0x08];
 using Vector4D = char[0x10];
 using VectorAligned = char[0x10];
+using VectorWS = char[0x0c];
 using WorldGroupId_t = char[0x04];
 using float32 = char[0x04];
 using fltx4 = char[0x10];
