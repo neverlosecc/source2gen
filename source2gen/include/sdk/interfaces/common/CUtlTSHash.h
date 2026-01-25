@@ -249,13 +249,13 @@ public:
 
     class HashBucket_t {
     public:
-        CThreadSpinRWLock m_AddLock; // 0x0000
-        HashFixedData_t* m_pFirst; // 0x0020
-        HashFixedData_t* m_pFirstUncommitted; // 0x0020
-        IF_LINUX(char pad_0x20[0x08];)
-    }; // Size: 0x0028
+        CThreadSpinRWLock* m_AddLock; // 0x0000
+        HashFixedData_t* m_pFirst; // 0x008
+        HashFixedData_t* m_pFirstUncommitted; // 0x0010
+        IF_LINUX(char pad_0x18[0x08];)
+    }; // Size: 0x0018
     // clang-19 requires an explicit template type for platform_specific
-    static_assert(sizeof(HashBucket_t) == platform_specific<int>{.windows = 0x28, .linux = 0x30});
+    static_assert(sizeof(HashBucket_t) == platform_specific<int>{.windows = 0x18, .linux = 0x20});
 
     CUtlMemoryPoolBase m_EntryMemory;
 
