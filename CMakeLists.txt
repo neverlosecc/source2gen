@@ -69,7 +69,7 @@ endif()
 # Generating sdk-static
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 execute_process(
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/generate_static.py
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/generate_static.py --game ${SOURCE2GEN_GAME}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     RESULT_VARIABLE SDK_STATIC_SCRIPT_RESULT
     OUTPUT_VARIABLE SDK_STATIC_SCRIPT_OUTPUT

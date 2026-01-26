@@ -7,6 +7,7 @@ except ImportError:
         msg = "Please install tomli to read TOML files. You can do this by running 'pip install tomli'."
         raise ImportError(msg) from err
 
+import argparse
 from pathlib import Path
 from typing import NotRequired, TypeAlias, TypedDict
 
@@ -132,11 +133,26 @@ def dump_to(cwd: Path, language: str, filename: str, content: str) -> None:
     status(f'Wrote {len(content)} bytes to {language}/{filename}')
 
 
+def apply_game_overrides(classes: ClassDefs, game: str) -> None:
+    for class_def in classes.values():
+        if game_override := class_def.get(game):
+            if isinstance(game_override, dict):
+                class_def.update(game_override)
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--game', help='Game name to generate for')
+    args = parser.parse_args()
+
     cwd = Path(__file__).parent.parent.resolve().absolute()
     toml_file: ClassDefs = tomllib.loads((cwd / 'sdk-static.toml').read_text(encoding='utf-8'))
 
     status(f'Read {len(toml_file)} types from sdk-static.toml')
+
+    if args.game:
+        apply_game_overrides(toml_file, args.game)
+        status(f'Applied overrides for game: {args.game}')
 
     cpp = assemble_cpp(toml_file)
     dump_to(cwd, 'cpp', 'source2gen.hpp', cpp)

@@ -1036,3 +1036,7 @@ bin/
 
 # CLion
 .idea/**
+
+# sdk-static code-generated files
+sdk-static/c/include/
+sdk-static/cpp/include/

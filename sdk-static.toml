@@ -47,6 +47,9 @@ size = 0x04
 
 [CPulseValueFullType]
 size = 0x10
+
+[CPulseValueFullType.DEADLOCK]
+size = 0x18
 note = "size is 8 bytes bigger in Deadlock"
 
 [CResourceName]
