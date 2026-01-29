@@ -262,7 +262,9 @@ public:
     IF_LINUX(char pad[0x04]);
     std::array<HashBucket_t, BucketCount> m_aBuckets;
     bool m_bNeedsCommit{};
+    char _pad_0x1861[0x03]{};
     CInterlockedInt m_ContentionCheck;
+    char _pad_0x1868[0x08]{};
 };
 
 template <typename T>

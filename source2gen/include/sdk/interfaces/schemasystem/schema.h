@@ -132,8 +132,8 @@ enum {
 #elif defined(DOTA2) || defined(CS2) || defined(DEADLOCK)
 
 constexpr auto kSchemaSystemVersion = platform_specific{.windows = 2, .linux = 1}.get();
-constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x188, .linux = 0x188 + 0x68}.get();
-constexpr auto kSchemaSystem_PAD1 = 0x120;
+constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x190, .linux = 0x190 + 0x68}.get();
+constexpr auto kSchemaSystem_PAD1 = 0xE0;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
 enum {
@@ -966,8 +966,12 @@ private:
     CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 
-    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x05C0
-    CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings = {}; // 0x2E50
+#if defined(DOTA2) || defined(CS2) || defined(DEADLOCK)
+    char _pad_before_bindings[0x60]{};
+#endif
+
+    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x0560
+    CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings = {}; // 0x1DD0
 };
 
 enum SchemaTypeScope_t : std::uint8_t {
