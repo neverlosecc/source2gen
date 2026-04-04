@@ -637,6 +637,7 @@ struct SchemaBaseClassInfoData_t {
 using SchemaFieldMetadataOverrideSetData_t = datamap_t;
 using SchemaFieldMetadataOverrideData_t = typedescription_t;
 
+
 struct SchemaClassInfoData_t {
 public:
     enum class SchemaClassInfoFunctionIndex : std::int32_t {
@@ -654,6 +655,7 @@ public:
     SchemaClassInfoData_t* m_pSelf; // 0x0000
     const char* m_pszName; // 0x0008
     const char* m_pszModule; // 0x0010
+    const char* m_pszName2; // 0x0010
 
     int m_nSizeOf; // 0x0018
 
@@ -688,7 +690,8 @@ public:
     }
 };
 
-static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x60, "Offset of m_pFn should be 0x60");
+
+static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68, "Offset of m_pFn should be 0x60");
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
 public:
