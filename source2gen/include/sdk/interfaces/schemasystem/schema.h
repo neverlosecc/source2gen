@@ -655,7 +655,10 @@ public:
     SchemaClassInfoData_t* m_pSelf; // 0x0000
     const char* m_pszName; // 0x0008
     const char* m_pszModule; // 0x0010
+#if defined(DOTA2)
     const char* m_pszName2; // 0x0010
+#endif // DOTA2
+
 
     int m_nSizeOf; // 0x0018
 
@@ -689,9 +692,12 @@ public:
         return reinterpret_cast<RetTy (*)(SchemaClassInfoFunctionIndex, Ty...)>(m_pFn)(index, std::forward<Ty>(args)...);
     }
 };
+#if defined(DOTA2)
+static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68, "Offset of m_pFn should be 0x68");
+#else
+static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x60, "Offset of m_pFn should be 0x60");
+#endif // DOTA2
 
-
-static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68, "Offset of m_pFn should be 0x60");
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
 public:
