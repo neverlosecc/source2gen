@@ -12,7 +12,11 @@ typedef std::uint32_t ThreadId_t;
 typedef std::uint64_t ThreadId_t;
 #endif
 
+#if DOTA2 && TARGET_OS == WINDOWS
+constexpr auto kTtSizeofCriticalsection = 4;
+#else
 constexpr auto kTtSizeofCriticalsection = 40;
+#endif
 
 class CThreadMutex {
 public:
@@ -24,7 +28,11 @@ public:
     bool m_bTrace;
     const char* m_pDebugName;
 };
+#if DOTA2 && TARGET_OS == WINDOWS
+static_assert(sizeof(CThreadMutex) == platform_specific{.windows = 0x18, .linux = 0x40});
+#else
 static_assert(sizeof(CThreadMutex) == platform_specific{.windows = 0x38, .linux = 0x40});
+#endif
 
 // source2gen - Source2 games SDK generator
 // Copyright 2024 neverlosecc

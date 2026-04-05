@@ -132,7 +132,12 @@ enum {
 #elif defined(DOTA2) || defined(CS2) || defined(DEADLOCK)
 
 constexpr auto kSchemaSystemVersion = platform_specific{.windows = 2, .linux = 1}.get();
+
+#if DOTA2 && TARGET_OS == WINDOWS
+constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x190, .linux = 0x188 + 0x68}.get();
+#else
 constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x188, .linux = 0x188 + 0x68}.get();
+#endif
 constexpr auto kSchemaSystem_PAD1 = 0x120;
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
@@ -143,7 +148,7 @@ enum {
     kSchemaSystem_GetClassModuleName = kSchemaSystem_GetClassInfoBinaryName + 1,
     kSchemaSystem_GetEnumBinaryName = kSchemaSystem_GetClassModuleName + 1,
     kSchemaSystem_GetEnumProjectName = kSchemaSystem_GetEnumBinaryName + 1,
-    kSchemaSystemTypeScope_DeclaredClass = 14,
+    kSchemaSystemTypeScope_DeclaredClass = 12,
     kSchemaSystemTypeScope_DeclaredEnum = kSchemaSystemTypeScope_DeclaredClass + 1,
     kSchemaSystemTypeScope_GetScopeName = 28,
     kSchemaSystemTypeScope_IsGlobalScope = kSchemaSystemTypeScope_GetScopeName + 1,
@@ -632,6 +637,7 @@ struct SchemaBaseClassInfoData_t {
 using SchemaFieldMetadataOverrideSetData_t = datamap_t;
 using SchemaFieldMetadataOverrideData_t = typedescription_t;
 
+
 struct SchemaClassInfoData_t {
 public:
     enum class SchemaClassInfoFunctionIndex : std::int32_t {
@@ -649,6 +655,10 @@ public:
     SchemaClassInfoData_t* m_pSelf; // 0x0000
     const char* m_pszName; // 0x0008
     const char* m_pszModule; // 0x0010
+#if defined(DOTA2)
+    const char* m_pszName2; // 0x0010
+#endif // DOTA2
+
 
     int m_nSizeOf; // 0x0018
 
@@ -682,8 +692,12 @@ public:
         return reinterpret_cast<RetTy (*)(SchemaClassInfoFunctionIndex, Ty...)>(m_pFn)(index, std::forward<Ty>(args)...);
     }
 };
-
+#if defined(DOTA2)
+static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68, "Offset of m_pFn should be 0x68");
+#else
 static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x60, "Offset of m_pFn should be 0x60");
+#endif // DOTA2
+
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
 public:
@@ -798,8 +812,8 @@ class CSchemaPtrMap {
 public:
     CUtlMap<K, V> m_Map;
 
-#if TARGET_OS == LINUX
     char pad_0x28[0x08];
+#if TARGET_OS == LINUX
 #endif
 
 #if !defined(DOTA2) && !defined(CS2) && !defined(DEADLOCK)
@@ -808,7 +822,7 @@ public:
 };
 
 #if defined(DOTA2) || defined(CS2) || defined(DEADLOCK)
-static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x28, .linux = 0x30}.get());
+static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x30, .linux = 0x30}.get());
 #else
 static_assert(sizeof(CSchemaPtrMap<int, int>) == platform_specific{.windows = 0x30, .linux = 0x30}.get());
 #endif
@@ -966,7 +980,10 @@ private:
     CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 
-    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x05C0
+#if DOTA2 && TARGET_OS == WINDOWS
+    void* unk; // 0x0558
+#endif
+    CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x0560
     CUtlTSHash<CSchemaEnumBinding*> m_EnumBindings = {}; // 0x2E50
 };
 

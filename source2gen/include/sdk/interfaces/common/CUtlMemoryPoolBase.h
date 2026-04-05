@@ -100,7 +100,12 @@ public:
 
     int m_TotalSize{}; // m_BlocksPerBlob * (m_NumBlobs + 1) + (m_nAligment + 14)
 };
+
+#if DOTA2 && TARGET_OS == WINDOWS
+static_assert(sizeof(CUtlMemoryPoolBaseV2) == platform_specific{.windows = 0x60, .linux = 0x90});
+#else
 static_assert(sizeof(CUtlMemoryPoolBaseV2) == platform_specific{.windows = 0x80, .linux = 0x90});
+#endif
 
 using CUtlMemoryPoolBase = std::conditional_t<kUtlMemoryPoolBaseVersion == 1, CUtlMemoryPoolBaseV1, CUtlMemoryPoolBaseV2>;
 
