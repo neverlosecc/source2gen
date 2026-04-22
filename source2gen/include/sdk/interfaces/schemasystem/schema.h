@@ -133,12 +133,16 @@ enum {
 
 constexpr auto kSchemaSystemVersion = platform_specific{.windows = 2, .linux = 1}.get();
 
-#if DOTA2 && TARGET_OS == WINDOWS
+#if (DOTA2 || DEADLOCK) && TARGET_OS == WINDOWS
 constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x190, .linux = 0x188 + 0x68}.get();
 #else
 constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x188, .linux = 0x188 + 0x68}.get();
 #endif
+#if defined(DEADLOCK) && TARGET_OS == WINDOWS
+constexpr auto kSchemaSystem_PAD1 = 0xE0;
+#else
 constexpr auto kSchemaSystem_PAD1 = 0x120;
+#endif
 constexpr auto kSchemaSystemTypeScope_PAD0 = 0x7;
 
 enum {
@@ -980,7 +984,7 @@ private:
     CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 
-#if DOTA2 && TARGET_OS == WINDOWS
+#if (DOTA2 || DEADLOCK) && TARGET_OS == WINDOWS
     void* unk; // 0x0558
 #endif
     CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x0560
