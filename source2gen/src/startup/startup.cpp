@@ -89,6 +89,19 @@ namespace source2_gen {
             }
         }
 
+        const auto global_scope = sdk::g_schema->GlobalTypeScope();
+        auto current_enums = global_scope->GetEnumBindings();
+        for (auto el : current_enums.GetElements()) {
+            auto& dump{dumped_modules.emplace(el->m_pszModule, unique_module_dump{}).first->second};
+            dump.enums.emplace(el->m_pszName, el);
+        }
+
+        auto current_classes = global_scope->GetClassBindings();
+        for (auto el : current_classes.GetElements()) {
+            auto& dump{dumped_modules.emplace(el->m_pszModule, unique_module_dump{}).first->second};
+            dump.classes.emplace(el->m_pszName, el);
+        }
+
         std::unordered_map<std::string, module_dump> result{};
 
         for (const auto& [module_name, unique_dump] : dumped_modules) {
@@ -150,8 +163,8 @@ namespace source2_gen {
     }
 
     [[nodiscard]]
-    constexpr std::string_view GetStaticSdkName(source2_gen::Language language) {
-        using enum source2_gen::Language;
+    constexpr std::string_view GetStaticSdkName(Language language) {
+        using enum Language;
         switch (language) {
         case cpp:
             return "cpp";
@@ -237,8 +250,9 @@ namespace source2_gen {
         }
 
         // @note: @es3n1n: Obtaining type scopes and generating sdk
-        const auto type_scopes = sdk::g_schema->GetTypeScopes();
+        auto type_scopes = sdk::g_schema->GetTypeScopes();
         assert(type_scopes.Count() > 0 && "sdk is outdated");
+
 
         const std::unordered_map all_modules = CollectModules(std::span{type_scopes.m_pElements, static_cast<std::size_t>(type_scopes.m_Size)});
 
@@ -246,7 +260,7 @@ namespace source2_gen {
         std::unordered_set<std::filesystem::path> generated_files{};
 
         for (const auto& [module_name, dump] : all_modules) {
-            const auto result = sdk::GenerateTypeScopeSdk(options, cache, module_name, dump.enums, dump.classes);
+            const auto result = GenerateTypeScopeSdk(options, cache, module_name, dump.enums, dump.classes);
             std::ranges::move(result.generated_files, std::inserter(generated_files, generated_files.end()));
         }
 
@@ -256,7 +270,7 @@ namespace source2_gen {
         std::filesystem::copy(FindSdkStatic(options), kOutDirName,
                               std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
 
-        if (options.emit_language == source2_gen::Language::c_ida) {
+        if (options.emit_language == Language::c_ida) {
             PostProcessCIDA(generated_files);
         }
 
