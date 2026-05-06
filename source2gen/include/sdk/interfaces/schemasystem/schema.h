@@ -133,12 +133,12 @@ enum {
 
 constexpr auto kSchemaSystemVersion = platform_specific{.windows = 2, .linux = 1}.get();
 
-#if (DOTA2 || DEADLOCK) && TARGET_OS == WINDOWS
+#if (DOTA2 || CS2 || DEADLOCK) && TARGET_OS == WINDOWS
 constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x190, .linux = 0x188 + 0x68}.get();
 #else
 constexpr auto kSchemaSystem_PAD0 = platform_specific{.windows = 0x188, .linux = 0x188 + 0x68}.get();
 #endif
-#if defined(DEADLOCK) && TARGET_OS == WINDOWS
+#if (CS2 || DEADLOCK) && TARGET_OS == WINDOWS
 constexpr auto kSchemaSystem_PAD1 = 0xE0;
 #else
 constexpr auto kSchemaSystem_PAD1 = 0x120;
@@ -659,9 +659,9 @@ public:
     SchemaClassInfoData_t* m_pSelf; // 0x0000
     const char* m_pszName; // 0x0008
     const char* m_pszModule; // 0x0010
-#if defined(DOTA2)
-    const char* m_pszName2; // 0x0010
-#endif // DOTA2
+#if defined(DOTA2) || defined(CS2)
+    const char* m_pszName2; // 0x0018
+#endif
 
 
     int m_nSizeOf; // 0x0018
@@ -696,11 +696,11 @@ public:
         return reinterpret_cast<RetTy (*)(SchemaClassInfoFunctionIndex, Ty...)>(m_pFn)(index, std::forward<Ty>(args)...);
     }
 };
-#if defined(DOTA2)
+#if defined(DOTA2) || defined(CS2)
 static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x68, "Offset of m_pFn should be 0x68");
 #else
 static_assert(offsetof(SchemaClassInfoData_t, m_pFn) == 0x60, "Offset of m_pFn should be 0x60");
-#endif // DOTA2
+#endif
 
 
 class CSchemaClassInfo : public SchemaClassInfoData_t {
@@ -984,7 +984,7 @@ private:
     CSchemaType_NoschemaType m_pNoschemaType = {};
 #endif
 
-#if (DOTA2 || DEADLOCK) && TARGET_OS == WINDOWS
+#if (DOTA2 || CS2 || DEADLOCK) && TARGET_OS == WINDOWS
     void* unk; // 0x0558
 #endif
     CUtlTSHash<CSchemaClassBinding*> m_ClassBindings = {}; // 0x0560

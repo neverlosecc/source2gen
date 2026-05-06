@@ -249,7 +249,7 @@ public:
 
     class HashBucket_t {
     public:
-#if (DOTA2 || DEADLOCK) && TARGET_OS == WINDOWS
+#if (DOTA2 || CS2 || DEADLOCK) && TARGET_OS == WINDOWS
         RTL_SRWLOCK m_AddLock; // 0x0000
 #else
         CThreadSpinRWLock m_AddLock; // 0x0000
@@ -260,7 +260,7 @@ public:
     }; // Size: 0x0028
     // clang-19 requires an explicit template type for platform_specific
 
-#if (DOTA2 || DEADLOCK) && TARGET_OS == WINDOWS
+#if (DOTA2 || CS2 || DEADLOCK) && TARGET_OS == WINDOWS
     static_assert(sizeof(HashBucket_t) == platform_specific<int>{.windows = 0x18, .linux = 0x30}); // Linux UNTESTED
 #else
     static_assert(sizeof(HashBucket_t) == platform_specific<int>{.windows = 0x28, .linux = 0x30});

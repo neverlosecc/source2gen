@@ -12,7 +12,7 @@ typedef std::uint32_t ThreadId_t;
 typedef std::uint64_t ThreadId_t;
 #endif
 
-#if (DOTA2 || DEADLOCK) && TARGET_OS == WINDOWS
+#if (DOTA2 || CS2 || DEADLOCK) && TARGET_OS == WINDOWS
 constexpr auto kTtSizeofCriticalsection = 4;
 #else
 constexpr auto kTtSizeofCriticalsection = 40;
@@ -28,7 +28,7 @@ public:
     bool m_bTrace;
     const char* m_pDebugName;
 };
-#if (DOTA2 || DEADLOCK) && TARGET_OS == WINDOWS
+#if (DOTA2 || CS2 || DEADLOCK) && TARGET_OS == WINDOWS
 static_assert(sizeof(CThreadMutex) == platform_specific{.windows = 0x18, .linux = 0x40});
 #else
 static_assert(sizeof(CThreadMutex) == platform_specific{.windows = 0x38, .linux = 0x40});
